@@ -8,7 +8,7 @@ export const SHORT = {
   pistol: 'Pis',
   smg: 'Smg',
   shotgun: 'Esc',
-  rifle: 'Rif',
+  flamer: 'Lla',
   ar: 'Fus',
   autoshotgun: 'EscA',
   sniper: 'Fra',

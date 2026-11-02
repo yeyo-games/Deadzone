@@ -1149,7 +1149,7 @@ const GUN_LEN = {
   pistol: 23,
   smg: 30,
   shotgun: 33,
-  rifle: 38,
+  flamer: 38,
   ar: 35,
   autoshotgun: 35,
   sniper: 47,
@@ -1245,13 +1245,28 @@ const GUNS = {
       g.fill();
     }
   },
-  rifle: (g, r) => {
-    g.fillStyle = '#4b3a2a';
-    g.fillRect(r * 0.15, -3, 10, 6);
+  // depósito rojo bajo el cuerpo, tubo largo y la llama piloto encendida en la boquilla
+  flamer: (g, r) => {
+    const x = r * 0.15;
+    g.fillStyle = '#2c2e30';
+    g.fillRect(x, -3, 9, 6);
+    g.fillStyle = '#9a2a1e';
+    g.fillRect(x + 6, 1.5, 14, 7);
+    g.fillStyle = '#c94a32';
+    g.fillRect(x + 6, 1.5, 14, 2);
+    g.fillStyle = '#1b1c1e';
+    g.fillRect(x + 8, 1.5, 1.5, 7);
+    g.fillRect(x + 16, 1.5, 1.5, 7);
     g.fillStyle = '#25272a';
-    g.fillRect(r * 0.15 + 10, -2.4, 26, 4.8);
-    g.fillStyle = '#121314';
-    g.fillRect(r * 0.15 + 12, -4.5, 11, 3);
+    g.fillRect(x + 9, -3.2, 14, 6.4);
+    g.fillStyle = '#4a4f42';
+    g.fillRect(x + 23, -2, 11, 4);
+    g.fillStyle = '#1b1c1e';
+    g.fillRect(x + 33, -2.8, 4, 5.6);
+    g.fillStyle = '#ffb040';
+    g.beginPath();
+    g.arc(x + 37.5, 2.2, 1.4, 0, TAU);
+    g.fill();
   },
 };
 

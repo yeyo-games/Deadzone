@@ -825,7 +825,7 @@ export class ServerSim {
         robots: [...this.slots.values()].map((q) => ({ idx: q.idx, r: q.robot })),
         // lo que disparó él ya lo vio en su pantalla; las torretas se repiten como efecto
         // las del piloto automático de su torreta no las predijo: también le llegan
-        skipBullet: (b: any) => (b.owner === id && !b.auto) || !!b.turret || !!b.atgm,
+        skipBullet: (b: any) => (b.owner === id && !b.auto) || !!b.turret || !!b.atgm || !!b.flame,
       },
     );
     const st = this.structures;

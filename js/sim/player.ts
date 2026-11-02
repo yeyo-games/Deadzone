@@ -14,6 +14,7 @@ import {
   RELOAD_STEPS,
 } from '../core/config.ts';
 import { clamp, rand, angleTo } from '../core/util.ts';
+import { flameBullet } from './bullets.ts';
 import { newCombo } from './combo.ts';
 import { fireHeavy, heavyRate } from './heavy.ts';
 import type { GameHost, Vec, Weapon, Zombie } from '../core/types.d.ts';
@@ -75,7 +76,7 @@ const GUN_TIP: Record<string, number> = {
   pistol: 22.5,
   smg: 29.7,
   shotgun: 32.8,
-  rifle: 38.1,
+  flamer: 38,
   ar: 35,
   autoshotgun: 35,
   sniper: 46,
@@ -593,6 +594,10 @@ export class Player {
       const off = d.pellets > 1 ? (i / (d.pellets - 1) - 0.5) * 2 * spread + rand(-0.04, 0.04) : rand(-spread, spread);
       const a = aim + off;
       fired.push(a);
+      if (d.flame) {
+        game.bullets.spawn({ ...flameBullet(ox, oy, a, d.damage * this.stats.dmgMult), shot });
+        continue;
+      }
       game.bullets.spawn({
         x: ox,
         y: oy,
@@ -623,8 +628,8 @@ export class Player {
     game.muzzleX = sx;
     game.muzzleY = sy;
     if (d.rocket) game.particles.backblast(this.x - ca * 14, this.y - sa * 14, this.angle + Math.PI);
-    else game.particles.casing(this.x + ca * 8, this.y + sa * 8, this.angle + Math.PI / 2);
-    game.particles.muzzleSmoke(sx, sy, this.angle);
+    else if (!d.flame) game.particles.casing(this.x + ca * 8, this.y + sa * 8, this.angle + Math.PI / 2);
+    if (!d.flame) game.particles.muzzleSmoke(sx, sy, this.angle);
     game.sfx.shot(d.id);
     if (w.mag === 0 && w.reserve > 0) this.startReload(game);
   }

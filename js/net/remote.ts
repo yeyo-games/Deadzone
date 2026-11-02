@@ -8,6 +8,7 @@
 import { NET, PLAYER_BASE, ROBOT, SHOP, WEAPON_ORDER, WEAPONS, ZOMBIES } from '../core/config.ts';
 import { angleTo, rand, TAU } from '../core/util.ts';
 import { militaryMissile, turretBullet } from '../sim/build.ts';
+import { flameBullet } from '../sim/bullets.ts';
 import { heavyMaxHp } from '../sim/heavy.ts';
 import { Player } from '../sim/player.ts';
 import { Robot } from '../sim/robot.ts';
@@ -21,7 +22,15 @@ import { PEER_N, ROBOT_N, ZOMBIE_N } from './snapshot.ts';
 export type Identity = { name?: string; code?: string };
 export type Identify = (idx: number) => Identity | null;
 /** Jugador remoto: un Player con lo que le añade este módulo. */
-export type Peer = Player & { it?: Interp; away?: boolean; lookCode?: string; manned?: unknown };
+export type Peer = Player & {
+  it?: Interp;
+  away?: boolean;
+  lookCode?: string;
+  manned?: unknown;
+  // lanzallamas: cuánto le queda echando fuego según la última foto, y llamaradas por salir
+  flameT?: number;
+  flameAcc?: number;
+};
 /** Zombi remoto: lo que se dibuja a partir de la foto. */
 export type RemoteZombie = Pick<
   Zombie,
@@ -315,6 +324,8 @@ export class Remote {
         q.reloadProg = (Number(pl[i + 18]) || 0) / 100;
       }
       if (pl[i + 7]) q.flashT = 0.05;
+      // la foto sólo dice que dispara: con el lanzallamas, sigue echando fuego hasta la próxima
+      if (pl[i + 7] && wid === 'flamer') q.flameT = 0.15;
       q.alive = !!pl[i + 8];
       if (pl[i + 9]) q.hurtT = 0.2;
       q.recoil = Math.max(q.recoil, pl[i + 10] / 100);
@@ -345,7 +356,22 @@ export class Remote {
       q.flashT -= dt;
       q.hurtT -= dt;
       q.recoil = Math.max(0, q.recoil - dt * 8);
+      q.flameT = (q.flameT || 0) - dt;
+      if (q.flameT > 0 && q.alive) this.peerFlames(q, dt);
       if (q.inRobot && q.idx !== undefined) this.followRobot(this.robots.get(q.idx), q, dt);
+    }
+  }
+
+  // Llamaradas de adorno del lanzallamas de otro jugador, al ritmo del arma y desde su boquilla.
+  peerFlames(q: Peer, dt: number) {
+    const d = WEAPONS.flamer;
+    q.flameAcc = (q.flameAcc || 0) + dt * d.rate;
+    const tip = q.gunTip;
+    while (q.flameAcc >= 1) {
+      q.flameAcc--;
+      const x = q.x + Math.cos(q.angle) * tip;
+      const y = q.y + Math.sin(q.angle) * tip;
+      this.game.bullets.spawn(flameBullet(x, y, q.angle + rand(-d.spread, d.spread), 0, true));
     }
   }
 

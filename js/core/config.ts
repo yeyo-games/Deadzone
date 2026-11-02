@@ -102,28 +102,33 @@ export const WEAPONS = {
     ammoPrice: 12,
     desc: '8 perdigones de golpe: derriba grupos y los empuja lejos.',
   },
-  rifle: {
-    id: 'rifle',
-    name: 'Rifle',
-    damage: 110,
-    rate: 2,
-    mag: 10,
-    reserve: 40,
+  // Lanzallamas: cada disparo es una llamarada corta (flameBullet en sim/bullets.ts) que atraviesa a
+  // todos los zombis que toca (el gigante la ataja), no los empuja y los deja ardiendo burn s
+  // (MOLOTOV.dps por segundo). El cargador es el depósito de combustible.
+  flamer: {
+    id: 'flamer',
+    name: 'Lanzallamas',
+    damage: 9,
+    rate: 18,
+    mag: 100,
+    reserve: 200,
     reserveMax: Infinity,
-    pickup: 16,
-    reload: 1.7,
-    spread: 0.008,
-    bloom: 0.06,
+    pickup: 100,
+    reload: 2.4,
+    spread: 0.16,
+    bloom: 0.004,
     pellets: 1,
-    speed: 1500,
-    range: 950,
-    knock: 110,
-    shake: 0.22,
-    pierce: 2,
-    len: 24,
+    speed: 560,
+    range: 250,
+    knock: 0,
+    shake: 0.012,
+    pierce: 0,
+    len: 26,
+    flame: true,
+    burn: 3,
     price: 1200,
     ammoPrice: 18,
-    desc: 'Disparo potente y lejano que atraviesa 2 enemigos.',
+    desc: 'Escupe fuego de cerca: quema a todos los que toca y los deja ardiendo.',
   },
   ar: {
     id: 'ar',
@@ -267,7 +272,7 @@ export const WEAPONS = {
     len: 30,
   },
 };
-export const WEAPON_ORDER = ['pistol', 'smg', 'shotgun', 'rifle', 'ar', 'autoshotgun', 'sniper', 'lmg', 'bazooka'];
+export const WEAPON_ORDER = ['pistol', 'smg', 'shotgun', 'flamer', 'ar', 'autoshotgun', 'sniper', 'lmg', 'bazooka'];
 
 // Cohete de la bazuca. La granada tiene radio 140 y 330 de daño: el cohete abarca el doble de área.
 // Contra un gordo se queda clavado en su panza (stick s), brilla en verde (glow s) y estalla más fuerte;
@@ -297,7 +302,7 @@ export const ABILITY = {
 };
 export const CLASS_ORDER = ['bomber', 'berserker', 'booster'];
 // cajas de armas (las básicas); las mejores se compran
-export const CRATE_WEAPONS = ['shotgun', 'rifle'];
+export const CRATE_WEAPONS = ['shotgun', 'flamer'];
 
 // Unidad de velocidad: la del zombi normal en px/s (al azar entre los dos; 1,5 veces la de antes,
 // [60, 88]). En ZOMBIES, speed es un múltiplo de esta unidad y nunca menos de 1 (ningún tipo es
@@ -911,7 +916,7 @@ export const GUN_REACH = {
   pistol: 12,
   smg: 22,
   shotgun: 30,
-  rifle: 36,
+  flamer: 36,
   ar: 30,
   autoshotgun: 30,
   sniper: 46,
@@ -936,11 +941,11 @@ export const RELOAD_STEPS = {
     [0.56, 'magIn'],
     [0.85, 'bolt'],
   ],
-  rifle: [
-    [0.12, 'boltOpen'],
+  flamer: [
+    [0.12, 'coverOpen'],
     [0.3, 'magOut'],
     [0.62, 'magIn'],
-    [0.9, 'boltClose'],
+    [0.9, 'coverClose'],
   ],
   sniper: [
     [0.1, 'boltOpen'],

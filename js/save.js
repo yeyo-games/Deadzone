@@ -113,7 +113,9 @@ export function loadProgress(game, kind = 'save') {
   p.hp = Math.min(sp.hp, p.stats.maxHp);
   p.stamina = sp.stamina;
   // (partidas viejas: la pistola se cambia por el arma inicial, que siempre tiene balas infinitas)
+  // (el rifle se cambió por el lanzallamas: quien lo tenía recibe el lanzallamas con el depósito lleno)
   p.weapons = sp.weapons
+    .map((w) => (w.id === 'rifle' ? { id: 'flamer', mag: WEAPONS.flamer.mag, reserve: WEAPONS.flamer.reserve } : w))
     .filter((w) => WEAPONS[w.id] && w.id !== 'pistol' && w.id !== START_WEAPON)
     .map((w) => ({ id: w.id, def: WEAPONS[w.id], mag: w.mag, reserve: w.reserve < 0 ? Infinity : w.reserve }));
   p.weapons.unshift(p.makeWeapon(START_WEAPON));

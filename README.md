@@ -153,7 +153,7 @@ puede agarrar. Te bajas con `E` por detrás de la torre.
 ### Armas y munición
 
 El subfusil, con el que empiezas, tiene balas infinitas. Las demás se compran en la tienda (la escopeta y
-el rifle también salen en las cajas de armas) y cuestan más mientras más poder tienen: daño por segundo
+el lanzallamas también salen en las cajas de armas) y cuestan más mientras más poder tienen: daño por segundo
 contando recargas, a cuántos zombis atraviesan y el área. Puedes **vender** cualquier arma que tengas por
 la mitad de su precio:
 
@@ -162,11 +162,16 @@ la mitad de su precio:
 | Subfusil | inicial | 14 | 32 | 100 |
 | Escopeta | $500 | 8 × 30 | 6 | 280 de cerca |
 | Fusil de asalto | $800 | 30 | 30 (atraviesa 1) | 180 (365 en fila) |
-| Rifle | $1200 | 110 | 10 (atraviesa 2) | 165 (490 en fila) |
+| Lanzallamas | $1200 | 9 por llamarada + quemadura | 100 de combustible (atraviesa a todos) | 160 a cada uno de cerca, más 24 por segundo mientras arden |
 | Escopeta automática | $2000 | 9 × 22 | 12 | 400 de cerca |
 | Ametralladora | $3000 | 30 | 100 (atraviesa 2) | 260 (780 en fila) |
 | Francotirador | $4500 | 300 | 5 (atraviesa 6) | 190 (1320 en fila) |
 | Bazuca antitanque | $6000 | cohete en área | 1 (recarga 4 s) | revienta grupos y blindados |
+
+El **lanzallamas** escupe 18 llamaradas por segundo que llegan a unos 250 px: queman a todos los zombis
+que tocan (sólo el gigante las ataja), no los empujan y los dejan ardiendo 3 s; el fuego se contagia entre
+los que van pegados. Las paredes paran las llamas. Las partidas guardadas que tenían el rifle reciben el
+lanzallamas con el depósito lleno.
 
 En la sección **Munición** de la tienda compras cargadores de cualquier arma que tengas, de 1 en 1 o de
 10 en 10. La reserva de balas no tiene límite.

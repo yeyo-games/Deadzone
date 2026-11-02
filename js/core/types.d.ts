@@ -72,6 +72,10 @@ export interface Bullet {
   // misil antitanque de la torreta militar (fake: el de adorno de los clientes en línea)
   atgm?: boolean;
   fake?: boolean;
+  // llamarada del lanzallamas: arde burn s; life0 es su vida al salir
+  flame?: boolean;
+  burn?: number;
+  life0?: number;
   exploded?: boolean;
   dead?: boolean;
   hits?: Zombie[];

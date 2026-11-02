@@ -10,7 +10,6 @@ const SHOTS = {
   pistol: { crack: 4200, body: 1400, thump: 150, tail: 0.18, gain: 0.75, dur: 0.14 },
   smg: { crack: 5200, body: 1900, thump: 170, tail: 0.1, gain: 0.5, dur: 0.08 },
   shotgun: { crack: 2600, body: 700, thump: 95, tail: 0.42, gain: 1, dur: 0.24 },
-  rifle: { crack: 5600, body: 1100, thump: 120, tail: 0.38, gain: 0.95, dur: 0.18 },
   ar: { crack: 4800, body: 1500, thump: 135, tail: 0.16, gain: 0.62, dur: 0.1 },
   autoshotgun: { crack: 2900, body: 820, thump: 105, tail: 0.3, gain: 0.85, dur: 0.18 },
   sniper: { crack: 6200, body: 900, thump: 80, tail: 0.65, gain: 1, dur: 0.26 },
@@ -129,6 +128,7 @@ export class Sfx {
 
   // Disparo por capas, distinto por arma y con variación en cada tiro.
   shot(kind) {
+    if (kind === 'flamer') return this.flame();
     const P = SHOTS[kind] || SHOTS.pistol;
     if (!this.ok('shot', 0.025, true)) return;
     const v = rand(0.92, 1.08);
@@ -144,6 +144,15 @@ export class Sfx {
     // bazuca: silbido del cohete al salir
     if (kind === 'bazooka')
       this.burst({ dur: 1.1, freq: 900, sweep: 3200, gain: 0.35, type: 'bandpass', q: 1.5, attack: 0.03, delay: 0.04 });
+  }
+
+  // Lanzallamas: un rugido de gas en vez de un estampido; suena seguido mientras dispara.
+  flame() {
+    if (!this.ok('flame', 0.07, true)) return;
+    const v = rand(0.9, 1.1);
+    this.burst({ dur: 0.17, freq: 520 * v, sweep: 300, gain: 0.34, type: 'bandpass', q: 0.6, attack: 0.02 });
+    this.burst({ dur: 0.12, freq: 2400 * v, gain: 0.08, type: 'highpass', q: 0.5, attack: 0.02 });
+    this.tone({ freq: 70 * v, to: 55, dur: 0.15, gain: 0.12 });
   }
 
   // Un paso de la recarga: cada tipo suena distinto (metal contra metal, plástico, muelle).

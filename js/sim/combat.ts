@@ -7,6 +7,13 @@ import type { Bullet, GameHost, Zombie } from '../core/types.d.ts';
 export function bulletHit(game: GameHost, z: Zombie, b: Bullet, hx: number, hy: number) {
   z.hp -= b.dmg;
   z.flash = 0.08;
+  // llamarada del lanzallamas: no frena ni empuja, lo deja ardiendo
+  if (b.flame) {
+    z.burn = Math.max(z.burn, b.burn || 0);
+    z.lastDx = b.dx;
+    z.lastDy = b.dy;
+    return;
+  }
   // reacción breve: sacudida hacia un lado y leve agrandado (no frena su comportamiento)
   z.hitT = 0.18;
   z.hitJolt = rand(0.2, 0.5) * (Math.random() < 0.5 ? -1 : 1) * (z.type === 'heavy' && !b.blast ? 0.25 : 1);

@@ -1,9 +1,34 @@
-import { segCircleT } from '../core/util.ts';
+import { WEAPONS } from '../core/config.ts';
+import { rand, segCircleT } from '../core/util.ts';
 import type { Bullet, GameHost, Zombie } from '../core/types.d.ts';
 
 const near: Zombie[] = [];
 // Parte de las balas rebota en la armadura del super blindado (sin hacer daño).
 const RICOCHET = 0.45;
+
+// Llamarada del lanzallamas: corta, lenta y crece mientras vuela (life0 es su vida al salir).
+// fake: la de adorno que se ve salir del lanzallamas de otro jugador en línea (no hace daño).
+export function flameBullet(x: number, y: number, a: number, dmg: number, fake = false) {
+  const d = WEAPONS.flamer;
+  const life = d.range * rand(0.8, 1);
+  return {
+    x,
+    y,
+    dx: Math.cos(a),
+    dy: Math.sin(a),
+    speed: d.speed * rand(0.85, 1.1),
+    life,
+    life0: life,
+    dmg,
+    pierce: 0,
+    knock: 0,
+    hits: null,
+    flame: true,
+    burn: d.burn,
+    fake,
+    seed: Math.random() * 10,
+  };
+}
 
 export class Bullets {
   declare list: Bullet[];
@@ -112,6 +137,15 @@ export class Bullets {
           endT = bt;
           break;
         }
+        if (b.flame) {
+          // la llamarada atraviesa a todos y los deja ardiendo; el gigante la ataja
+          if (!b.fake) game.hitZombie(best, b, hx, hy);
+          if (!best.def.blocksBullets) continue;
+          dead = true;
+          wall = false;
+          endT = bt;
+          break;
+        }
         if (best.type === 'heavy' && Math.random() < RICOCHET) {
           // rebote: se refleja sobre la placa con algo de desvío y pierde fuerza
           const nl = Math.hypot(hx - best.x, hy - best.y) || 1;
@@ -159,7 +193,7 @@ export class Bullets {
       } else if (b.rocket && !b.exploded && (wall || b.life <= 0))
         game.rocketBlast(b.x - b.dx * 4, b.y - b.dy * 4, b.owner);
       else if (b.blast && wall) game.heavyBlast(b.x - b.dx * 4, b.y - b.dy * 4, b.owner, b.blastR, b.blastP);
-      else if (wall) game.particles.impact(b.x, b.y, b.dx, b.dy);
+      else if (wall && !b.flame) game.particles.impact(b.x, b.y, b.dx, b.dy);
       if (dead || b.life <= 0) {
         b.dead = true;
         list[i] = list[list.length - 1];

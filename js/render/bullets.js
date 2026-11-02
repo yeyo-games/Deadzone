@@ -2,7 +2,12 @@
 
 export function drawBullets(ctx, list) {
   ctx.lineCap = 'round';
+  let flames = false;
   for (const b of list) {
+    if (b.flame) {
+      flames = true;
+      continue;
+    }
     if (b.rocket) {
       drawRocket(ctx, b.x, b.y, Math.atan2(b.dy, b.dx) + Math.sin((b.age || 0) * 31) * 0.12, true);
       continue;
@@ -25,6 +30,43 @@ export function drawBullets(ctx, list) {
     ctx.lineTo(b.x, b.y);
     ctx.stroke();
   }
+  if (flames) drawFlames(ctx, list);
+}
+
+// Llamaradas del lanzallamas: salen pequeñas y blancas de la boquilla, crecen, se vuelven naranjas y
+// rojas, ondulan y acaban en humo oscuro.
+function drawFlames(ctx, list) {
+  ctx.save();
+  for (const b of list) {
+    if (!b.flame) continue;
+    const k = 1 - b.life / (b.life0 || 1);
+    if (k < 0.5) continue;
+    const r = 6 + k * 18;
+    ctx.fillStyle = `rgba(38,32,28,${((k - 0.5) * 0.5).toFixed(3)})`;
+    ctx.beginPath();
+    ctx.arc(b.x - b.dy * Math.sin(b.seed) * 6, b.y + b.dx * Math.sin(b.seed) * 6 - k * 8, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalCompositeOperation = 'lighter';
+  for (const b of list) {
+    if (!b.flame) continue;
+    const k = 1 - b.life / (b.life0 || 1);
+    const w = Math.sin(b.seed + k * 9) * k * 7;
+    const x = b.x - b.dy * w;
+    const y = b.y + b.dx * w;
+    const r = 3 + k * 16 + Math.random() * 2;
+    const gc = Math.round(235 - k * 175);
+    const bc = Math.round(Math.max(0, 170 - k * 340));
+    ctx.fillStyle = `rgba(255,${gc},${bc},${(0.2 * (1 - k)).toFixed(3)})`;
+    ctx.beginPath();
+    ctx.arc(x, y, r * 1.7, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = `rgba(255,${Math.min(255, gc + 20)},${bc},${(0.6 * (1 - k * 0.85)).toFixed(3)})`;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
 }
 
 // Misil antitanque de la torreta militar: el recorrido brilla detrás de él y se apaga hacia la torre.
