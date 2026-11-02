@@ -90,6 +90,7 @@ de elegir tu mejora de nivel) se abre la tienda:
 | Mina terrestre | $45 | Explota al pisarla |
 | Granada | $90 | Explosión en área que lanzas tú |
 | Molotov | $60 | Charco de fuego: los zombis que lo pisan arden, se retuercen y el fuego se contagia |
+| Misil improvisado | $120 | Tubo con pólvora y cinta: sale recto hacia donde apuntas (cabeceando) y estalla al primer zombi o pared, algo más fuerte que una granada. De un solo uso |
 
 Las barricadas se colocan delante de ti y las balas pasan por encima (también por encima de los coches).
 Tú puedes atravesar tus propias estructuras; los zombis no. Puedes **encimar estructuras** en el mismo lugar
@@ -189,15 +190,20 @@ animación. Hay gruñidos, pasos de la horda, impactos y caídas. La música cam
 
 ### Controles
 
+En el celular sólo hay a mano disparar, cambiar de arma, recargar y la habilidad. Los botones pequeños
+de granada, molotov, misil improvisado, construir, robot y taller aparecen en una fila encima sólo
+cuando los puedes usar (si los compraste o estás junto a la torreta), y el inventario sólo enseña lo que
+tienes.
+
 | Computadora | Celular |
 |-------------|---------|
 | `WASD` / flechas: moverse | Joystick virtual (lado izquierdo) |
-| `Shift`: correr · `Espacio`: disparar | Botón **Correr** (activa/desactiva) |
+| `Shift`: correr · `Espacio`: disparar | Lleva el joystick hasta el borde para correr |
 | Ratón: apuntar · clic: disparar | Botón de disparo con **apuntado automático** |
 | `R`: recargar | Botón de recarga |
 | `1`–`9`, `Q` o `Tab`: cambiar arma | Botón de cambio de arma |
 | `F`: construir · `V`: cambiar bloque | Botón **Construir** |
-| `G`: lanzar granada · `T`: molotov · `E`: robot o torreta pesada | Botones **Granada** y **Molotov** (apuntan solos) |
+| `G`: lanzar granada · `T`: molotov · `Z`: misil improvisado · `E`: robot o torreta pesada | Botones pequeños de **granada**, **molotov** y **misil** (apuntan solos) |
 | `M`: taller de la torreta pesada (junto a ella) | Botón de la **llave** |
 | `Enter`: iniciar siguiente ronda | Botón del panel **Ronda completada** |
 | `Esc` / `P`: pausa | Botón de pausa |

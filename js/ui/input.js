@@ -3,6 +3,8 @@
 import { clamp } from '../core/util.ts';
 
 const JOY_RADIUS = 56;
+// desde qué inclinación del joystick (0..1) se corre
+const JOY_RUN = 0.92;
 
 export class Input {
   constructor(root, canvas) {
@@ -45,6 +47,7 @@ export class Input {
       if (e.code === 'KeyV') this.pressed.cycleBuild = true;
       if (e.code === 'KeyG') this.pressed.grenade = true;
       if (e.code === 'KeyT') this.pressed.molotov = true;
+      if (e.code === 'KeyZ') this.pressed.improv = true;
       if (e.code === 'KeyE') this.pressed.robot = true;
       if (e.code === 'KeyU') this.pressed.upgrade = true;
       if (e.code === 'KeyM') this.pressed.turret = true;
@@ -172,12 +175,12 @@ export class Input {
         fn(el);
       });
     };
-    tap('#btn-run', () => this.setRun(!this.runToggle));
     tap('#btn-reload', () => (this.pressed.reload = true));
     tap('#btn-swap', () => (this.pressed.swap = true));
     tap('#btn-build', () => (this.pressed.build = true));
     tap('#btn-grenade', () => (this.pressed.grenade = true));
     tap('#btn-molotov', () => (this.pressed.molotov = true));
+    tap('#btn-improv', () => (this.pressed.improv = true));
     tap('#btn-robot', () => (this.pressed.robot = true));
     tap('#btn-tup', () => (this.pressed.turret = true));
     tap('#btn-ab-touch', () => (this.pressed.ability = true));
@@ -197,7 +200,6 @@ export class Input {
 
   setRun(v) {
     this.runToggle = v;
-    this.root.querySelector('#btn-run').classList.toggle('on', v);
   }
 
   placeJoy() {
@@ -234,8 +236,14 @@ export class Input {
     return this.vec;
   }
 
+  // en el celular se corre llevando el joystick hasta el borde (no hay botón de correr)
   get run() {
-    return this.keys.has('ShiftLeft') || this.keys.has('ShiftRight') || this.runToggle;
+    return (
+      this.keys.has('ShiftLeft') ||
+      this.keys.has('ShiftRight') ||
+      this.runToggle ||
+      (this.joy.id !== null && Math.hypot(this.joy.x, this.joy.y) >= JOY_RUN)
+    );
   }
 
   get firing() {

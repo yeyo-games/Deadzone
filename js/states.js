@@ -66,6 +66,7 @@ export function updatePlay(game, dt) {
     if (game.input.consume('cycleBuild')) Act.cycleBuild(game);
     if (game.input.consume('grenade')) Act.tryGrenade(game);
     if (game.input.consume('molotov')) Act.tryGrenade(game, 'molotov');
+    if (game.input.consume('improv')) Act.tryGrenade(game, 'improv');
     if (game.input.consume('robot')) Act.toggleRobot(game);
     if (game.input.consume('turret')) return openTurret(game);
     game.robot.update(dt, p, game);

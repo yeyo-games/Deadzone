@@ -210,6 +210,36 @@ test('construcción, granadas y molotovs: se compran entre oleadas y se usan cua
   assert.ok(sim.structures.scorches.length > 0, 'dejó la marca');
 });
 
+test('misil improvisado: se compra, lo lanza el servidor, quien lo lanzó lo ve y estalla', () => {
+  const sim = new ServerSim(5, [{ id: 'a', idx: 1, name: 'Ana' }]);
+  const a = sim.slots.get('a')!;
+  const seq = { n: 0 };
+  idle(sim, 'a', seq, 2);
+  a.money = 1000;
+  sim.director.state = 'waiting';
+  assert.ok(sim.shop('a', 'item', 'improv', 0));
+  assert.equal(a.money, 1000 - 120);
+  assert.equal(a.inv.improv, 1);
+  sim.director.state = 'active';
+  const p = a.p;
+  const scorches = sim.structures.scorches.length;
+  sim.act('a', { s: seq.n + 1, k: 'throw', kind: 'improv', tx: p.x + 300, ty: p.y });
+  idle(sim, 'a', seq, 1);
+  assert.equal(a.inv.improv, 0);
+  const m = sim.bullets.list.find((q: any) => q.improv);
+  assert.ok(m, 'misil en el aire');
+  assert.equal(m.owner, 'a');
+  const b = sim.snapshot('a', 0)!.b;
+  assert.equal(b[4], 2, 'va en la foto, también para quien lo lanzó');
+  idle(sim, 'a', seq, 90);
+  assert.ok(!sim.bullets.list.some((q: any) => q.improv), 'estalló');
+  assert.ok(sim.structures.scorches.length > scorches, 'dejó la marca');
+  // sin misiles no lanza nada
+  sim.act('a', { s: seq.n + 1, k: 'throw', kind: 'improv', tx: p.x + 300, ty: p.y });
+  idle(sim, 'a', seq, 1);
+  assert.ok(!sim.bullets.list.some((q: any) => q.improv));
+});
+
 test('torreta: el disparo va como efecto y su bala no viaja en la foto', () => {
   const sim = new ServerSim(5, [{ id: 'a', idx: 1, name: 'Ana' }]);
   const a = sim.slots.get('a')!;

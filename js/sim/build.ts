@@ -1,5 +1,5 @@
 // Barricadas compradas en la tienda (madera, metal, vallas, alambre) y granadas.
-import { SHOP, MOLOTOV, ROCKET, ABILITY, HEAVY, AIR, MILITARY } from '../core/config.ts';
+import { SHOP, MOLOTOV, ROCKET, ABILITY, HEAVY, AIR, MILITARY, IMPROV } from '../core/config.ts';
 import { TAU, rand, clamp } from '../core/util.ts';
 import type { Bullet, GameHost, Zombie } from '../core/types.d.ts';
 import type { Player } from './player.ts';
@@ -148,6 +148,25 @@ export function turretBullet(x: number, y: number, a: number, owner: string | nu
     hits: null as Zombie[] | null,
     owner,
     turret: true,
+  };
+}
+
+// El misil improvisado en vuelo (ver IMPROV): estalla con Structures.improvBlast.
+export function improvMissile(x: number, y: number, a: number, owner: string | null = null) {
+  return {
+    x,
+    y,
+    dx: Math.cos(a),
+    dy: Math.sin(a),
+    speed: IMPROV.speed,
+    life: IMPROV.range,
+    dmg: 0,
+    pierce: 0,
+    knock: 0,
+    shot: null as unknown,
+    hits: null as Zombie[] | null,
+    owner,
+    improv: true,
   };
 }
 
@@ -409,6 +428,26 @@ export class Structures {
     const ey = p.y + Math.sin(a) * d;
     const dur = 0.25 + d / 650;
     this.grenades.push({ sx: p.x, sy: p.y, ex, ey, x: p.x, y: p.y, h: 0, t: 0, dur, fuse: dur + 0.55, rot: 0, owner });
+  }
+
+  /* ---------- misil improvisado ---------- */
+
+  // Sale del hombro hacia donde apunta el jugador, con el chorro de humo hacia atrás.
+  launchImprov(game: GameHost, tx: number, ty: number, owner: string | null = null) {
+    const p = game.player;
+    if (!p) return;
+    const a = Math.atan2(ty - p.y, tx - p.x);
+    const ca = Math.cos(a);
+    const sa = Math.sin(a);
+    game.bullets.spawn(improvMissile(p.x + ca * 16, p.y + sa * 16, a, owner));
+    game.particles.backblast(p.x - ca * 12, p.y - sa * 12, a + Math.PI);
+    game.sfx.shot('bazooka');
+    game.camera.shake(0.25, p.x, p.y);
+  }
+
+  improvBlast(game: GameHost, x: number, y: number, owner: string | null = null) {
+    if (!game.mode.authority()) return;
+    this.explode(game, { x, y, owner }, IMPROV.radius, IMPROV.power, 1);
   }
 
   /* ---------- misil balístico (habilidad del Bomber) ---------- */

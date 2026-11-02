@@ -9,7 +9,11 @@ export function drawBullets(ctx, list) {
       continue;
     }
     if (b.rocket) {
-      drawRocket(ctx, b.x, b.y, Math.atan2(b.dy, b.dx) + Math.sin((b.age || 0) * 31) * 0.12, true);
+      drawRocket(ctx, b.x, b.y, Math.atan2(b.dy, b.dx) + Math.sin((b.age || 0) * 31) * 0.12, true, b.improv);
+      continue;
+    }
+    if (b.improv) {
+      drawRocket(ctx, b.x, b.y, Math.atan2(b.dy, b.dx), true, true);
       continue;
     }
     if (b.atgm) {
@@ -147,7 +151,8 @@ function drawAtgm(ctx, b) {
 }
 
 // Cohete de la bazuca (también se dibuja clavado en un zombi). flame = tobera encendida.
-export function drawRocket(ctx, x, y, a, flame) {
+// improv: el misil improvisado, un tubo oxidado con cinta y la punta pintada a mano.
+export function drawRocket(ctx, x, y, a, flame, improv = false) {
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(a);
@@ -158,6 +163,11 @@ export function drawRocket(ctx, x, y, a, flame) {
     ctx.ellipse(-13, 0, 6 + Math.random() * 4, 2.6, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.globalCompositeOperation = 'source-over';
+  }
+  if (improv) {
+    drawImprov(ctx);
+    ctx.restore();
+    return;
   }
   ctx.fillStyle = '#4a5636';
   ctx.strokeStyle = '#141612';
@@ -182,4 +192,36 @@ export function drawRocket(ctx, x, y, a, flame) {
   ctx.lineTo(-7, 2.6);
   ctx.fill();
   ctx.restore();
+}
+
+function drawImprov(ctx) {
+  ctx.strokeStyle = '#141612';
+  ctx.lineWidth = 1;
+  // tubo oxidado
+  ctx.fillStyle = '#8a5a34';
+  ctx.fillRect(-10, -2.8, 15, 5.6);
+  ctx.strokeRect(-10, -2.8, 15, 5.6);
+  // cinta gris
+  ctx.fillStyle = '#c9c4b4';
+  ctx.fillRect(-6, -3.1, 2.6, 6.2);
+  ctx.fillRect(0, -3.1, 2.6, 6.2);
+  // punta roja chueca
+  ctx.fillStyle = '#b8402c';
+  ctx.beginPath();
+  ctx.moveTo(5, -3);
+  ctx.lineTo(10.5, 0.6);
+  ctx.lineTo(5, 3);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  // aletas de lata
+  ctx.fillStyle = '#9aa1a8';
+  ctx.beginPath();
+  ctx.moveTo(-10, -2.8);
+  ctx.lineTo(-13, -6);
+  ctx.lineTo(-7, -2.8);
+  ctx.moveTo(-10, 2.8);
+  ctx.lineTo(-12, 5.5);
+  ctx.lineTo(-7, 2.8);
+  ctx.fill();
 }

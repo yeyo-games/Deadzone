@@ -532,6 +532,7 @@ export class ServerSim {
         if (!THROWABLES.includes(a.kind) || s.inv[a.kind] <= 0) return;
         s.inv[a.kind]--;
         if (a.kind === 'molotov') this.structures.throwMolotov(g, a.tx, a.ty, s.id);
+        else if (a.kind === 'improv') this.structures.launchImprov(g, a.tx, a.ty, s.id);
         else this.structures.throwGrenade(g, a.tx, a.ty, s.id);
       } else if (a.k === 'robot') this.toggleRobot(s);
       else if (a.k === 'ab') {
@@ -825,7 +826,8 @@ export class ServerSim {
         robots: [...this.slots.values()].map((q) => ({ idx: q.idx, r: q.robot })),
         // lo que disparó él ya lo vio en su pantalla; las torretas se repiten como efecto
         // las del piloto automático de su torreta no las predijo: también le llegan
-        skipBullet: (b: any) => (b.owner === id && !b.auto) || !!b.turret || !!b.atgm || !!b.flame,
+        // el misil improvisado lo lanza el servidor: también lo ve quien lo lanzó
+        skipBullet: (b: any) => (b.owner === id && !b.auto && !b.improv) || !!b.turret || !!b.atgm || !!b.flame,
       },
     );
     const st = this.structures;

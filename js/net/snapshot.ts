@@ -169,7 +169,7 @@ export function encodeScene(src: WorldSource, viewer: Viewer, skipBullet: (b: Bu
     ),
     b: src.bullets.list.flatMap((b) =>
       !skipBullet(b) && near(b.x, b.y)
-        ? [Math.round(b.x), Math.round(b.y), r100(b.dx), r100(b.dy), b.rocket ? 1 : 0]
+        ? [Math.round(b.x), Math.round(b.y), r100(b.dx), r100(b.dy), b.improv ? 2 : b.rocket ? 1 : 0]
         : [],
     ),
     gr: st.grenades.flatMap((q) =>

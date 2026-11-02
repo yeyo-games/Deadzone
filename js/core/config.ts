@@ -890,6 +890,12 @@ export const SHOP = {
     price: 60,
     consumable: true,
   },
+  improv: {
+    name: 'Misil improvisado',
+    desc: 'Tubo, pólvora y cinta: sale recto hacia donde apuntas y estalla al primer golpe. De un solo uso.',
+    price: 120,
+    consumable: true,
+  },
 };
 export const BUILD_ORDER = [
   'wood',
@@ -906,7 +912,11 @@ export const BUILD_ORDER = [
   'spikes',
   'mine',
 ];
-export const THROWABLES = ['grenade', 'molotov'];
+export const THROWABLES = ['grenade', 'molotov', 'improv'];
+// Misil improvisado (SHOP.improv): vuela recto (cabeceando más que el cohete de la bazuca) hasta
+// range px y estalla en el primer zombi o pared que toca, un poco más fuerte que una granada
+// (radio 140, daño 330) y con la mitad del área del cohete.
+export const IMPROV = { speed: 640, range: 650, radius: 160, power: 420, wobble: 1.8 };
 export const SHOP_ORDER = [...BUILD_ORDER, ...THROWABLES];
 // Vender un arma devuelve esta fracción de su precio.
 export const SELL_RATE = 0.5;

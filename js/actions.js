@@ -107,7 +107,13 @@ export function cycleBuild(game) {
 
 export function tryGrenade(game, kind = 'grenade') {
   if (game.inv[kind] <= 0) {
-    game.toast(kind === 'molotov' ? 'Sin molotovs: cómpralos en la tienda' : 'Sin granadas: cómpralas en la tienda');
+    game.toast(
+      kind === 'molotov'
+        ? 'Sin molotovs: cómpralos en la tienda'
+        : kind === 'improv'
+          ? 'Sin misiles improvisados: cómpralos en la tienda'
+          : 'Sin granadas: cómpralas en la tienda',
+    );
     return;
   }
   const p = game.player;
@@ -128,6 +134,7 @@ export function tryGrenade(game, kind = 'grenade') {
   // en línea la lanza el servidor; la cuenta se corrige con su siguiente foto
   if (game.mode.sendThrow(kind, tx, ty)) return;
   if (kind === 'molotov') game.structures.throwMolotov(game, tx, ty);
+  else if (kind === 'improv') game.structures.launchImprov(game, tx, ty);
   else game.structures.throwGrenade(game, tx, ty);
 }
 

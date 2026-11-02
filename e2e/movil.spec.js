@@ -15,7 +15,14 @@ test.describe('móvil táctil', () => {
     await jugarSolo(page);
     expect(await page.evaluate(() => window.__deadzone.input.mode)).toBe('touch');
     await expect(page.locator('#btn-fire')).toBeVisible();
-    await expect(page.locator('#btn-run')).toBeVisible();
+    await expect(page.locator('#btn-swap')).toBeVisible();
+    // botones simplificados: no hay botón de correr, y los lanzables sólo salen si los tienes
+    await expect(page.locator('#btn-run')).toHaveCount(0);
+    await expect(page.locator('#btn-grenade')).toBeHidden();
+    await page.evaluate(() => {
+      window.__deadzone.inv.improv = 2;
+    });
+    await expect(page.locator('#btn-improv')).toBeVisible();
     await expect(page.locator('#btn-reload')).toBeVisible();
 
     const mag = () => page.evaluate(() => window.__deadzone.player.weapon.mag);

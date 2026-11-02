@@ -192,6 +192,8 @@ export function updateHud(game, force) {
     '|' +
     inv.molotov +
     '|' +
+    inv.improv +
+    '|' +
     game.buildSel +
     '|' +
     game.money;
@@ -202,6 +204,8 @@ export function updateHud(game, force) {
       `<span class="it gren${inv.grenade ? '' : ' zero'}" title="Granadas">${ITEM_ICONS.grenade}<b>${inv.grenade}</b></span>`,
       `<span class="it gren${inv.molotov ? '' : ' zero'}" title="Molotovs">${ITEM_ICONS.molotov}<b>${inv.molotov}</b></span>`,
     ];
+    if (inv.improv)
+      items.push(`<span class="it gren" title="Misiles improvisados">${ITEM_ICONS.improv}<b>${inv.improv}</b></span>`);
     for (const k of BUILD_ORDER) {
       if (!inv[k]) continue;
       const cls = `it${k === game.buildSel ? ' on' : ''}`;
@@ -212,11 +216,14 @@ export function updateHud(game, force) {
     items.push(`<span class="it money" title="Dinero">$<b id="money">${game.money}</b></span>`);
     $('inv').innerHTML = items.join('');
     $('build-count').textContent = inv[game.buildSel] > 0 ? inv[game.buildSel] : '0';
-    $('btn-build').classList.toggle('off', !BUILD_ORDER.some((k) => inv[k] > 0));
+    // en el celular sólo se ven los botones de lo que tienes
+    $('btn-build').classList.toggle('gone', !BUILD_ORDER.some((k) => inv[k] > 0));
     $('gren-count').textContent = inv.grenade;
-    $('btn-grenade').classList.toggle('off', inv.grenade <= 0);
+    $('btn-grenade').classList.toggle('gone', inv.grenade <= 0);
     $('molo-count').textContent = inv.molotov;
-    $('btn-molotov').classList.toggle('off', inv.molotov <= 0);
+    $('btn-molotov').classList.toggle('gone', inv.molotov <= 0);
+    $('improv-count').textContent = inv.improv;
+    $('btn-improv').classList.toggle('gone', inv.improv <= 0);
   }
   const sig = p.manned ? p.manned.kind : p.weapons.map((x) => x.id).join() + '|' + p.wi;
   if (game.cache.slots !== sig) {

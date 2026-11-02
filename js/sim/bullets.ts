@@ -1,4 +1,4 @@
-import { WEAPONS } from '../core/config.ts';
+import { IMPROV, WEAPONS } from '../core/config.ts';
 import { rand, segCircleT } from '../core/util.ts';
 import type { Bullet, GameHost, Zombie } from '../core/types.d.ts';
 
@@ -51,8 +51,9 @@ export class Bullets {
     const grid = game.horde.grid;
     for (let i = list.length - 1; i >= 0; i--) {
       const b = list[i];
-      if (b.rocket) {
-        // el cohete cabecea y se tambalea en el aire, sin perder del todo el rumbo
+      if (b.rocket || b.improv) {
+        // el cohete cabecea y se tambalea en el aire, sin perder del todo el rumbo (el improvisado, más)
+        const wb = b.improv ? IMPROV.wobble : 1;
         if (b.base === undefined) {
           b.base = Math.atan2(b.dy, b.dx);
           b.ph = Math.random() * 10;
@@ -60,8 +61,9 @@ export class Bullets {
           b.age = 0;
         }
         b.age += dt;
-        b.drift = Math.max(-0.09, Math.min(0.09, b.drift + (Math.random() - 0.5) * dt * 1.6));
-        const a = b.base + b.drift + Math.sin(b.age * 17 + b.ph) * 0.09 + Math.sin(b.age * 7.3 + b.ph * 2) * 0.05;
+        b.drift = Math.max(-0.09 * wb, Math.min(0.09 * wb, b.drift + (Math.random() - 0.5) * dt * 1.6 * wb));
+        const a =
+          b.base + b.drift + (Math.sin(b.age * 17 + b.ph) * 0.09 + Math.sin(b.age * 7.3 + b.ph * 2) * 0.05) * wb;
         b.dx = Math.cos(a);
         b.dy = Math.sin(a);
         game.particles.rocketTrail(b.x, b.y, b.dx, b.dy);
@@ -114,6 +116,15 @@ export class Bullets {
           // misil antitanque: estalla en el primero que toca
           b.exploded = true;
           if (!b.fake) game.structures.missileBlast(game, hx, hy, b.owner);
+          dead = true;
+          wall = false;
+          endT = bt;
+          break;
+        }
+        if (b.improv) {
+          // misil improvisado: estalla en el primero que toca (no se clava como el cohete)
+          b.exploded = true;
+          game.structures.improvBlast(game, hx, hy, b.owner);
           dead = true;
           wall = false;
           endT = bt;
@@ -190,6 +201,9 @@ export class Bullets {
       if (b.atgm && !b.exploded && (wall || b.life <= 0)) {
         b.exploded = true;
         if (!b.fake) game.structures.missileBlast(game, b.x - b.dx * 4, b.y - b.dy * 4, b.owner);
+      } else if (b.improv && !b.exploded && (wall || b.life <= 0)) {
+        b.exploded = true;
+        game.structures.improvBlast(game, b.x - b.dx * 4, b.y - b.dy * 4, b.owner);
       } else if (b.rocket && !b.exploded && (wall || b.life <= 0))
         game.rocketBlast(b.x - b.dx * 4, b.y - b.dy * 4, b.owner);
       else if (b.blast && wall) game.heavyBlast(b.x - b.dx * 4, b.y - b.dy * 4, b.owner, b.blastR, b.blastP);

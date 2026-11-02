@@ -438,7 +438,9 @@ export class Remote {
         y: b[i + 1],
         dx: b[i + 2] / 100,
         dy: b[i + 3] / 100,
+        // 1 cohete de bazuca, 2 misil improvisado (vuelan igual de rápido)
         rocket: !!b[i + 4],
+        improv: b[i + 4] === 2,
         trail: 22,
         age: 0,
       });
