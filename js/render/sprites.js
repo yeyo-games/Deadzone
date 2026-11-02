@@ -1,6 +1,6 @@
 // Todo el arte se genera por código: texturas del suelo, zombis, árboles,
 // vehículos y el superviviente. Nada de recursos externos.
-import { ZOMBIE_VARIANTS } from '../core/config.ts';
+import { LOOK_SLOT_ORDER, LOOK_SLOTS, ZOMBIE_VARIANTS } from '../core/config.ts';
 import { TAU, makeCanvas, mulberry32, rrange, rpick, roundRect, shade } from '../core/util.ts';
 
 export const OUT = '#141612';
@@ -13,7 +13,7 @@ export const OUT = '#141612';
 /** @typedef {{ [K in ZType]: (g: Ctx, r: number, p: PalOf[K], ph: number) => void }} Drawers */
 /** @typedef {{ frames: HTMLCanvasElement[], flash: HTMLCanvasElement[], dead: HTMLCanvasElement, burnt: HTMLCanvasElement, size: number, half: number }} ZSet */
 /** @typedef {{ id: string, name: string, colors: string[] }} LookPart */
-/** @typedef {{ [part: string]: string, skin: string, hair: string, scarf: string, jacket: string, pants: string, pack: string, hat: string }} Look */
+/** @typedef {{ [part: string]: string, skin: string, hair: string, scarf: string, jacket: string, pants: string, pack: string, hat: string, suit: string, face: string, back: string, aura: string }} Look */
 /** @typedef {import('../sim/player.ts').Player} Player */
 /** @typedef {(g: Ctx, r: number, p?: Player) => void} GunDraw */
 
@@ -1296,41 +1296,46 @@ export function drawGunIcon(g, id) {
 // Partes que el jugador puede recolorear; el primer color de cada lista es el original.
 /** @type {LookPart[]} */
 export const LOOK_PARTS = [
-  { id: 'skin', name: 'Piel', colors: ['#c7a184', '#e8c4a2', '#a87b5a', '#8a5a3c', '#5e3b26', '#3f281b'] },
+  {
+    id: 'skin',
+    name: 'Piel',
+    colors: ['#c7a184', '#e8c4a2', '#a87b5a', '#8a5a3c', '#5e3b26', '#3f281b', '#7a9a5a', '#9aa6b8'],
+  },
   {
     id: 'hair',
     name: 'Pelo',
-    colors: ['#2d2219', '#0f0d0c', '#6b4424', '#b0793d', '#d9c27a', '#9a9a96', '#b8392e', '#3e6bb0'],
+    colors: ['#2d2219', '#0f0d0c', '#6b4424', '#b0793d', '#d9c27a', '#9a9a96', '#b8392e', '#3e6bb0', '#d85aa8', '#4fbf6a'],
   },
   {
     id: 'scarf',
     name: 'Pañuelo',
-    colors: ['#8c3b2e', '#2f3a32', '#3f566b', '#c99a2e', '#d8d2c4', '#1c1c1c', '#7a3f8c', '#d06a2a'],
+    colors: ['#8c3b2e', '#2f3a32', '#3f566b', '#c99a2e', '#d8d2c4', '#1c1c1c', '#7a3f8c', '#d06a2a', '#2fa8a0', '#e04060'],
   },
   {
     id: 'jacket',
     name: 'Chaqueta',
-    colors: ['#6b4f3a', '#4c5236', '#3f566b', '#2c2c2e', '#7d2f2a', '#8a7a5a', '#5b6b7a', '#c75f43'],
+    colors: ['#6b4f3a', '#4c5236', '#3f566b', '#2c2c2e', '#7d2f2a', '#8a7a5a', '#5b6b7a', '#c75f43', '#d8d2c4', '#3a6b4c', '#6a3a7a'],
   },
-  { id: 'pants', name: 'Pantalón', colors: ['#2c3038', '#3c412a', '#4a3a2c', '#1a1a1c', '#596270', '#6b5a44'] },
-  { id: 'pack', name: 'Mochila', colors: ['#4c5236', '#6b4f3a', '#2c2c2e', '#3f566b', '#7d2f2a', '#8a6a3a'] },
+  {
+    id: 'pants',
+    name: 'Pantalón',
+    colors: ['#2c3038', '#3c412a', '#4a3a2c', '#1a1a1c', '#596270', '#6b5a44', '#2e4a6b', '#7a2a2a'],
+  },
+  {
+    id: 'pack',
+    name: 'Mochila / capa',
+    colors: ['#4c5236', '#6b4f3a', '#2c2c2e', '#3f566b', '#7d2f2a', '#8a6a3a', '#b8392e', '#d8d2c4'],
+  },
 ];
-// Sombreros: el primero es ninguno. Se dibujan encima de la cabeza (drawHat).
-export const HATS = [
-  { id: 'none', name: 'Nada' },
-  { id: 'cap', name: 'Gorra' },
-  { id: 'cowboy', name: 'Vaquero' },
-  { id: 'beanie', name: 'Gorro' },
-  { id: 'helmet', name: 'Casco' },
-];
-const HAT_IDS = HATS.map((h) => h.id);
+// Sombreros, trajes, cara, espalda y efecto (ver LOOK_SLOTS en config: nombres y latas).
+export const HATS = LOOK_SLOTS.hat;
 /** @type {Look} */
 export const DEFAULT_LOOK = /** @type {Look} */ ({
   ...Object.fromEntries(LOOK_PARTS.map((q) => [q.id, q.colors[0]])),
-  hat: 'none',
+  ...Object.fromEntries(LOOK_SLOT_ORDER.map((k) => [k, LOOK_SLOTS[k][0].id])),
 });
 
-// Acepta sólo colores y sombreros de las listas (llega también de la red en cooperativo).
+// Acepta sólo colores y piezas de las listas (llega también guardado y de la red).
 /** @param {Partial<Look> | null | undefined} o @returns {Look} */
 export function cleanLook(o) {
   const out = /** @type {Record<string, string>} */ ({});
@@ -1338,32 +1343,41 @@ export function cleanLook(o) {
     const c = o?.[q.id];
     out[q.id] = c !== undefined && q.colors.includes(c) ? c : q.colors[0];
   }
-  out.hat = o?.hat !== undefined && HAT_IDS.includes(o.hat) ? o.hat : 'none';
+  for (const k of LOOK_SLOT_ORDER) {
+    const v = o?.[k];
+    out[k] = v !== undefined && LOOK_SLOTS[k].some((i) => i.id === v) ? v : LOOK_SLOTS[k][0].id;
+  }
   return /** @type {Look} */ (out);
 }
 
-// En línea viaja como código corto: un dígito por parte (índice del color en su lista)
-// y al final el del sombrero (los códigos viejos sin él quedan sin sombrero).
+// En línea viaja como código corto: un carácter en base 36 por parte (índice del color en su lista)
+// y luego uno por ranura (sombrero, traje, cara, espalda, efecto). Los códigos viejos, más cortos,
+// quedan con lo de fábrica en lo que les falta.
 /** @param {Partial<Look> | null | undefined} look */
 export function lookCode(look) {
+  const ix = (/** @type {number} */ i) => Math.max(0, i).toString(36);
   return (
-    LOOK_PARTS.map((q) => Math.max(0, q.colors.indexOf((look && look[q.id]) ?? ''))).join('') +
-    Math.max(0, HAT_IDS.indexOf((look && look.hat) ?? ''))
+    LOOK_PARTS.map((q) => ix(q.colors.indexOf((look && look[q.id]) ?? ''))).join('') +
+    LOOK_SLOT_ORDER.map((k) => ix(LOOK_SLOTS[k].findIndex((i) => i.id === (look && look[k])))).join('')
   );
 }
 /** @param {string} code @returns {Look} */
 export function lookFromCode(code) {
   const s = typeof code === 'string' ? code : '';
-  const out = /** @type {Look} */ (
-    Object.fromEntries(LOOK_PARTS.map((q, i) => [q.id, q.colors[Number(s[i])] || q.colors[0]]))
-  );
-  out.hat = HAT_IDS[Number(s[LOOK_PARTS.length])] || 'none';
-  return out;
+  const at = (/** @type {number} */ i) => (s[i] ? Number.parseInt(s[i], 36) : 0);
+  const out = /** @type {Record<string, string>} */ ({});
+  LOOK_PARTS.forEach((q, i) => {
+    out[q.id] = q.colors[at(i)] || q.colors[0];
+  });
+  LOOK_SLOT_ORDER.forEach((k, j) => {
+    out[k] = (LOOK_SLOTS[k][at(LOOK_PARTS.length + j)] || LOOK_SLOTS[k][0]).id;
+  });
+  return /** @type {Look} */ (out);
 }
 
 // Vista cenital: la cabeza mira hacia +x, centrada en (r*0.02, 0) con radio r*0.44.
-/** @param {Ctx} g @param {string} id @param {number} r */
-function drawHat(g, id, r) {
+/** @param {Ctx} g @param {string} id @param {number} r @param {string} [color] @param {number} [time] */
+function drawHat(g, id, r, color = '#6b4f3a', time = 0) {
   const x = r * 0.02;
   if (id === 'cap') {
     // visera hacia delante, copa con costuras y botón
@@ -1433,16 +1447,470 @@ function drawHat(g, id, r) {
     g.beginPath();
     g.ellipse(x + r * 0.12, -r * 0.14, r * 0.16, r * 0.09, -0.6, 0, TAU);
     g.fill();
+  } else if (id === 'bandana') {
+    // cinta roja alrededor de la frente y las puntas del nudo atrás
+    g.strokeStyle = '#b8392e';
+    g.lineWidth = r * 0.16;
+    g.beginPath();
+    g.arc(x, 0, r * 0.4, 0, TAU);
+    g.stroke();
+    g.fillStyle = '#b8392e';
+    g.beginPath();
+    g.moveTo(x - r * 0.4, -r * 0.05);
+    g.lineTo(x - r * 0.78, -r * 0.2);
+    g.lineTo(x - r * 0.72, r * 0.02);
+    g.lineTo(x - r * 0.8, r * 0.22);
+    g.lineTo(x - r * 0.4, r * 0.06);
+    g.fill();
+  } else if (id === 'hood') {
+    // capucha del color de la chaqueta, abierta hacia delante
+    circ(g, x - r * 0.06, 0, r * 0.52, color);
+    g.fillStyle = shade(color, 0.7);
+    g.beginPath();
+    g.ellipse(x + r * 0.12, 0, r * 0.3, r * 0.34, 0, -Math.PI / 2, Math.PI / 2);
+    g.fill();
+  } else if (id === 'tophat') {
+    // ala negra, copa alta con cinta roja
+    circ(g, x, 0, r * 0.62, '#18181a');
+    circ(g, x, 0, r * 0.4, '#232326');
+    g.strokeStyle = '#a8302a';
+    g.lineWidth = r * 0.1;
+    g.beginPath();
+    g.arc(x, 0, r * 0.4, 0, TAU);
+    g.stroke();
+    g.fillStyle = 'rgba(255,255,255,0.14)';
+    g.beginPath();
+    g.ellipse(x + r * 0.1, -r * 0.14, r * 0.14, r * 0.07, -0.6, 0, TAU);
+    g.fill();
+  } else if (id === 'viking') {
+    // casco de hierro con remaches y dos cuernos a los lados
+    for (const sgn of [-1, 1]) {
+      g.fillStyle = '#e8dcc0';
+      g.strokeStyle = OUT;
+      g.lineWidth = 1.2;
+      g.beginPath();
+      g.moveTo(x - r * 0.05, sgn * r * 0.36);
+      g.quadraticCurveTo(x + r * 0.1, sgn * r * 0.95, x + r * 0.5, sgn * r * 0.98);
+      g.quadraticCurveTo(x + r * 0.1, sgn * r * 0.72, x + r * 0.15, sgn * r * 0.36);
+      g.closePath();
+      g.fill();
+      g.stroke();
+    }
+    circ(g, x, 0, r * 0.48, '#7c8288');
+    g.strokeStyle = '#5a5f64';
+    g.lineWidth = r * 0.1;
+    g.beginPath();
+    g.moveTo(x - r * 0.45, 0);
+    g.lineTo(x + r * 0.45, 0);
+    g.stroke();
+    for (const a of [0.6, 2.2, 3.8, 5.4]) circ(g, x + Math.cos(a) * r * 0.36, Math.sin(a) * r * 0.36, r * 0.05, '#c9c4b4', null);
+  } else if (id === 'samurai') {
+    // kabuto laqueado: placas del cuello, casco rojo oscuro y media luna dorada al frente
+    ell(g, x - r * 0.18, 0, r * 0.5, r * 0.66, 0, '#2a1a1a');
+    g.strokeStyle = '#4a2222';
+    g.lineWidth = 1;
+    g.beginPath();
+    for (const k of [0.3, 0.45, 0.6]) {
+      g.moveTo(x - r * 0.18 + Math.cos(Math.PI * 0.6) * r * k, Math.sin(Math.PI * 0.6) * r * k);
+      g.arc(x - r * 0.18, 0, r * k, Math.PI * 0.6, Math.PI * 1.4);
+    }
+    g.stroke();
+    circ(g, x, 0, r * 0.46, '#7a1e1e');
+    circ(g, x, 0, r * 0.18, '#5a1414', null);
+    g.fillStyle = '#e0b84a';
+    g.strokeStyle = OUT;
+    g.lineWidth = 1;
+    g.beginPath();
+    g.moveTo(x + r * 0.3, 0);
+    g.quadraticCurveTo(x + r * 0.95, -r * 0.2, x + r * 0.7, -r * 0.62);
+    g.quadraticCurveTo(x + r * 0.7, -r * 0.18, x + r * 0.42, 0);
+    g.quadraticCurveTo(x + r * 0.7, r * 0.18, x + r * 0.7, r * 0.62);
+    g.quadraticCurveTo(x + r * 0.95, r * 0.2, x + r * 0.3, 0);
+    g.fill();
+    g.stroke();
+  } else if (id === 'crown') {
+    // corona de oro con picos, gemas y un destello que recorre el borde
+    g.fillStyle = '#e0b84a';
+    g.strokeStyle = OUT;
+    g.lineWidth = 1.2;
+    g.beginPath();
+    for (let i = 0; i <= 10; i++) {
+      const a = (i / 10) * TAU;
+      const rr = i % 2 ? r * 0.56 : r * 0.38;
+      g.lineTo(x + Math.cos(a) * rr, Math.sin(a) * rr);
+    }
+    g.closePath();
+    g.fill();
+    g.stroke();
+    circ(g, x, 0, r * 0.32, '#c99a2e', null);
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 5) * TAU + TAU / 10;
+      circ(g, x + Math.cos(a) * r * 0.5, Math.sin(a) * r * 0.5, r * 0.07, ['#c8443a', '#3e8ad6', '#4fbf6a'][i % 3], null);
+    }
+    const sh = (time * 1.5) % TAU;
+    g.fillStyle = 'rgba(255,255,230,0.75)';
+    g.beginPath();
+    g.arc(x + Math.cos(sh) * r * 0.4, Math.sin(sh) * r * 0.4, r * 0.06, 0, TAU);
+    g.fill();
   }
+}
+
+// Lo que va en la cara (al frente de la cabeza, hacia +x).
+/** @param {Ctx} g @param {string} id @param {number} r @param {number} time */
+function drawFace(g, id, r, time) {
+  const x = r * 0.02;
+  if (id === 'glasses') {
+    g.fillStyle = '#111';
+    for (const sgn of [-1, 1]) {
+      g.beginPath();
+      g.ellipse(x + r * 0.34, sgn * r * 0.15, r * 0.09, r * 0.12, 0, 0, TAU);
+      g.fill();
+    }
+    g.strokeStyle = '#111';
+    g.lineWidth = 1.4;
+    g.beginPath();
+    g.moveTo(x + r * 0.36, -r * 0.05);
+    g.lineTo(x + r * 0.36, r * 0.05);
+    g.moveTo(x + r * 0.3, -r * 0.27);
+    g.lineTo(x - r * 0.1, -r * 0.4);
+    g.moveTo(x + r * 0.3, r * 0.27);
+    g.lineTo(x - r * 0.1, r * 0.4);
+    g.stroke();
+    g.fillStyle = 'rgba(255,255,255,0.35)';
+    g.fillRect(x + r * 0.33, -r * 0.2, r * 0.04, r * 0.06);
+  } else if (id === 'gasmask') {
+    // careta gris, ojos redondos y el filtro al frente
+    g.fillStyle = '#4a4f48';
+    g.strokeStyle = OUT;
+    g.lineWidth = 1.2;
+    g.beginPath();
+    g.arc(x, 0, r * 0.46, -1.1, 1.1);
+    g.closePath();
+    g.fill();
+    g.stroke();
+    for (const sgn of [-1, 1]) circ(g, x + r * 0.28, sgn * r * 0.19, r * 0.1, '#9fb8a8', OUT, 1);
+    ell(g, x + r * 0.5, 0, r * 0.14, r * 0.16, 0, '#2c2f2c');
+    g.strokeStyle = '#6a6f68';
+    g.lineWidth = 1;
+    g.beginPath();
+    g.moveTo(x + r * 0.5, -r * 0.1);
+    g.lineTo(x + r * 0.5, r * 0.1);
+    g.stroke();
+  } else if (id === 'hockey') {
+    // máscara blanca con agujeros y marcas rojas
+    g.fillStyle = '#ece6d6';
+    g.strokeStyle = OUT;
+    g.lineWidth = 1.2;
+    g.beginPath();
+    g.arc(x, 0, r * 0.47, -1.25, 1.25);
+    g.closePath();
+    g.fill();
+    g.stroke();
+    for (const [dx, dy] of [
+      [0.3, -0.18],
+      [0.3, 0.18],
+      [0.18, -0.06],
+      [0.18, 0.06],
+      [0.4, 0],
+    ])
+      circ(g, x + dx * r, dy * r, r * 0.04, '#1a1a1a', null);
+    g.strokeStyle = '#c8443a';
+    g.lineWidth = 1.4;
+    g.beginPath();
+    g.moveTo(x + r * 0.15, -r * 0.32);
+    g.lineTo(x + r * 0.32, -r * 0.26);
+    g.moveTo(x + r * 0.15, r * 0.32);
+    g.lineTo(x + r * 0.32, r * 0.26);
+    g.stroke();
+  } else if (id === 'nvg') {
+    // visor nocturno: dos tubos hacia delante con brillo verde
+    g.fillStyle = '#2a2d2a';
+    g.fillRect(x + r * 0.1, -r * 0.3, r * 0.16, r * 0.6);
+    for (const sgn of [-1, 1]) {
+      g.fillStyle = '#3a3e3a';
+      g.strokeStyle = OUT;
+      g.lineWidth = 1;
+      g.fillRect(x + r * 0.22, sgn * r * 0.16 - r * 0.08, r * 0.34, r * 0.16);
+      g.strokeRect(x + r * 0.22, sgn * r * 0.16 - r * 0.08, r * 0.34, r * 0.16);
+      g.save();
+      g.globalCompositeOperation = 'lighter';
+      circ(g, x + r * 0.58, sgn * r * 0.16, r * 0.08, `rgba(110,255,120,${0.65 + 0.25 * Math.sin(time * 6)})`, null);
+      g.restore();
+    }
+  } else if (id === 'cyber') {
+    // banda luminosa cian que rodea la frente y parpadea
+    g.save();
+    g.globalCompositeOperation = 'lighter';
+    const pulse = 0.6 + 0.3 * Math.sin(time * 5);
+    g.strokeStyle = `rgba(80,230,255,${pulse * 0.35})`;
+    g.lineWidth = r * 0.24;
+    g.beginPath();
+    g.arc(x, 0, r * 0.38, -1.1, 1.1);
+    g.stroke();
+    g.strokeStyle = `rgba(170,250,255,${pulse})`;
+    g.lineWidth = r * 0.09;
+    g.stroke();
+    g.restore();
+  }
+}
+
+// Lo que va a la espalda (hacia -x), en lugar de la mochila. color: el de la mochila (también la capa).
+/** @param {Ctx} g @param {string} id @param {number} r @param {string} color @param {Player} p @param {number} time */
+function drawBack(g, id, r, color, p, time) {
+  const moving = p.speedNow > 8;
+  if (id === 'katana') {
+    // vaina negra cruzada a la espalda, con empuñadura trenzada y guarda dorada
+    g.save();
+    g.translate(-r * 0.3, 0);
+    g.rotate(-1.05);
+    g.fillStyle = '#16161a';
+    g.strokeStyle = OUT;
+    g.lineWidth = 1.2;
+    g.fillRect(-r * 1.15, -r * 0.1, r * 1.55, r * 0.2);
+    g.strokeRect(-r * 1.15, -r * 0.1, r * 1.55, r * 0.2);
+    g.fillStyle = '#8a2a22';
+    g.fillRect(-r * 1.15, -r * 0.1, r * 0.18, r * 0.2);
+    g.fillStyle = '#c99a2e';
+    g.fillRect(r * 0.4, -r * 0.2, r * 0.08, r * 0.4);
+    g.fillStyle = '#d8d2c4';
+    g.fillRect(r * 0.48, -r * 0.08, r * 0.55, r * 0.16);
+    g.strokeStyle = '#2a2a2e';
+    g.lineWidth = 1;
+    g.beginPath();
+    for (let i = 0; i < 5; i++) {
+      g.moveTo(r * (0.52 + i * 0.1), -r * 0.08);
+      g.lineTo(r * (0.57 + i * 0.1), r * 0.08);
+    }
+    g.stroke();
+    g.restore();
+  } else if (id === 'cape') {
+    // capa que ondea hacia atrás (más larga y rápida al correr)
+    const len = r * (moving ? 1.7 : 1.25);
+    const w = Math.sin(time * (moving ? 12 : 4)) * r * 0.12;
+    g.fillStyle = color;
+    g.strokeStyle = OUT;
+    g.lineWidth = 1.4;
+    g.beginPath();
+    g.moveTo(-r * 0.2, -r * 0.62);
+    g.quadraticCurveTo(-r * 0.2 - len * 0.6, -r * 0.8 + w, -r * 0.2 - len, -r * 0.7 - w);
+    g.lineTo(-r * 0.3 - len, r * 0.7 + w);
+    g.quadraticCurveTo(-r * 0.2 - len * 0.6, r * 0.8 - w, -r * 0.2, r * 0.62);
+    g.closePath();
+    g.fill();
+    g.stroke();
+    g.strokeStyle = shade(color, 0.7);
+    g.lineWidth = 1.2;
+    g.beginPath();
+    g.moveTo(-r * 0.5, -r * 0.2);
+    g.lineTo(-r * 0.2 - len * 0.9, -r * 0.25 + w);
+    g.moveTo(-r * 0.5, r * 0.2);
+    g.lineTo(-r * 0.2 - len * 0.9, r * 0.25 - w);
+    g.stroke();
+  } else if (id === 'jetpack') {
+    // dos tanques metálicos; las toberas escupen fuego (más al moverse)
+    for (const sgn of [-1, 1]) {
+      const f = (moving ? 1 : 0.45) * (0.8 + Math.random() * 0.4);
+      g.save();
+      g.globalCompositeOperation = 'lighter';
+      ell(g, -r * 1.25 - f * r * 0.3, sgn * r * 0.3, r * 0.38 * f + r * 0.08, r * 0.12, 0, 'rgba(255,150,50,0.75)', null);
+      ell(g, -r * 1.12, sgn * r * 0.3, r * 0.14, r * 0.08, 0, 'rgba(255,240,190,0.9)', null);
+      g.restore();
+      roundRect(g, -r * 1.1, sgn * r * 0.3 - r * 0.2, r * 0.8, r * 0.4, 4);
+      g.fillStyle = '#8a9096';
+      g.fill();
+      g.lineWidth = 1.4;
+      g.strokeStyle = OUT;
+      g.stroke();
+      g.fillStyle = '#c8443a';
+      g.fillRect(-r * 0.75, sgn * r * 0.3 - r * 0.2, r * 0.08, r * 0.4);
+    }
+  } else if (id === 'wings') {
+    // alas de plumas que se abren a los lados y aletean despacio
+    const flap = Math.sin(time * (moving ? 7 : 2.5)) * 0.14;
+    for (const sgn of [-1, 1]) {
+      g.save();
+      g.rotate(sgn * flap);
+      for (let i = 0; i < 4; i++) {
+        const k = 1 - i * 0.2;
+        g.fillStyle = i % 2 ? shade('#f2efe6', 0.9) : '#f2efe6';
+        g.strokeStyle = 'rgba(0,0,0,0.35)';
+        g.lineWidth = 1;
+        g.beginPath();
+        g.ellipse(-r * (0.5 + i * 0.12), sgn * r * (0.75 + i * 0.12), r * 0.75 * k, r * 0.22, sgn * (0.5 + i * 0.25), 0, TAU);
+        g.fill();
+        g.stroke();
+      }
+      g.restore();
+    }
+  }
+}
+
+// Sombreros de ala: lo de la cara queda debajo.
+const BRIMS = ['cowboy', 'tophat', 'samurai'];
+
+// Los trajes que tapan la ropa cambian el color de la chaqueta, los brazos y el pantalón.
+/** @type {Record<string, { jacket: string, pants: string }>} */
+const SUIT_COLORS = {
+  hazmat: { jacket: '#d8b52a', pants: '#c9a420' },
+  ninja: { jacket: '#1b1b1f', pants: '#141417' },
+  gold: { jacket: '#c99a2e', pants: '#8a6a24' },
+};
+
+// Detalles del traje sobre el torso (después de dibujarlo).
+/** @param {Ctx} g @param {string} id @param {number} r @param {string} jacket @param {number} time */
+function drawSuit(g, id, r, jacket, time) {
+  if (id === 'camo') {
+    g.save();
+    g.beginPath();
+    g.ellipse(-r * 0.05, 0, r * 0.5, r * 0.86, 0, 0, TAU);
+    g.clip();
+    for (const [dx, dy, rr, k] of [
+      [-0.2, -0.55, 0.22, 0.55],
+      [0.15, -0.7, 0.16, 1.45],
+      [-0.25, 0.15, 0.19, 0.6],
+      [0.1, 0.55, 0.22, 1.4],
+      [-0.1, 0.78, 0.15, 0.55],
+      [0.2, -0.35, 0.14, 0.6],
+    ])
+      circ(g, dx * r, dy * r, rr * r, shade(jacket, k), null);
+    g.restore();
+  } else if (id === 'vest') {
+    // chaleco antibalas negro con bolsillos
+    ell(g, -r * 0.05, 0, r * 0.5, r * 0.86, 0, '#2a2c2a');
+    g.fillStyle = '#4a4f42';
+    for (const sgn of [-1, 1]) {
+      g.fillRect(-r * 0.3, sgn * r * 0.62 - r * 0.12, r * 0.4, r * 0.24);
+      g.fillRect(-r * 0.3, sgn * r * 0.62 - r * 0.12, r * 0.4, r * 0.05);
+    }
+    g.strokeStyle = '#4a4f42';
+    g.lineWidth = 1.2;
+    g.beginPath();
+    g.moveTo(-r * 0.5, -r * 0.4);
+    g.lineTo(-r * 0.5, r * 0.4);
+    g.stroke();
+  } else if (id === 'hazmat') {
+    g.strokeStyle = '#2a2a2a';
+    g.lineWidth = 1.4;
+    g.beginPath();
+    g.moveTo(r * 0.1, -r * 0.7);
+    g.lineTo(r * 0.1, r * 0.7);
+    g.stroke();
+    g.fillStyle = '#1c1c1c';
+    g.fillRect(-r * 0.36, -r * 0.12, r * 0.22, r * 0.24);
+  } else if (id === 'ninja') {
+    g.strokeStyle = '#b8392e';
+    g.lineWidth = r * 0.14;
+    g.beginPath();
+    g.moveTo(-r * 0.45, -r * 0.55);
+    g.lineTo(r * 0.3, r * 0.6);
+    g.stroke();
+  } else if (id === 'gold') {
+    // placas de armadura con un brillo que sube y baja
+    g.strokeStyle = shade('#c99a2e', 0.65);
+    g.lineWidth = 1.2;
+    g.beginPath();
+    for (const y of [-0.4, 0, 0.4]) {
+      g.moveTo(-r * 0.45, y * r);
+      g.lineTo(r * 0.4, y * r);
+    }
+    g.stroke();
+    const sy = Math.sin(time * 2) * r * 0.6;
+    g.fillStyle = 'rgba(255,245,200,0.45)';
+    g.beginPath();
+    g.ellipse(r * 0.1, sy, r * 0.12, r * 0.2, 0, 0, TAU);
+    g.fill();
+  }
+}
+
+// Efecto alrededor del jugador (debajo de él, sin girar con la mira).
+/** @param {Ctx} g @param {string} id @param {number} r @param {Player} p @param {number} time */
+function drawAura(g, id, r, p, time) {
+  const moving = p.speedNow > 8;
+  g.save();
+  g.globalCompositeOperation = 'lighter';
+  if (id === 'neon') {
+    // estela rosa y cian detrás al moverse, y un anillo que respira
+    const ba = p.legAngle + Math.PI;
+    if (moving) {
+      for (let i = 1; i <= 5; i++) {
+        g.globalAlpha = 0.3 / i;
+        circ(g, Math.cos(ba) * r * 0.7 * i, Math.sin(ba) * r * 0.7 * i, r * (0.95 - i * 0.1), i % 2 ? '#ff4fd8' : '#4fe8ff', null);
+      }
+    }
+    g.globalAlpha = 0.35 + 0.15 * Math.sin(time * 4);
+    g.strokeStyle = '#ff6ae0';
+    g.lineWidth = 2;
+    g.beginPath();
+    g.arc(0, 0, r * 1.3, 0, TAU);
+    g.stroke();
+  } else if (id === 'sparks') {
+    // rayos cortos que saltan alrededor
+    g.strokeStyle = '#9fe8ff';
+    g.lineWidth = 1.6;
+    for (let i = 0; i < 3; i++) {
+      const a = time * 3 + i * 2.1 + Math.floor(time * 12) * 1.7;
+      let x = Math.cos(a) * r * 1.05;
+      let y = Math.sin(a) * r * 1.05;
+      g.globalAlpha = 0.85;
+      g.beginPath();
+      g.moveTo(x, y);
+      for (let k = 0; k < 3; k++) {
+        x += Math.cos(a + (Math.random() - 0.5) * 2) * r * 0.25;
+        y += Math.sin(a + (Math.random() - 0.5) * 2) * r * 0.25;
+        g.lineTo(x, y);
+      }
+      g.stroke();
+    }
+    g.globalAlpha = 0.18;
+    circ(g, 0, 0, r * 1.25, '#5ab4ff', null);
+  } else if (id === 'flames') {
+    // llamas en los pies, que se alargan hacia atrás al correr
+    const ba = p.legAngle + Math.PI;
+    const len = moving ? 1.7 : 0.8;
+    for (let i = 0; i < 6; i++) {
+      const ph = (time * 3 + i / 6) % 1;
+      const d = ph * r * len;
+      const side = (i % 2 ? 1 : -1) * r * 0.3;
+      const x = Math.cos(ba) * d - Math.sin(ba) * side;
+      const y = Math.sin(ba) * d + Math.cos(ba) * side;
+      g.globalAlpha = (1 - ph) * 0.8;
+      circ(g, x, y, r * (0.48 - ph * 0.28), ph < 0.4 ? '#ffd27a' : '#ff6a20', null);
+    }
+  } else if (id === 'toxic') {
+    // halo verde y burbujas que suben
+    const gr = g.createRadialGradient(0, 0, r * 0.4, 0, 0, r * 1.6);
+    gr.addColorStop(0, 'rgba(120,255,90,0.28)');
+    gr.addColorStop(1, 'rgba(120,255,90,0)');
+    g.fillStyle = gr;
+    g.beginPath();
+    g.arc(0, 0, r * 1.6, 0, TAU);
+    g.fill();
+    g.strokeStyle = '#9dff7a';
+    g.lineWidth = 1.2;
+    for (let i = 0; i < 5; i++) {
+      const ph = (time * 0.6 + i / 5) % 1;
+      const a = i * 1.3;
+      g.globalAlpha = (1 - ph) * 0.8;
+      g.beginPath();
+      g.arc(Math.cos(a) * r * 0.9, Math.sin(a) * r * 0.9 - ph * r * 0.9, r * 0.12 + ph * r * 0.08, 0, TAU);
+      g.stroke();
+    }
+  }
+  g.restore();
 }
 
 /** @param {Ctx} g @param {Player} p @param {number} time */
 export function drawSurvivor(g, p, time) {
   const r = p.r;
   const L = p.look || DEFAULT_LOOK;
+  // los trajes que tapan la ropa cambian sus colores
+  const suit = SUIT_COLORS[L.suit];
+  const J = suit ? suit.jacket : L.jacket;
+  const P = suit ? suit.pants : L.pants;
   g.save();
   g.translate(p.x, p.y);
   softShadow(g, r * 1.5, 0.45);
+  if (L.aura && L.aura !== 'none') drawAura(g, L.aura, r, p, time);
   // Booster: estelas azules detrás y halo de inmunidad
   if (p.boostT > 0) {
     g.globalCompositeOperation = 'lighter';
@@ -1467,8 +1935,8 @@ export function drawSurvivor(g, p, time) {
   const moving = p.speedNow > 8;
   const amp = moving ? (p.running ? 0.75 : 0.5) : 0;
   const s = Math.sin(p.walkPhase) * amp;
-  ell(g, s * r, -r * 0.3, r * 0.38, r * 0.22, 0, L.pants);
-  ell(g, -s * r, r * 0.3, r * 0.38, r * 0.22, 0, L.pants);
+  ell(g, s * r, -r * 0.3, r * 0.38, r * 0.22, 0, P);
+  ell(g, -s * r, r * 0.3, r * 0.38, r * 0.22, 0, P);
   g.fillStyle = '#1a1a1a';
   g.fillRect(s * r + r * 0.18, -r * 0.42, r * 0.2, r * 0.24);
   g.fillRect(-s * r + r * 0.18, r * 0.18, r * 0.2, r * 0.24);
@@ -1477,19 +1945,24 @@ export function drawSurvivor(g, p, time) {
   g.rotate(p.angle);
   const kick = -p.recoil * 3;
   const longGun = p.weapon.id !== 'pistol';
-  // mochila
-  roundRect(g, -r * 1.05, -r * 0.6, r * 0.7, r * 1.2, 4);
-  g.fillStyle = L.pack;
-  g.fill();
-  g.lineWidth = 1.4;
-  g.strokeStyle = OUT;
-  g.stroke();
-  g.fillStyle = shade(L.pack, 0.79);
-  g.fillRect(-r * 0.95, -r * 0.4, r * 0.5, r * 0.25);
+  // mochila (o lo que lleve a la espalda)
+  if (!L.back || L.back === 'pack') {
+    roundRect(g, -r * 1.05, -r * 0.6, r * 0.7, r * 1.2, 4);
+    g.fillStyle = L.pack;
+    g.fill();
+    g.lineWidth = 1.4;
+    g.strokeStyle = OUT;
+    g.stroke();
+    g.fillStyle = shade(L.pack, 0.79);
+    g.fillRect(-r * 0.95, -r * 0.4, r * 0.5, r * 0.25);
+  } else if (L.back !== 'katana') drawBack(g, L.back, r, L.pack, p, time);
   // torso
-  ell(g, -r * 0.05, 0, r * 0.52, r * 0.88, 0, L.jacket);
-  g.fillStyle = shade(L.jacket, 0.84);
+  ell(g, -r * 0.05, 0, r * 0.52, r * 0.88, 0, J);
+  g.fillStyle = shade(J, 0.84);
   g.fillRect(-r * 0.12, -r * 0.7, r * 0.12, r * 1.4);
+  if (L.suit && L.suit !== 'none') drawSuit(g, L.suit, r, J, time);
+  // la katana va cruzada sobre la espalda (se ve encima del torso)
+  if (L.back === 'katana') drawBack(g, L.back, r, L.pack, p, time);
   // arma + brazos
   g.save();
   g.translate(kick, 0);
@@ -1510,13 +1983,13 @@ export function drawSurvivor(g, p, time) {
     }
   } else if (!p.manned) GUNS[p.weapon.id](g, r, p);
   if (longGun || rage) {
-    limb(g, 0, r * 0.62, r * 0.7, r * 0.12, r * 0.28, L.jacket);
-    limb(g, 0, -r * 0.62, r * 1.25, -r * 0.05, r * 0.28, L.jacket);
+    limb(g, 0, r * 0.62, r * 0.7, r * 0.12, r * 0.28, J);
+    limb(g, 0, -r * 0.62, r * 1.25, -r * 0.05, r * 0.28, J);
     circ(g, r * 0.72, r * 0.12, r * 0.17, L.skin, OUT, 1);
     circ(g, r * 1.28, -r * 0.05, r * 0.17, L.skin, OUT, 1);
   } else {
-    limb(g, 0, r * 0.62, r * 0.78, r * 0.08, r * 0.28, L.jacket);
-    limb(g, 0, -r * 0.62, r * 0.78, -r * 0.08, r * 0.28, L.jacket);
+    limb(g, 0, r * 0.62, r * 0.78, r * 0.08, r * 0.28, J);
+    limb(g, 0, -r * 0.62, r * 0.78, -r * 0.08, r * 0.28, J);
     circ(g, r * 0.8, 0, r * 0.2, L.skin, OUT, 1);
   }
   if (p.flashT > 0) {
@@ -1553,7 +2026,12 @@ export function drawSurvivor(g, p, time) {
   g.lineTo(-r * 0.7, 2 + Math.sin(time * 9 + 1) * 2);
   g.closePath();
   g.fill();
-  if (L.hat && L.hat !== 'none') drawHat(g, L.hat, r);
+  // la cara va debajo de los sombreros de ala y encima de los que van pegados a la cabeza
+  const face = L.face && L.face !== 'none';
+  const brim = BRIMS.includes(L.hat);
+  if (face && brim) drawFace(g, L.face, r, time);
+  if (L.hat && L.hat !== 'none') drawHat(g, L.hat, r, J, time);
+  if (face && !brim) drawFace(g, L.face, r, time);
   if (p.hurtT > 0) {
     g.globalAlpha = Math.min(1, p.hurtT * 4) * 0.6;
     circ(g, 0, 0, r * 1.05, '#c8443a', null);

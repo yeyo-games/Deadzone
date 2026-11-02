@@ -821,6 +821,7 @@ export class Online {
     // fin de oleada: tienda y mejoras; si empieza la siguiente con la tienda abierta, se cierra
     if (this.lastDs === 'active' && s.ds === 'waiting') {
       g.shopPending = true;
+      g.earnCans(Number(s.w) || 1);
       g.sfx.level();
     } else if (this.lastDs === 'waiting' && s.ds === 'active') {
       g.shopPending = false;

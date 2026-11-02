@@ -328,7 +328,13 @@
       <div class="panel">
         <p class="kicker">Antes de salir</p>
         <h2>Tu superviviente</h2>
-        <canvas id="look-preview" width="160" height="160" aria-label="Vista previa del personaje"></canvas>
+        <p class="look-cans" id="look-cans"></p>
+        <canvas id="look-preview" width="220" height="220" aria-label="Vista previa del personaje"></canvas>
+        <div class="look-buy" id="look-buy" hidden>
+          <span id="look-buy-name"></span>
+          <button class="btn primary" id="btn-look-buy" type="button"></button>
+        </div>
+        <p class="look-hint">Ganas latas al superar cada oleada (más mientras más lejos llegas).</p>
         <div class="look-parts" id="look-parts"></div>
         <div class="look-actions">
           <button class="btn" id="btn-look-random" type="button">Al azar</button>

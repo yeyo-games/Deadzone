@@ -195,6 +195,15 @@ Cada arma tiene su propio disparo y su recarga (cargador, cerrojo, cartuchos) si
 animación. Hay gruñidos, pasos de la horda, impactos y caídas. La música cambia sola entre **calma**,
 **amenaza** y **horda** según cuántos zombis tengas cerca, con transiciones suaves.
 
+### Personaje y latas
+
+En **Personaje** eliges colores (piel, pelo, pañuelo, chaqueta, pantalón y mochila o capa) y, por pestañas,
+sombrero, traje, cara, espalda y efecto. Al superar cada oleada ganas **latas** (1 en las primeras, 2 desde
+la 5, 3 desde la 10...), que se guardan en tu cuenta. Con ellas compras accesorios: corona, kabuto
+samurái, vikingo, armadura dorada, ninja, visor nocturno o cibernético, capa, katana, jetpack, alas, estela
+de neón, chispas, pies en llamas o aura tóxica. Antes de comprar los puedes probar en la vista previa. En
+línea los demás ven lo que llevas.
+
 ### Controles
 
 En el celular sólo hay a mano disparar, cambiar de arma, recargar y la habilidad. Los botones pequeños

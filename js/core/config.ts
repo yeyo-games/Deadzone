@@ -548,6 +548,60 @@ export const GOLDEN = { rewardMin: 25, rewardMax: 63, life: 26, warnAt: 7, first
 // Racha: bajas seguidas sin dejar pasar window s entre una y otra ni recibir un golpe de zombi.
 // tiers: [bajas, multiplicador] del dinero y la experiencia de cada baja · golden: bajas que suma
 // un dorado · show: desde cuántas bajas se ve el contador.
+// Latas: la moneda de la personalización. Al superar cada oleada ganas base + 1 por cada `every`
+// oleadas (1 en las primeras, 2 desde la 5, 3 desde la 10...). Se guardan en la cuenta.
+export const CANS = { base: 1, every: 5 };
+export const cansForWave = (wave: number) => CANS.base + Math.floor(Math.max(0, wave) / CANS.every);
+
+// Lo que se pone el superviviente, por ranura (el primero de cada lista es el de fábrica). price: latas
+// que cuesta (sin price es gratis). El orden importa: en línea viaja como un carácter por ranura.
+export const LOOK_SLOTS: Record<string, { id: string; name: string; price?: number }[]> = {
+  hat: [
+    { id: 'none', name: 'Nada' },
+    { id: 'cap', name: 'Gorra' },
+    { id: 'cowboy', name: 'Vaquero' },
+    { id: 'beanie', name: 'Gorro' },
+    { id: 'helmet', name: 'Casco' },
+    { id: 'bandana', name: 'Bandana' },
+    { id: 'hood', name: 'Capucha' },
+    { id: 'tophat', name: 'Sombrero de copa', price: 6 },
+    { id: 'viking', name: 'Vikingo', price: 12 },
+    { id: 'samurai', name: 'Kabuto samurái', price: 18 },
+    { id: 'crown', name: 'Corona', price: 30 },
+  ],
+  suit: [
+    { id: 'none', name: 'Normal' },
+    { id: 'camo', name: 'Camuflaje' },
+    { id: 'vest', name: 'Chaleco táctico' },
+    { id: 'hazmat', name: 'Traje hazmat', price: 10 },
+    { id: 'ninja', name: 'Ninja', price: 14 },
+    { id: 'gold', name: 'Armadura dorada', price: 30 },
+  ],
+  face: [
+    { id: 'none', name: 'Nada' },
+    { id: 'glasses', name: 'Gafas de sol', price: 3 },
+    { id: 'gasmask', name: 'Máscara de gas', price: 6 },
+    { id: 'hockey', name: 'Máscara de hockey', price: 8 },
+    { id: 'nvg', name: 'Visor nocturno', price: 12 },
+    { id: 'cyber', name: 'Visor cibernético', price: 20 },
+  ],
+  back: [
+    { id: 'pack', name: 'Mochila' },
+    { id: 'katana', name: 'Katana', price: 8 },
+    { id: 'cape', name: 'Capa', price: 12 },
+    { id: 'jetpack', name: 'Jetpack', price: 20 },
+    { id: 'wings', name: 'Alas', price: 35 },
+  ],
+  aura: [
+    { id: 'none', name: 'Nada' },
+    { id: 'neon', name: 'Estela de neón', price: 15 },
+    { id: 'sparks', name: 'Chispas eléctricas', price: 18 },
+    { id: 'flames', name: 'Pies en llamas', price: 22 },
+    { id: 'toxic', name: 'Aura tóxica', price: 25 },
+  ],
+};
+export const LOOK_SLOT_ORDER = ['hat', 'suit', 'face', 'back', 'aura'];
+
 export const COMBO = {
   window: 2.5,
   golden: 10,

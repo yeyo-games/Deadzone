@@ -178,6 +178,7 @@ export function onWaveCleared(game) {
   recordScore(game);
   // después del récord, para que este aviso sea el que se lee
   game.toast(`¡Oleada superada! +$${bonus}`);
+  game.earnCans(game.director.wave);
   game.analitica.guardar(false);
 }
 

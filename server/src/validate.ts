@@ -14,7 +14,7 @@ export function cleanName(raw: unknown): string | null {
 
 // Colores del personaje: un dígito por parte (índice en LOOK_PARTS de js/render/sprites.js).
 // Si no es válido se usa el aspecto original; no es motivo para rechazar la entrada.
-const LOOK_RE = /^[0-9]{1,8}$/;
+const LOOK_RE = /^[0-9a-z]{1,16}$/;
 export function cleanLookCode(raw: unknown): string {
   return typeof raw === 'string' && LOOK_RE.test(raw) ? raw : '';
 }

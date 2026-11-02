@@ -488,14 +488,46 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .acct-error { min-height: 1.2em; margin: 4px 0; color: #e05a48; font-size: 15px; }
 .acct-known { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; }
 #btn-acct-back { margin-top: 12px; }
-#look-preview { display: block; width: 160px; height: 160px; margin: 0 auto 10px; background: radial-gradient(circle, rgba(255,255,255,0.07), transparent 70%); }
+#look-preview { display: block; width: 180px; height: 180px; margin: 0 auto 10px; background: radial-gradient(circle, rgba(255,255,255,0.07), transparent 70%); }
 .look-parts { display: grid; gap: 8px; text-align: left; margin-bottom: 14px; }
 .look-row { display: grid; grid-template-columns: 78px minmax(0, 1fr); align-items: center; gap: 8px; }
 .look-row > span { font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--dim); }
 .look-sw { display: flex; flex-wrap: wrap; gap: 6px; }
 .look-sw button { width: 28px; height: 28px; border-radius: 50%; border: 2px solid rgba(0,0,0,0.6); box-shadow: 0 0 0 1px var(--line); cursor: pointer; }
 .look-sw button.on { box-shadow: 0 0 0 2px var(--ink); }
-.look-hats button { width: auto; border-radius: 14px; padding: 0 10px; background: rgba(255,255,255,0.06); color: var(--ink); font: inherit; font-size: 12px; font-weight: 700; }
+.look-cans { display: flex; align-items: center; justify-content: center; gap: 6px; margin: -4px 0 6px; font-size: 14px; color: var(--dim); }
+.look-cans b { font-family: var(--display); font-size: 24px; color: var(--ink); }
+svg.can { width: 14px; height: 16px; vertical-align: -3px; }
+.look-cans svg.can { width: 18px; height: 21px; }
+.look-hint { margin: 0 0 10px; font-size: 12px; color: var(--dim); }
+.look-buy { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 10px; }
+.look-buy span { font-size: 13px; font-weight: 700; color: var(--st); }
+.look-buy .btn { display: inline-flex; align-items: center; gap: 6px; }
+.look-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.look-tabs .chip { padding: 5px 11px 3px; color: var(--ink); background: rgba(255, 255, 255, 0.06); border: 1px solid var(--line); font: inherit; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; }
+.look-tabs .chip.on { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
+.look-items { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 6px; }
+.look-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  min-height: 38px;
+  padding: 6px 10px;
+  text-align: left;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--line);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.look-item small { display: inline-flex; align-items: center; gap: 3px; color: var(--st); font-size: 12px; }
+.look-item.locked span { color: var(--dim); }
+.look-item.on { border-color: var(--xp); background: rgba(134, 168, 146, 0.18); }
+.look-item.try { border-color: var(--st); box-shadow: 0 0 8px rgba(199, 162, 74, 0.45); }
+.money-pop.cans { color: #e0806a; }
 .look-actions { display: flex; gap: 8px; margin-bottom: 10px; }
 .look-actions .btn { flex: 1; }
 #btn-look-done { width: 100%; }

@@ -32,7 +32,7 @@ import { setState, pause, resume, stepState, updatePlay, updateMenu, emitFires }
 import { setupMenu, start, bindMenu } from './ui/menu.js';
 import { bindOver, gameOver } from './ui/over.js';
 import { openLevelUp } from './ui/levelup.js';
-import { bindLook } from './ui/look.js';
+import { bindLook, earnCans } from './ui/look.js';
 import { renderClassRows, bindClass } from './ui/class.js';
 import { showOnline, onlineStatus, renderLobby, openInvite, bindLobby } from './ui/lobby.js';
 import { showAccount, bindAccount } from './ui/account.js';
@@ -195,6 +195,7 @@ class Game {
   banner = (title, sub) => banner(this, title, sub);
   updateHud = (force) => updateHud(this, force);
   moneyPop = (text, kind) => moneyPop(this, text, kind);
+  earnCans = (wave) => earnCans(this, wave);
 
   /* ---------- partidas ---------- */
 

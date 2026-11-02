@@ -85,6 +85,11 @@ export class Accounts {
     return this.active ? `${LEGACY_CHECK}:${this.active}` : LEGACY_CHECK;
   }
 
+  // latas y accesorios comprados (ver ui/look.js)
+  cansKey() {
+    return this.active ? `dz-cans:${this.active}` : 'dz-cans';
+  }
+
   persist() {
     storage.set(ACC_KEY, this.list);
     storage.set(ACTIVE_KEY, this.active);

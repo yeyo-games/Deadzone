@@ -4,6 +4,7 @@ import { loadProgress } from '../save.js';
 import { on } from './dom.js';
 import { showClass } from './class.js';
 import { refreshHall } from './board.js';
+import { fitLook } from './look.js';
 
 export function setupMenu(game) {
   game.resetRun();
@@ -21,6 +22,8 @@ export function setupMenu(game) {
     }
   }
   game.setState('menu');
+  // lo que esta cuenta no compró no se lleva puesto
+  fitLook(game);
   const cur = game.accounts.current;
   game.$('acct-name').textContent = cur ? cur.name : 'Sin cuenta';
   game.$('acct-best').textContent =
