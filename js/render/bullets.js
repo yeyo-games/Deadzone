@@ -52,19 +52,30 @@ function drawFlames(ctx, list) {
     if (!b.flame) continue;
     const k = 1 - b.life / (b.life0 || 1);
     const w = Math.sin(b.seed + k * 9) * k * 7;
-    const x = b.x - b.dy * w;
-    const y = b.y + b.dx * w;
-    const r = 3 + k * 16 + Math.random() * 2;
-    const gc = Math.round(235 - k * 175);
-    const bc = Math.round(Math.max(0, 170 - k * 340));
-    ctx.fillStyle = `rgba(255,${gc},${bc},${(0.2 * (1 - k)).toFixed(3)})`;
-    ctx.beginPath();
-    ctx.arc(x, y, r * 1.7, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = `rgba(255,${Math.min(255, gc + 20)},${bc},${(0.6 * (1 - k * 0.85)).toFixed(3)})`;
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fill();
+    const r0 = 6 + k * 17 + Math.random() * 2;
+    const gc = Math.round(210 - k * 150);
+    const bc = Math.round(Math.max(0, 90 - k * 180));
+    // tres lenguas por llamarada, hacia la boquilla, para que el chorro se vea seguido
+    for (let j = 0; j < 3; j++) {
+      const off = j * 11 * (0.5 + k);
+      const x = b.x - b.dx * off - b.dy * w;
+      const y = b.y - b.dy * off + b.dx * w;
+      const r = r0 * (1 - j * 0.22);
+      ctx.fillStyle = `rgba(255,110,25,${(0.16 * (1 - k)).toFixed(3)})`;
+      ctx.beginPath();
+      ctx.arc(x, y, r * 1.8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = `rgba(255,${gc},${bc},${(0.5 * (1 - k * 0.75)).toFixed(3)})`;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+      if (k < 0.4) {
+        ctx.fillStyle = `rgba(255,248,215,${(0.55 * (1 - k / 0.4)).toFixed(3)})`;
+        ctx.beginPath();
+        ctx.arc(x, y, r * 0.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
   }
   ctx.restore();
 }
