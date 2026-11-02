@@ -52,8 +52,8 @@ export function render(game) {
   game.decals.draw(ctx, v);
   drawBlocks(ctx, game.structures, v);
   drawPickups(ctx, game.pickups.list, v, game.time);
-  if (game.state === 'play' && p.alive && game.inv[game.buildSel] > 0)
-    drawGhost(ctx, game.structures, game, game.buildSel, game.time);
+  if (game.building && game.state === 'play' && p.alive && game.inv[game.buildSel] > 0)
+    drawGhost(ctx, game.structures, game, game.buildSel, game.time, game.buildTarget());
   drawHorde(ctx, game.horde.list, v, base, 'small');
   drawFires(ctx, game.structures, v, game.time);
   drawStuck(ctx, game.structures, game.time);

@@ -83,14 +83,14 @@ test('el cliente en línea manda intenciones al servidor y no avanza el mundo é
   const g = juego();
   const m = new OnlineClient(g);
   m.sendAbility({ cls: 'bomber' }, { x: 1.4, y: 2.6 });
-  m.sendBuild('metal');
+  m.sendBuild('metal', 10.4, 20.6);
   assert.equal(m.sendThrow('grenade', 3.2, 4.8), true);
   assert.equal(m.sendNextRound(), true);
   assert.equal(m.step(0.016), true);
   assert.equal(m.netStats(1), 'online');
   assert.deepEqual(g.calls, [
     ['act', 'ab', { tx: 1, ty: 3 }],
-    ['act', 'build', { kind: 'metal' }],
+    ['act', 'build', { kind: 'metal', tx: 10, ty: 21 }],
     ['act', 'throw', { kind: 'grenade', tx: 3, ty: 5 }],
     ['osend', 'next'],
   ]);

@@ -897,6 +897,8 @@ export const SHOP = {
     consumable: true,
   },
 };
+// Modo construir: hasta qué distancia del jugador (px) se coloca la pieza donde apuntas o tocas.
+export const BUILD = { reach: 190 };
 export const BUILD_ORDER = [
   'wood',
   'sandbag',

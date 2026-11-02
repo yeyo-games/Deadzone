@@ -240,6 +240,56 @@ test('misil improvisado: se compra, lo lanza el servidor, quien lo lanzó lo ve 
   assert.ok(!sim.bullets.list.some((q: any) => q.improv));
 });
 
+test('entre oleadas la siguiente ronda empieza sólo cuando todos están listos', () => {
+  const sim = new ServerSim(5, [
+    { id: 'a', idx: 1, name: 'Ana' },
+    { id: 'b', idx: 2, name: 'Beto' },
+    { id: 'c', idx: 3, name: 'Caro' },
+  ]);
+  const seq = { n: 0 };
+  idle(sim, 'a', seq, 2);
+  sim.director.state = 'waiting';
+  assert.equal(sim.director.state, 'waiting');
+  assert.ok(sim.ready('a'));
+  assert.deepEqual(sim.snapshot('a', 0)!.rd, [1, 3, 1], 'listos, de cuántos y él');
+  assert.deepEqual(sim.snapshot('b', 0)!.rd, [1, 3, 0]);
+  // nadie se adelanta, ni con el tiempo
+  for (let i = 0; i < 60 * 60; i++) sim.step();
+  assert.equal(sim.director.state, 'waiting', 'no empieza sola');
+  // se puede arrepentir
+  sim.ready('a');
+  assert.deepEqual(sim.snapshot('a', 0)!.rd, [0, 3, 0]);
+  sim.ready('a');
+  sim.ready('b');
+  assert.equal(sim.director.state, 'waiting');
+  // quien se desconecta no cuenta: con los dos que quedan listos, empieza
+  sim.setAway('c', true);
+  sim.step();
+  assert.notEqual(sim.director.state, 'waiting');
+  assert.ok([...sim.slots.values()].every((s) => !s.ready), 'para la siguiente vuelven a no estar listos');
+  assert.equal(sim.snapshot('a', 0)!.rd, undefined);
+  assert.equal(sim.ready('a'), false, 'en plena oleada no se marca');
+});
+
+test('construir: la pieza va al punto que manda el cliente, sin pasar del alcance', () => {
+  const sim = new ServerSim(5, [{ id: 'a', idx: 1, name: 'Ana' }]);
+  const a = sim.slots.get('a')!;
+  const seq = { n: 0 };
+  idle(sim, 'a', seq, 2);
+  a.inv.wood = 2;
+  const p = a.p;
+  const act = cleanAct({ s: seq.n + 1, k: 'build', kind: 'wood', tx: p.x + 2000, ty: p.y });
+  assert.ok(act && act.at, 'el punto es opcional y se valida');
+  assert.equal(cleanAct({ s: 1, k: 'build', kind: 'wood', tx: 'x', ty: 0 }), null);
+  assert.ok(!cleanAct({ s: 1, k: 'build', kind: 'wood' })!.at);
+  sim.act('a', act!);
+  idle(sim, 'a', seq, 1);
+  const b = sim.structures.blocks[0];
+  assert.ok(b, 'colocada');
+  assert.ok(Math.hypot(b.x + b.w / 2 - p.x, b.y + b.h / 2 - p.y) <= 190 + 20, 'como mucho al alcance');
+  assert.ok(b.x > p.x + 100, 'hacia donde apuntó, no delante de su mira');
+});
+
 test('torreta: el disparo va como efecto y su bala no viaja en la foto', () => {
   const sim = new ServerSim(5, [{ id: 'a', idx: 1, name: 'Ana' }]);
   const a = sim.slots.get('a')!;

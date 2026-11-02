@@ -1,5 +1,5 @@
 // Barricadas compradas en la tienda (madera, metal, vallas, alambre) y granadas.
-import { SHOP, MOLOTOV, ROCKET, ABILITY, HEAVY, AIR, MILITARY, IMPROV } from '../core/config.ts';
+import { SHOP, MOLOTOV, ROCKET, ABILITY, HEAVY, AIR, MILITARY, IMPROV, BUILD } from '../core/config.ts';
 import { TAU, rand, clamp } from '../core/util.ts';
 import type { Bullet, GameHost, Zombie } from '../core/types.d.ts';
 import type { Player } from './player.ts';
@@ -244,21 +244,31 @@ export class Structures {
 
   /* ---------- construcción ---------- */
 
-  // Dónde caería el bloque: delante del jugador, alineado a una rejilla de 20 px.
-  placement(game: GameHost, kind: string) {
+  // Dónde caería el bloque, alineado a una rejilla de 20 px: en (tx, ty) si se da (el punto que
+  // apunta o toca el jugador, como mucho a BUILD.reach de él), si no delante de él.
+  placement(game: GameHost, kind: string, tx?: number, ty?: number) {
     const def = shopDef(kind);
     const p = game.player;
-    if (!p) return { x: 0, y: 0, w: def.w, h: def.h, ok: false };
-    const ca = Math.cos(p.angle);
-    const sa = Math.sin(p.angle);
+    if (!p) return { x: 0, y: 0, w: def.w, h: def.h, a: 0, ok: false };
+    let ca = Math.cos(p.angle);
+    let sa = Math.sin(p.angle);
+    const at = Number.isFinite(tx) && Number.isFinite(ty);
+    const d = at ? Math.hypot(tx! - p.x, ty! - p.y) : 0;
+    if (d > 1) {
+      ca = (tx! - p.x) / d;
+      sa = (ty! - p.y) / d;
+    }
     let w = def.w;
     let h = def.h;
-    // las piezas alargadas se colocan atravesadas a la dirección de la mira
+    // las piezas alargadas se colocan atravesadas a la dirección en que se ponen
     if (def.rotates && Math.abs(ca) > Math.abs(sa)) {
       w = def.h;
       h = def.w;
     }
-    const dist = p.r + Math.max(w, h) / 2 + 14;
+    // sin punto, delante; con punto, ahí mismo pero sin pisar al jugador (salvo lo que va en el suelo)
+    const front = p.r + Math.max(w, h) / 2 + 14;
+    const clear = def.ground ? 0 : p.r + (Math.abs(ca) * w + Math.abs(sa) * h) / 2 + 2;
+    const dist = at ? clamp(d, clear, BUILD.reach) : front;
     const cx = p.x + ca * dist;
     const cy = p.y + sa * dist;
     const x = Math.round((cx - w / 2) / SNAP) * SNAP;
@@ -291,12 +301,12 @@ export class Structures {
         }
       }
     }
-    return { x, y, w, h, ok };
+    return { x, y, w, h, a: Math.atan2(sa, ca), ok };
   }
 
-  // owner: de quién son las bajas de sus minas y torretas (en línea)
-  place(game: GameHost, kind: string, owner: string | null = null) {
-    const pl = this.placement(game, kind);
+  // owner: de quién son las bajas de sus minas y torretas (en línea); (tx, ty): dónde (ver placement)
+  place(game: GameHost, kind: string, owner: string | null = null, tx?: number, ty?: number) {
+    const pl = this.placement(game, kind, tx, ty);
     const p = game.player;
     if (!pl.ok || !p) return false;
     const def = shopDef(kind);
@@ -316,7 +326,7 @@ export class Structures {
         max: def.hp,
         hitT: 0,
         cd: 0,
-        ang: p.angle,
+        ang: pl.a,
         owner,
       };
       this.blocks.push(o);

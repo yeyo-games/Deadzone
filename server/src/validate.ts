@@ -45,18 +45,22 @@ export function cleanAct(raw: any): Act | null {
   if (typeof kind !== 'string' || (!bare && !KIND_RE.test(kind))) return null;
   let tx = 0;
   let ty = 0;
+  const point = (x: unknown, y: unknown) =>
+    typeof x === 'number' &&
+    typeof y === 'number' &&
+    Number.isFinite(x) &&
+    Number.isFinite(y) &&
+    Math.abs(x) <= 1e5 &&
+    Math.abs(y) <= 1e5;
   if (k === 'throw' || k === 'ab') {
+    if (!point(raw.tx, raw.ty)) return null;
     tx = raw.tx;
     ty = raw.ty;
-    if (
-      typeof tx !== 'number' ||
-      typeof ty !== 'number' ||
-      !Number.isFinite(tx) ||
-      !Number.isFinite(ty) ||
-      Math.abs(tx) > 1e5 ||
-      Math.abs(ty) > 1e5
-    )
-      return null;
+  }
+  // construir: el punto es opcional (sin él, delante del jugador)
+  if (k === 'build' && raw.tx !== undefined) {
+    if (!point(raw.tx, raw.ty)) return null;
+    return { s, k, kind, tx: raw.tx, ty: raw.ty, at: true };
   }
   return { s, k, kind, tx, ty };
 }

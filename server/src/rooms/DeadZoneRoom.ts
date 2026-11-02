@@ -110,7 +110,7 @@ export class DeadZoneRoom extends Room<{ state: LobbyStateT; input: MoveInputT }
     );
     this.onMessage('next', (c) =>
       this.admin(c, () => {
-        if (this.phase === 'playing' && this.sim && this.member(c)?.inGame) this.sim.nextRound();
+        if (this.phase === 'playing' && this.sim && this.member(c)?.inGame) this.sim.ready(c.sessionId);
       }),
     );
     // elegir mejora y comprar: el servidor comprueba nivel, dinero y momento (entre oleadas)

@@ -88,6 +88,9 @@ function set(game, key, el, prop, value) {
   else el.style[prop] = value;
 }
 
+const ROUND_SUB =
+  'Sin límite de tiempo. Muévete, construye y revisa tus armas: los zombis no llegarán hasta que inicies.';
+
 export function updateHud(game, force) {
   if (force) game.cache = {};
   const p = game.player;
@@ -225,6 +228,24 @@ export function updateHud(game, force) {
     $('improv-count').textContent = inv.improv;
     $('btn-improv').classList.toggle('gone', inv.improv <= 0);
   }
+  // modo construir: la barra con las piezas que tienes (la elegida resaltada) y cómo colocarla
+  const touch = game.input.mode === 'touch';
+  const bsig = game.building ? `${BUILD_ORDER.map((k) => inv[k]).join()}|${game.buildSel}|${touch}` : '';
+  if (game.cache.build !== bsig) {
+    game.cache.build = bsig;
+    if (game.building) {
+      $('bb-items').innerHTML = BUILD_ORDER.filter((k) => inv[k] > 0)
+        .map(
+          (k, i) =>
+            `<button type="button" class="bb-it${k === game.buildSel ? ' on' : ''}" data-bk="${k}" title="${SHOP[k].name}">${ITEM_ICONS[k]}<b>${inv[k]}</b>${!touch && i < 9 ? `<kbd>${i + 1}</kbd>` : ''}</button>`,
+        )
+        .join('');
+      $('bb-name').textContent = SHOP[game.buildSel].name;
+      $('bb-hint').textContent = touch
+        ? 'Toca el mapa o ✓ para colocar'
+        : 'Clic: colocar · rueda o 1–9: pieza · clic derecho: salir';
+    }
+  }
   const sig = p.manned ? p.manned.kind : p.weapons.map((x) => x.id).join() + '|' + p.wi;
   if (game.cache.slots !== sig) {
     game.cache.slots = sig;
@@ -242,6 +263,12 @@ export function updateHud(game, force) {
     game.cache.prep = prep;
     $('round-panel').classList.toggle('show', prep);
     if (prep) $('round-kicker').textContent = `Ronda ${game.director.wave} superada`;
+    // en línea el botón es «Estoy listo» (lo escribe online.showReady con cada foto)
+    if (prep && !game.mode.viaServer()) {
+      $('btn-next-round').textContent = 'Iniciar siguiente ronda';
+      $('btn-next-round').classList.remove('on');
+      $('round-sub').textContent = ROUND_SUB;
+    }
   }
 }
 
@@ -256,11 +283,23 @@ export function bindHud(game) {
   on(game, 'btn-upgrade', () => {
     if (game.state === 'play' && game.online.upReady) game.openLevelUp();
   });
+  game.$('bb-items').addEventListener('pointerdown', (e) => {
+    const b = closest(e.target, '[data-bk]');
+    if (!b) return;
+    e.preventDefault();
+    e.stopPropagation();
+    game.pickBuild(b.dataset.bk);
+  });
+  game.$('bb-close').addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    game.toggleBuild(false);
+  });
   game.$('inv').addEventListener('pointerdown', (e) => {
     const b = closest(e.target, '[data-k]');
     if (!b) return;
     e.preventDefault();
-    game.buildSel = b.dataset.k;
+    game.pickBuild(b.dataset.k);
   });
   game.$('slots').addEventListener('pointerdown', (e) => {
     const b = closest(e.target, '.slot[data-i]');

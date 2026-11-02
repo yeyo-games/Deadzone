@@ -65,3 +65,37 @@ test('las explosiones seguidas no suben a un zombi más allá del tope (antes pa
   assert.ok(top > AIR.max * 0.9, `vuela (${top})`);
   assert.ok(top <= AIR.max, `sin pasar el tope (${top})`);
 });
+
+test('modo construir: la pieza va donde apuntas, hasta BUILD.reach, atravesada y sin pisarte', async () => {
+  const { BUILD } = await import('../js/core/config.ts');
+  const { Horde } = await import('../js/sim/zombies.ts');
+  const { World } = await import('../js/sim/world.ts');
+  const world = new World(777);
+  const horde = new Horde();
+  const st = new Structures();
+  const { x, y } = world.spawn;
+  const game = fakeGame({ world, horde, structures: st, particles: silent, player: { x, y, r: 14, angle: 0 } });
+  // cerca: justo ahí (alineada a 20 px), y los sacos atravesados a la dirección (se ponen hacia arriba)
+  const a = st.placement(game, 'sandbag', x, y - 90);
+  const cx = a.x + a.w / 2;
+  const cy = a.y + a.h / 2;
+  assert.ok(Math.abs(cx - x) <= 10 && Math.abs(cy - (y - 90)) <= 10, 'cae donde apuntas');
+  assert.ok(a.w > a.h, 'atravesada a la dirección en que se pone');
+  // lejos: se queda en el borde del alcance
+  const b = st.placement(game, 'sandbag', x + 1000, y);
+  assert.ok(Math.hypot(b.x + b.w / 2 - x, b.y + b.h / 2 - y) <= BUILD.reach + 15);
+  assert.ok(b.h > b.w);
+  // encima del jugador: se aparta lo justo para no pisarlo (el alambre sí puede ir debajo)
+  const c = st.placement(game, 'wood', x + 2, y);
+  assert.ok(c.x >= x + 14 - 10, 'no tapa al jugador');
+  const w = st.placement(game, 'wire', x, y);
+  assert.ok(w.x <= x && w.x + w.w >= x);
+  // sin punto, delante (como antes)
+  const d = st.placement(game, 'wood');
+  assert.ok(d.x > x);
+  // colocarla de verdad: la torreta mira hacia donde se puso
+  assert.ok(st.place(game, 'turret', 'ana', x, y + 120));
+  const t = st.blocks.at(-1);
+  assert.equal(t.owner, 'ana');
+  assert.ok(Math.abs(t.ang - Math.PI / 2) < 1e-9);
+});

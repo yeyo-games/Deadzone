@@ -171,6 +171,7 @@ export class Online {
   declare up: { n: number; ids: string[] } | null;
   declare upDone: number;
   declare lastDs: string;
+  declare rdSig: string;
   declare left: number;
   declare myKills: number;
   declare abAt: number;
@@ -459,6 +460,7 @@ export class Online {
     this.up = null;
     this.upDone = 0;
     this.lastDs = '';
+    this.rdSig = '';
     this.playing = true;
     g.input.reset();
     g.input.setRun(false);
@@ -593,11 +595,14 @@ export class Online {
     const p = g.player;
     const live = g.state === 'play';
     if (live) {
-      if (inp.consume('pause')) return g.pause();
+      if (inp.consume('pause')) {
+        // Esc en el modo construir sólo lo cierra
+        if (!g.building) return g.pause();
+        g.toggleBuild(false);
+      }
+      g.stepBuild();
       if (inp.consume('reload')) this.wantReload = true;
       if (p.alive) {
-        if (inp.consume('build')) g.tryBuild();
-        if (inp.consume('cycleBuild')) g.cycleBuild();
         if (inp.consume('grenade')) g.tryGrenade();
         if (inp.consume('molotov')) g.tryGrenade('molotov');
         if (inp.consume('improv')) g.tryGrenade('improv');
@@ -826,6 +831,13 @@ export class Online {
       }
     }
     this.lastDs = s.ds;
+    // entre oleadas: [listos, de cuántos, yo]; la ronda empieza cuando todos están listos
+    const rd = Array.isArray(s.rd) ? s.rd.map((v: unknown) => Number(v) | 0) : null;
+    const rsig = rd ? rd.join() : '';
+    if (rsig !== this.rdSig) {
+      this.rdSig = rsig;
+      if (rd) this.showReady(rd);
+    }
     // la compra se confirmó (o cambió el dinero): la tienda abierta se vuelve a dibujar
     if (g.state === 'shop' && shopSig !== this.shopSig) g.renderShop();
     this.shopSig = shopSig;
@@ -848,6 +860,18 @@ export class Online {
 
   // Construir, lanzar o subir al robot: el servidor lo hace al llegar a la última entrada que
   // mandamos (s), así ocurre donde se veía el jugador y hacia donde apuntaba.
+  // El panel de ronda completada en línea: el botón dice si estás listo y cuántos faltan.
+  showReady([n, of, me]: number[]) {
+    const g = this.game;
+    const btn = g.$('btn-next-round');
+    btn.textContent = me ? `Listo ✓ (${n}/${of}) · Cancelar` : `Estoy listo (${n}/${of})`;
+    btn.classList.toggle('on', !!me);
+    g.$('round-sub').textContent =
+      n >= of - 1 && !me
+        ? 'Sólo faltas tú: la siguiente ronda empieza cuando estés listo.'
+        : 'La siguiente ronda empieza cuando todos estén listos. Mientras, muévete, construye y compra.';
+  }
+
   act(k: string, extra: Record<string, unknown> = {}) {
     if (!this.inp) return;
     this.send('act', { s: this.inp.sentCount, k, ...extra });

@@ -75,6 +75,16 @@
       <div id="banner"><b id="banner-title"></b><span id="banner-sub"></span></div>
     </div>
 
+    <!-- modo construir: piezas que tienes, la elegida y cómo colocarla -->
+    <div id="build-bar" aria-label="Construir">
+      <div class="bb-head">
+        <b id="bb-name"></b>
+        <small id="bb-hint"></small>
+        <button class="bb-x" id="bb-close" type="button" aria-label="Dejar de construir">✕</button>
+      </div>
+      <div class="bb-items" id="bb-items"></div>
+    </div>
+
     <div id="touch">
       <div id="joy-zone">
         <div id="joy-base"><div id="joy-knob"></div></div>
@@ -111,7 +121,8 @@
           </button>
         </div>
         <button class="tbtn big" id="btn-fire" aria-label="Disparar">
-          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><path d="M12 2v5M12 17v5M2 12h5M17 12h5"/></svg>
+          <svg class="ic-fire" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><path d="M12 2v5M12 17v5M2 12h5M17 12h5"/></svg>
+          <svg class="ic-place" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
         </button>
       </div>
     </div>
@@ -143,7 +154,7 @@
     <div id="round-panel" role="dialog" aria-labelledby="round-title">
       <p class="kicker" id="round-kicker">Ronda 1</p>
       <h2 id="round-title">Ronda completada</h2>
-      <p class="round-sub">Sin límite de tiempo. Muévete, construye y revisa tus armas: los zombis no llegarán hasta que inicies.</p>
+      <p class="round-sub" id="round-sub">Sin límite de tiempo. Muévete, construye y revisa tus armas: los zombis no llegarán hasta que inicies.</p>
       <div class="round-actions">
         <button class="btn primary" id="btn-next-round">Iniciar siguiente ronda</button>
         <button class="btn" id="btn-round-shop">Tienda</button>

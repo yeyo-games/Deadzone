@@ -16,6 +16,7 @@ export class Input {
     this.joy = { id: null, bx: 0, by: 0, x: 0, y: 0 };
     this.touchFire = false;
     this.runToggle = false;
+    this.blockFire = false;
     this.pressed = {};
     this.vec = { x: 0, y: 0 };
     this.listeners = [];
@@ -64,16 +65,27 @@ export class Input {
     this.on(window, 'blur', () => this.reset());
 
     const c = this.canvas;
+    // point: dónde se hizo clic o se tocó el mapa (lo usa el modo construir); clic derecho: cancel
     this.on(c, 'pointerdown', (e) => {
       if (e.pointerType === 'mouse') {
         this.setMode('mouse');
         this.mouse.x = e.clientX;
         this.mouse.y = e.clientY;
         if (e.button === 0) this.mouse.down = true;
+        if (e.button === 2) this.pressed.cancel = true;
       } else {
         this.setMode('touch');
       }
+      if (e.button === 0) this.pressed.point = { x: e.clientX, y: e.clientY };
     });
+    this.on(
+      c,
+      'wheel',
+      (e) => {
+        if (e.deltaY) this.pressed.wheel = Math.sign(e.deltaY);
+      },
+      { passive: true },
+    );
     this.on(window, 'pointermove', (e) => {
       if (e.pointerType === 'mouse') {
         this.mouse.x = e.clientX;
@@ -165,7 +177,11 @@ export class Input {
       this.on(el, 'pointercancel', up);
       this.on(el, 'lostpointercapture', up);
     };
-    hold('#btn-fire', (v) => (this.touchFire = v));
+    hold('#btn-fire', (v) => {
+      this.touchFire = v;
+      // en el modo construir el botón de disparo coloca la pieza
+      if (v) this.pressed.place = true;
+    });
     const tap = (sel, fn) => {
       const el = this.root.querySelector(sel);
       this.on(el, 'pointerdown', (e) => {
@@ -246,8 +262,9 @@ export class Input {
     );
   }
 
+  // blockFire: en el modo construir el clic y el botón colocan piezas en vez de disparar
   get firing() {
-    return this.mouse.down || this.touchFire || this.keys.has('Space');
+    return !this.blockFire && (this.mouse.down || this.touchFire || this.keys.has('Space'));
   }
 
   consume(name) {

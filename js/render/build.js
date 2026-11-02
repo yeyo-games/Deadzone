@@ -1,5 +1,5 @@
 // Dibujo de barricadas, trampas, torreta pesada, granadas, fuegos y cohetes. La lógica vive en sim/build.js.
-import { ABILITY } from '../core/config.ts';
+import { ABILITY, BUILD, SHOP } from '../core/config.ts';
 import { TAU, roundRect } from '../core/util.ts';
 import { OUT, flameSprite } from './sprites.js';
 import { drawRocket } from './bullets.js';
@@ -166,11 +166,28 @@ export function drawMannedHeavy(ctx, st) {
   for (const b of st.blocks) if (b.kind === 'heavy' && b.manned) drawHeavyGun(ctx, b);
 }
 
-export function drawGhost(ctx, st, game, kind, time) {
-  const pl = st.placement(game, kind);
+// Modo construir: hasta dónde llegas (círculo) y la pieza misma, transparente, donde caería:
+// con marco verde si cabe y rojo si no.
+export function drawGhost(ctx, st, game, kind, time, at) {
+  const p = game.player;
+  const pl = st.placement(game, kind, at.x, at.y);
+  ctx.strokeStyle = 'rgba(230,224,210,0.18)';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([4, 6]);
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, BUILD.reach, 0, TAU);
+  ctx.stroke();
+  ctx.setLineDash([]);
   const pulse = 0.55 + Math.sin(time * 6) * 0.15;
+  ctx.globalAlpha = 0.6;
+  const piece = { k: 0, kind, x: pl.x, y: pl.y, w: pl.w, h: pl.h, hp: 1, max: 1, hitT: 0, ang: pl.a, up: 0 };
+  if (SHOP[kind].ground) {
+    if (kind === 'spikes') drawSpikes(ctx, piece);
+    else if (kind === 'mine') drawMine(ctx, piece, time);
+    else drawWire(ctx, piece);
+  } else drawBlock(ctx, piece);
   ctx.globalAlpha = pulse;
-  ctx.fillStyle = pl.ok ? 'rgba(134,168,146,0.25)' : 'rgba(181,70,58,0.25)';
+  ctx.fillStyle = pl.ok ? 'rgba(134,168,146,0.22)' : 'rgba(181,70,58,0.4)';
   ctx.fillRect(pl.x, pl.y, pl.w, pl.h);
   ctx.strokeStyle = pl.ok ? '#86a892' : '#b5463a';
   ctx.lineWidth = 2;

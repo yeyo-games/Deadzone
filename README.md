@@ -92,7 +92,14 @@ de elegir tu mejora de nivel) se abre la tienda:
 | Molotov | $60 | Charco de fuego: los zombis que lo pisan arden, se retuercen y el fuego se contagia |
 | Misil improvisado | $120 | Tubo con pólvora y cinta: sale recto hacia donde apuntas (cabeceando) y estalla al primer zombi o pared, algo más fuerte que una granada. De un solo uso |
 
-Las barricadas se colocan delante de ti y las balas pasan por encima (también por encima de los coches).
+Para construir pulsa `F` (o el botón de construir en el celular, o toca una pieza del inventario): abajo
+aparece la barra con las piezas que tienes y la elegida se ve donde caería, en verde si cabe y en rojo si
+no, dentro de un círculo que marca hasta dónde llegas. En computadora sigue al ratón y se pone con clic
+(rueda o `1`–`9` para cambiar de pieza, clic derecho, `F` o `Esc` para salir); en el celular tocas el
+mapa donde la quieres, o el botón ✓ para ponerla delante (hacia donde caminas). Las piezas alargadas se
+ponen atravesadas, de cara a ti. Mientras construyes no disparas.
+
+Las balas pasan por encima de las barricadas (también por encima de los coches).
 Tú puedes atravesar tus propias estructuras; los zombis no. Puedes **encimar estructuras** en el mismo lugar
 (madera sobre madera, muro sobre valla…): cada pieza aguanta lo suyo y los zombis rompen primero la de
 arriba. La torreta necesita su propio sitio. Los zombis las golpean hasta
@@ -202,10 +209,10 @@ tienes.
 | Ratón: apuntar · clic: disparar | Botón de disparo con **apuntado automático** |
 | `R`: recargar | Botón de recarga |
 | `1`–`9`, `Q` o `Tab`: cambiar arma | Botón de cambio de arma |
-| `F`: construir · `V`: cambiar bloque | Botón **Construir** |
+| `F`: modo construir (clic coloca, rueda o `1`–`9` cambia de pieza) | Botón **Construir**, toca el mapa o ✓ |
 | `G`: lanzar granada · `T`: molotov · `Z`: misil improvisado · `E`: robot o torreta pesada | Botones pequeños de **granada**, **molotov** y **misil** (apuntan solos) |
 | `M`: taller de la torreta pesada (junto a ella) | Botón de la **llave** |
-| `Enter`: iniciar siguiente ronda | Botón del panel **Ronda completada** |
+| `Enter`: iniciar siguiente ronda (en línea: estoy listo) | Botón del panel **Ronda completada** |
 | `Esc` / `P`: pausa | Botón de pausa |
 
 ### Modo desarrollador
@@ -349,7 +356,8 @@ combate (uno por jugador). Lo que compras lo usas cuando quieras, también en pl
 servidor, que también simula las torretas, minas, fuego, cohetes y el ácido del gordo. Se conservan
 armas de cajas, munición y botiquines.
 Zombis por oleada: 0,5 del solitario + 0,15 por cada jugador extra (y 1,4 veces su vida). Si caes, revives al terminar la oleada junto a un compañero; la partida termina cuando
-caen todos. La siguiente oleada la inicia cualquiera (o empieza sola a los 45 s). El zombi dorado
+caen todos. Entre oleadas cada uno pulsa **Estoy listo** (se puede cancelar) y la siguiente empieza cuando lo están
+todos los que siguen conectados; el botón dice cuántos faltan. El zombi dorado
 da dinero a quien lo mata. Quien entra a una sala con la partida empezada espera en la sala y juega la
 siguiente. Si alguien pierde la conexión, su personaje se queda quieto, los zombis lo ignoran y no
 recibe daño durante 20 s; si vuelve (con el token de reconexión, también tras recargar la página)

@@ -53,6 +53,9 @@ class Game {
     this.input = new Input(this.root, this.canvas);
     this.input.onModeChange = (m) => this.root.classList.toggle('touch', m === 'touch');
     this.root.classList.toggle('touch', this.input.mode === 'touch');
+    // modo construir (ver actions.js): abierto y dónde se tocó para poner la pieza
+    this.building = false;
+    this.buildAt = null;
     this.accounts = new Accounts();
     // estadísticas de uso anónimas (js/analitica.js); apagadas en desarrollo y en las pruebas
     this.analitica = new Analitica(this);
@@ -172,6 +175,10 @@ class Game {
   useAbility = () => Act.useAbility(this);
   tryBuild = () => Act.tryBuild(this);
   cycleBuild = () => Act.cycleBuild(this);
+  toggleBuild = (on) => Act.toggleBuild(this, on);
+  stepBuild = () => Act.stepBuild(this);
+  pickBuild = (k) => Act.pickBuild(this, k);
+  buildTarget = () => Act.buildTarget(this);
   toggleRobot = () => Act.toggleRobot(this);
   tryGrenade = (kind) => Act.tryGrenade(this, kind);
   startNextRound = () => Act.startNextRound(this);
@@ -228,6 +235,7 @@ class Game {
     this.devUsed = false;
     this.inv = Object.fromEntries([...BUILD_ORDER, ...THROWABLES].map((k) => [k, 0]));
     this.buildSel = 'wood';
+    if (this.building) Act.toggleBuild(this, false);
     this.shopPending = false;
     this.structures.clear();
     this.deathT = 0;

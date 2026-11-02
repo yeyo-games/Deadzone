@@ -102,7 +102,15 @@ export type Cmd = { s: number; mx: number; my: number; f: number; a: number; w: 
 
 // Acción de un jugador ligada a su última entrada (s): construir, lanzar, subir al robot o usar la
 // habilidad de su clase (ab, hacia tx/ty). La valida server/src/validate.ts (cleanAct).
-export type Act = { s: number; k: 'build' | 'throw' | 'robot' | 'ab'; kind: string; tx: number; ty: number };
+// at: la construcción lleva dónde colocar la pieza (tx, ty); sin él va delante del jugador
+export type Act = {
+  s: number;
+  k: 'build' | 'throw' | 'robot' | 'ab';
+  kind: string;
+  tx: number;
+  ty: number;
+  at?: boolean;
+};
 
 // Un jugador de la sala tal como lo ve el cliente en el estado de Colyseus. server/src/rooms/state.ts
 // comprueba en compilación que el esquema `Member` cumple esta forma.

@@ -642,6 +642,79 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
   .pips i { width: 10px; height: 5px; }
 }
 
+/* en línea: ya dijiste que estás listo (se puede cancelar) */
+#btn-next-round.on { color: #10140f; background: var(--xp); border-color: var(--xp); }
+
+/* ---------- Modo construir ---------- */
+
+#build-bar {
+  display: none;
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--sab) + 18px);
+  transform: translateX(-50%);
+  max-width: calc(100vw - 32px);
+  padding: 8px 10px 10px;
+  background: rgba(15, 17, 13, 0.82);
+  border: 1px solid rgba(134, 168, 146, 0.45);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  z-index: 5;
+}
+.building.state-play #build-bar { display: block; }
+.bb-head { display: flex; align-items: center; gap: 10px; margin-bottom: 7px; }
+.bb-head b { font-family: var(--display); font-size: 18px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--xp); }
+.bb-head small { color: var(--dim); font-size: 12px; }
+.bb-x {
+  margin-left: auto;
+  width: 30px;
+  height: 30px;
+  color: var(--ink);
+  background: rgba(230, 224, 210, 0.08);
+  border: 1px solid var(--line);
+  font-size: 15px;
+  cursor: pointer;
+  touch-action: none;
+}
+.bb-items { display: flex; flex-wrap: wrap; gap: 6px; }
+.bb-it {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  padding: 0;
+  background: rgba(230, 224, 210, 0.06);
+  border: 1px solid var(--line);
+  cursor: pointer;
+  touch-action: none;
+}
+.bb-it svg { width: 28px; height: 28px; }
+.bb-it b { position: absolute; right: 3px; bottom: 1px; font-size: 12px; color: var(--ink); }
+.bb-it kbd { position: absolute; left: 3px; top: 1px; font-size: 9px; color: var(--dim); }
+.bb-it.on { border-color: var(--xp); background: rgba(134, 168, 146, 0.22); box-shadow: 0 0 8px rgba(134, 168, 146, 0.5); }
+/* en el celular va a la derecha, sobre los botones, en lugar de la fila de lanzables */
+.touch #build-bar {
+  left: auto;
+  right: max(16px, var(--sar));
+  bottom: calc(var(--sab) + 18px + 184px);
+  transform: none;
+  width: min(300px, calc(100vw - 32px));
+}
+.touch #build-bar { padding: 6px 8px 8px; }
+.touch .bb-head { flex-wrap: wrap; row-gap: 0; margin-bottom: 5px; }
+.touch .bb-head b { font-size: 15px; }
+.touch .bb-head small { order: 3; width: 100%; font-size: 11px; }
+.touch .bb-x { width: 28px; height: 28px; }
+.touch .bb-items { gap: 5px; }
+.touch .bb-it { width: 42px; height: 42px; }
+.touch .bb-it svg { width: 24px; height: 24px; }
+.building .titems { display: none; }
+#btn-fire .ic-place { display: none; }
+.building #btn-fire .ic-place { display: block; }
+.building #btn-fire .ic-fire { display: none; }
+.building #btn-fire { border-color: rgba(134, 168, 146, 0.85); color: var(--xp); }
+
 /* ---------- Controles táctiles ---------- */
 
 #touch { display: none; position: absolute; inset: 0; pointer-events: none; }

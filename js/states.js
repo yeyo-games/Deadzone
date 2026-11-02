@@ -55,15 +55,18 @@ export function updatePlay(game, dt) {
   game.hitstopCd -= dt;
   const p = game.player;
   if (game.input.consume('pause')) {
-    game.pause();
-    return;
+    // Esc en el modo construir sólo lo cierra
+    if (game.building) Act.toggleBuild(game, false);
+    else {
+      game.pause();
+      return;
+    }
   }
+  Act.stepBuild(game);
   if (p.alive) {
     p.update(dt, game);
     if (game.input.consume('ability')) Act.useAbility(game);
     Abilities.update(dt, game, p);
-    if (game.input.consume('build')) Act.tryBuild(game);
-    if (game.input.consume('cycleBuild')) Act.cycleBuild(game);
     if (game.input.consume('grenade')) Act.tryGrenade(game);
     if (game.input.consume('molotov')) Act.tryGrenade(game, 'molotov');
     if (game.input.consume('improv')) Act.tryGrenade(game, 'improv');

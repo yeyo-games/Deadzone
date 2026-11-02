@@ -44,8 +44,6 @@ const FX_MAX = 300;
 const QUEUE_MAX = 30;
 // con más atraso que esto, se procesan dos entradas en un paso para alcanzar
 const BACKLOG = 4;
-// en espera entre oleadas: la siguiente empieza sola pasado este tiempo
-const AUTO_NEXT = 45;
 // pasos sin entrada en los que se repite la última (luego, quieto)
 const STARVE = 6;
 // acciones (construir, lanzar, robot) que esperan a que el servidor llegue a su entrada
@@ -105,6 +103,8 @@ export type Slot = {
   robot: any;
   acts: Act[];
   acidT: number;
+  // listo para la siguiente ronda (entre oleadas)
+  ready: boolean;
   acidTick: number;
   // dinero perdido por golpes desde la última foto (para el aviso en su pantalla)
   lost: number;
@@ -132,7 +132,6 @@ export class ServerSim {
   game: any;
   flowT = 0;
   goldenT = GOLDEN.firstAfter;
-  waitT = 0;
   deadT = 0;
   over = false;
   kills: Record<string, number> = {};
@@ -186,6 +185,7 @@ export class ServerSim {
         acts: [],
         acidT: 0,
         acidTick: 0,
+        ready: false,
         lost: 0,
         stGeo: '',
         stSent: '',
@@ -524,7 +524,7 @@ export class ServerSim {
     try {
       if (a.k === 'build') {
         if (!BUILD_ORDER.includes(a.kind) || s.inv[a.kind] <= 0) return;
-        if (this.structures.place(g, a.kind, s.id)) {
+        if (a.at ? this.structures.place(g, a.kind, s.id, a.tx, a.ty) : this.structures.place(g, a.kind, s.id)) {
           s.inv[a.kind]--;
           g.sfx.build();
         } else s.toasts.push('No cabe ahí');
@@ -672,7 +672,6 @@ export class ServerSim {
       this.world.collide(p, p.r, true);
       s.toasts.push('¡Reviviste!');
     }
-    this.waitT = 0;
   }
 
   /* ---------- entradas ---------- */
@@ -709,8 +708,33 @@ export class ServerSim {
     this.slots.delete(id);
   }
 
+  // Entre oleadas cada uno dice si está listo (o se arrepiente); la siguiente ronda empieza
+  // cuando lo están todos los que siguen conectados.
+  ready(id: string) {
+    const s = this.slots.get(id);
+    if (!s || this.director.state !== 'waiting') return false;
+    s.ready = !s.ready;
+    const [n, of] = this.readyCount();
+    if (s.ready && n < of) this.toastAll(`${s.name} está listo (${n}/${of})`);
+    this.tryNext();
+    return true;
+  }
+
+  readyCount() {
+    const here = [...this.slots.values()].filter((s) => !s.away);
+    return [here.filter((s) => s.ready).length, here.length];
+  }
+
+  // (también si se va quien faltaba)
+  tryNext() {
+    const [n, of] = this.readyCount();
+    if (of > 0 && n >= of) this.nextRound();
+  }
+
   nextRound() {
-    return this.director.nextRound(this.game);
+    if (!this.director.nextRound(this.game)) return false;
+    for (const s of this.slots.values()) s.ready = false;
+    return true;
   }
 
   /* ---------- un paso de simulación ---------- */
@@ -762,10 +786,7 @@ export class ServerSim {
       this.goldenT = Rules.goldenTick(g, this.goldenT, TICK, (m) => this.toastAll(m));
     }
     this.offerUpgrades();
-    if (d.state === 'waiting') {
-      this.waitT += TICK;
-      if (this.waitT > AUTO_NEXT) this.nextRound();
-    }
+    if (d.state === 'waiting') this.tryNext();
     this.horde.update(TICK, g);
     this.bullets.update(TICK, g);
     this.horde.removeDead();
@@ -863,6 +884,8 @@ export class ServerSim {
       wp: me.weapons.map((w: any) => [w.id, w.mag, w.reserve === Infinity ? -1 : w.reserve]),
       ...world,
       kl: this.totalKills(),
+      // entre oleadas: cuántos están listos, de cuántos, y si él lo está
+      rd: d.state === 'waiting' ? [...this.readyCount(), s.ready ? 1 : 0] : undefined,
       lft: d.queue.length + this.horde.list.length,
       ec: [s.level, Math.round(s.xp), s.xpNeed, s.pending],
       ps: STAT_KEYS.map((k) => Math.round(me.stats[k] * 1000) / 1000),
