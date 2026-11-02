@@ -385,9 +385,9 @@ export const ZOMBIES = {
     turn: 3,
   },
   // Rocoso: cuerpo de roca más ancho que un gordo, lento y pesado (aparta a la horda al pasar).
-  // La mitad de la vida del super blindado. Camina recto y destroza lo que le estorba (ver ROCK).
+  // El doble de la vida del super blindado. Camina recto y destroza lo que le estorba (ver ROCK).
   rock: {
-    hp: 42 * 25,
+    hp: 42 * 100,
     speed: 0.6,
     radius: 34,
     damage: 18,
