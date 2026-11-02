@@ -102,7 +102,7 @@ type HeavyBlock = {
   y: number;
   manned: unknown;
   ang: number;
-  ta: number;
+  ta?: number;
   side: number;
   flash: number;
   recoil: number;
