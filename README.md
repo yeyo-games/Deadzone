@@ -145,6 +145,11 @@ encima), **primero a los grandes** (rocosos, super blindados, gigantes, toros y 
 lanza un **misil antitanque** que sale con una nube de humo negro, deja un recorrido luminoso y estalla
 en el primer zombi o pared que toca (o donde estaba su blanco) con el radio y el daño del misil del Bomber.
 
+También **te puedes subir** (`E` junto a ella, o el botón **Torreta** en el celular): vas encima de la
+torre, que gira más rápido hacia tu mira, y lanzas tú un misil cada 1,6 s hasta donde apuntas (en el
+celular, al zombi más cercano). Encima recibes la mitad del daño, como en la torreta pesada, y nadie te
+puede agarrar. Te bajas con `E` por detrás de la torre.
+
 ### Armas y munición
 
 El subfusil, con el que empiezas, tiene balas infinitas. Las demás se compran en la tienda (la escopeta y

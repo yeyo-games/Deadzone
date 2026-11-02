@@ -9,6 +9,7 @@ import {
   ZOMBIE_SPEED,
   WAVES,
   HEAVY,
+  MILITARY,
   GUN_REACH,
   RELOAD_STEPS,
 } from '../core/config.ts';
@@ -350,8 +351,9 @@ export class Player {
     // en la torreta pesada no caminas: te quedas detrás del cañón, que gira contigo
     if (this.manned) {
       const b = this.manned;
-      this.x = b.x + b.w / 2 - Math.cos(b.ang) * HEAVY_BACK;
-      this.y = b.y + b.h / 2 - Math.sin(b.ang) * HEAVY_BACK;
+      const back = b.kind === 'military' ? MILITARY.seat : HEAVY_BACK;
+      this.x = b.x + b.w / 2 - Math.cos(b.ang) * back;
+      this.y = b.y + b.h / 2 - Math.sin(b.ang) * back;
       this.vx = this.vy = this.kx = this.ky = 0;
       this.speedNow = 0;
       this.legAngle = b.ang;
@@ -458,6 +460,7 @@ export class Player {
       this.manned = null;
       return;
     }
+    if (b.kind === 'military') return this.actMilitary(dt, game, mv, b);
     const d = weaponDef('heavy');
     const cx = b.x + b.w / 2;
     const cy = b.y + b.h / 2;
@@ -504,6 +507,45 @@ export class Player {
     game.muzzle = 1;
     game.muzzleX = m.x;
     game.muzzleY = m.y;
+  }
+
+  // Subido en la torreta militar: la torre gira hacia la mira y lanzas un misil hasta donde apuntas.
+  actMilitary(dt: number, game: GameHost, mv: Vec, b: Turret) {
+    const M = MILITARY;
+    const cx = b.x + b.w / 2;
+    const cy = b.y + b.h / 2;
+    let want = b.ang;
+    let dist = M.range;
+    if (game.input.mode === 'mouse') {
+      const m = game.mouseWorld();
+      want = Math.atan2(m.y - cy, m.x - cx);
+      dist = Math.hypot(m.x - cx, m.y - cy) - 46;
+      this.target = null;
+    } else {
+      this.target = game.horde.findTarget(cx, cy, M.range, this.target);
+      if (this.target) {
+        want = Math.atan2(this.target.y - cy, this.target.x - cx);
+        dist = Math.hypot(this.target.x - cx, this.target.y - cy) - 46;
+      } else if (Math.hypot(mv.x, mv.y) > 0.12) want = Math.atan2(mv.y, mv.x);
+    }
+    b.ang = angleTo(b.ang, want, dt * M.handTurn);
+    this.angle = b.ang;
+    this.fireCd -= dt;
+    this.hurtT -= dt;
+    b.recoil = Math.max(0, (b.recoil || 0) - dt * 2.5);
+    b.flash = Math.max(0, (b.flash || 0) - dt);
+    game.input.consume('reload');
+    game.input.consume('swap');
+    game.input.consume('slot');
+    if (!game.input.firing || this.fireCd > 0) return;
+    this.fireCd = M.manual / this.stats.rateMult;
+    this.shotsFired++;
+    // en línea lo lanza el servidor (y llega como efecto a todos, también a quien la maneja)
+    if (!game.mode.authority()) return;
+    // el servidor sólo sabe hacia dónde apuntas, no a qué distancia: ahí vuela hasta lo primero que toque
+    const far = game.targets ? M.range : Math.max(40, Math.min(dist, M.range));
+    game.structures.fireMilitary(game, b, far, null);
+    if (this === game.player) game.camera.kick(-Math.cos(b.ang) * 9, -Math.sin(b.ang) * 9);
   }
 
   tryFire(game: GameHost) {

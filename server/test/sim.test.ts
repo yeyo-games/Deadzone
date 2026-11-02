@@ -488,6 +488,50 @@ test('torreta pesada: se compra con sus balas, se monta y dispara en línea', ()
   assert.equal(t.manned, null, 'libre al caer');
 });
 
+test('torreta militar: se compra, se monta (encima de la torre) y lanzas tú los misiles', () => {
+  const sim = new ServerSim(5, [
+    { id: 'a', idx: 1, name: 'Ana' },
+    { id: 'b', idx: 2, name: 'Beto' },
+  ]);
+  const a = sim.slots.get('a')!;
+  const seq = { n: 0 };
+  idle(sim, 'a', seq, 2);
+  a.money = 60000;
+  sim.director.state = 'waiting';
+  assert.ok(sim.shop('a', 'item', 'military', 0));
+  assert.equal(a.money, 10000);
+  sim.director.state = 'active';
+  for (let k = 0; k < 8 && !sim.structures.blocks.length; k++) {
+    idle(sim, 'a', seq, 1, (k * Math.PI) / 4);
+    sim.act('a', { s: seq.n + 1, k: 'build', kind: 'military', tx: 0, ty: 0 });
+    idle(sim, 'a', seq, 1, (k * Math.PI) / 4);
+  }
+  const t = sim.structures.blocks[0];
+  assert.equal(t?.kind, 'military');
+  // montar (E): queda encima, en la escotilla
+  sim.act('a', { s: seq.n + 1, k: 'robot', kind: '', tx: 0, ty: 0 });
+  idle(sim, 'a', seq, 2, t.ang);
+  assert.equal(a.p.manned, t, 'montada');
+  assert.ok(Math.hypot(a.p.x - (t.x + 30), a.p.y - (t.y + 30)) < 12, 'encima de la torre');
+  assert.deepEqual(sim.snapshot('b', 0)!.hv.slice(0, 4), [t.x, t.y, Math.round(t.ang * 100), 1]);
+  // disparar: un misil antitanque de quien la maneja, que viaja como efecto y no como bala de la foto
+  sim.fx.length = 0;
+  sim.push('a', [{ s: ++seq.n, mx: 0, my: 0, f: IN_FIRE, a: t.ang, w: -1 }]);
+  sim.step();
+  const m = sim.bullets.list.find((q: any) => q.atgm);
+  assert.ok(m, 'lanzó el misil');
+  assert.equal(m.owner, 'a');
+  assert.ok(JSON.stringify(sim.fx).includes('"atgm"'), 'efecto del disparo');
+  assert.deepEqual(sim.snapshot('b', 0)!.b, [], 'el misil no va entre las balas de la foto');
+  // bajarse: por detrás de la torre, fuera de ella
+  sim.act('a', { s: seq.n + 1, k: 'robot', kind: '', tx: 0, ty: 0 });
+  idle(sim, 'a', seq, 1, t.ang);
+  assert.equal(a.p.manned, null, 'se bajó');
+  const dx = Math.abs(a.p.x - (t.x + 30));
+  const dy = Math.abs(a.p.y - (t.y + 30));
+  assert.ok(Math.max(dx, dy) > 30, 'fuera de la torre');
+});
+
 test('torreta pesada: mejoras junto a ella (también a mitad de oleada) y piloto automático con las balas del dueño', () => {
   const sim = new ServerSim(5, [
     { id: 'a', idx: 1, name: 'Ana' },

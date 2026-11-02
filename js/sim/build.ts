@@ -183,6 +183,8 @@ export function militaryMissile(
 }
 
 const isBig = (z: Zombie) => MILITARY.big.includes(z.type);
+// Torretas a las que te subes con E.
+const MOUNTS = ['heavy', 'military'];
 
 // Distancia al jugador más cercano (en línea, el servidor tiene varios en game.targets).
 export class Structures {
@@ -673,7 +675,7 @@ export class Structures {
     for (const b of this.blocks) {
       b.hitT -= dt;
       if (b.kind === 'turret') this.updateTurret(b, dt, game);
-      else if (b.kind === 'military') this.updateMilitary(b, dt, game);
+      else if (b.kind === 'military' && !b.manned) this.updateMilitary(b, dt, game);
       else if (b.kind === 'heavy' && !b.manned) updateAutoHeavy(b, dt, game, game.ownerOf?.(b.owner) ?? null);
     }
     for (const w of this.wires) w.hitT -= dt;
@@ -754,14 +756,21 @@ export class Structures {
     b.ang += Math.max(-dt * M.turn, Math.min(dt * M.turn, diff));
     if (b.cd > 0 || Math.abs(diff) > 0.08) return;
     b.cd = M.reload;
+    this.fireMilitary(game, b, Math.hypot(z.x - cx, z.y - cy) - 46, b.owner);
+  }
+
+  // Lanza un misil antitanque por el cañón de la torreta militar, que llega dist px más allá de la boca
+  // (lo usan la torreta sola y quien la maneja).
+  fireMilitary(game: GameHost, b: Block, dist: number, owner: string | null = null) {
     b.flash = 0.12;
     b.recoil = 1;
+    const cx = b.x + b.w / 2;
+    const cy = b.y + b.h / 2;
     const ca = Math.cos(b.ang);
     const sa = Math.sin(b.ang);
     const mx = cx + ca * 46;
     const my = cy + sa * 46;
-    const dist = Math.hypot(z.x - mx, z.y - my);
-    game.bullets.spawn(militaryMissile(mx, my, b.ang, dist, b.owner));
+    game.bullets.spawn(militaryMissile(mx, my, b.ang, dist, owner));
     // en línea: el servidor avisa y cada cliente lanza su propio misil de adorno
     if (game.onMilitaryShot) game.onMilitaryShot(mx, my, b.ang, dist);
     game.particles.militaryFire(mx, my, b.ang);
@@ -771,14 +780,15 @@ export class Structures {
 
   /* ---------- dibujo ---------- */
 
-  // La torreta pesada libre más cercana al alcance de p (o null).
+  // La torreta libre que se puede montar (pesada o militar) más cercana al alcance de p (o null).
   nearHeavy(p: Player) {
     let best = null;
-    let bd = HEAVY.reach + p.r;
+    let bd = Number.POSITIVE_INFINITY;
     for (const b of this.blocks) {
-      if (b.kind !== 'heavy' || b.manned) continue;
-      const d = Math.hypot(b.x + b.w / 2 - p.x, b.y + b.h / 2 - p.y);
-      if (d < bd) {
+      if (!MOUNTS.includes(b.kind) || b.manned) continue;
+      // la militar es más grande: se alcanza desde más lejos de su centro
+      const d = Math.hypot(b.x + b.w / 2 - p.x, b.y + b.h / 2 - p.y) - (b.w - 40) / 2;
+      if (d < bd && d < HEAVY.reach + p.r) {
         bd = d;
         best = b;
       }
@@ -801,7 +811,7 @@ export class Structures {
 
   // La torreta pesada que p puede mejorar: la que maneja o la más cercana a su alcance (aunque la maneje otro).
   heavyFor(p: Player) {
-    if (p.manned) return p.manned;
+    if (p.manned) return p.manned.kind === 'heavy' ? p.manned : null;
     let best = null;
     let bd = HEAVY.reach + p.r;
     for (const b of this.blocks) {
@@ -816,7 +826,14 @@ export class Structures {
   }
 
   leaveHeavy(p: Player) {
-    if (p.manned && p.manned.manned === p) p.manned.manned = null;
+    const b = p.manned;
+    if (b && b.manned === p) b.manned = null;
     p.manned = null;
+    // de la torreta militar te bajas por detrás de la torre (estabas encima)
+    if (b && b.kind === 'military') {
+      const d = b.w / 2 + p.r + 6;
+      p.x = b.x + b.w / 2 - Math.cos(b.ang) * d;
+      p.y = b.y + b.h / 2 - Math.sin(b.ang) * d;
+    }
   }
 }

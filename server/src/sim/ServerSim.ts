@@ -825,7 +825,7 @@ export class ServerSim {
         robots: [...this.slots.values()].map((q) => ({ idx: q.idx, r: q.robot })),
         // lo que disparó él ya lo vio en su pantalla; las torretas se repiten como efecto
         // las del piloto automático de su torreta no las predijo: también le llegan
-        skipBullet: (b: any) => (b.owner === id && !b.auto) || !!b.turret,
+        skipBullet: (b: any) => (b.owner === id && !b.auto) || !!b.turret || !!b.atgm,
       },
     );
     const st = this.structures;
@@ -868,9 +868,9 @@ export class ServerSim {
       // torretas pesadas que manejan los demás o que disparan solas (piloto automático, quien 0):
       // dónde, ángulo del cañón, quién y cañón que disparó
       hv: st.blocks.flatMap((b: any) => {
-        if (b.kind !== 'heavy' || !near(b.x, b.y)) return [];
+        if ((b.kind !== 'heavy' && b.kind !== 'military') || !near(b.x, b.y)) return [];
         const q = b.manned && b.manned !== me ? this.slotOf(b.manned) : null;
-        if (!q && (b.manned || !heavyAuto(b))) return [];
+        if (!q && (b.manned || b.kind === 'military' || !heavyAuto(b))) return [];
         return [b.x, b.y, r100(b.ang), q ? q.idx : 0, b.flash > 0 ? b.side : 0];
       }),
       // habilidad propia: clase, espera (décimas) y megarráfaga en curso

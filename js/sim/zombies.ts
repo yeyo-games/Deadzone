@@ -615,9 +615,10 @@ export class Horde {
       z.ox = z.x;
       z.oy = z.y;
     }
+    // el que va subido en una torreta se queda en su sitio (en la militar, encima de ella)
     if (targets) {
-      for (const pl of targets) if (pl.alive) world.collide(pl, pl.r, true);
-    } else if (p0.alive) world.collide(p0, p0.r, true);
+      for (const pl of targets) if (pl.alive && !pl.manned) world.collide(pl, pl.r, true);
+    } else if (p0.alive && !(p0 as Player).manned) world.collide(p0, p0.r, true);
     grid.clear();
     for (const z of list) grid.insert(z);
   }

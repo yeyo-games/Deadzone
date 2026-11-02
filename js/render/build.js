@@ -505,17 +505,12 @@ export function drawHeavyPrompt(ctx, game) {
   const p = game.player;
   // montado y disparando no estorba la vista
   if (game.input.mode !== 'mouse' || !p.alive || p.inRobot || (p.manned && game.input.firing)) return;
-  const b = game.structures.heavyFor(p);
+  const b = p.manned || game.structures.nearHeavy(p) || game.structures.heavyFor(p);
   if (!b) return;
-  const parts = p.manned
-    ? [
-        ['M', 'mejorar'],
-        ['E', 'bajar'],
-      ]
-    : [
-        ['E', 'montar'],
-        ['M', 'mejorar'],
-      ];
+  // la militar no tiene taller
+  const up = b.kind === 'heavy' ? [['M', 'mejorar']] : [];
+  const parts = p.manned ? [...up, ['E', 'bajar']] : b.manned ? up : [['E', 'montar'], ...up];
+  if (!parts.length) return;
   ctx.font = '600 12px "Barlow Condensed", "Arial Narrow", sans-serif';
   ctx.textBaseline = 'middle';
   ctx.textAlign = 'left';

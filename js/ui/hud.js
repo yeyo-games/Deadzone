@@ -117,7 +117,7 @@ export function updateHud(game, force) {
   }
   set(game, 'rbon', $('btn-robot'), 'text', rb.piloted || p.manned ? 'Bajar' : heavy ? 'Torreta' : 'Robot');
   // junto a una torreta pesada (o montado en ella): el botón de la llave abre su taller
-  const tup = p.alive && !p.inRobot && !!(p.manned || heavy);
+  const tup = p.alive && !p.inRobot && !!game.structures.heavyFor(p);
   if (game.cache.tup !== tup) {
     game.cache.tup = tup;
     $('btn-tup').classList.toggle('gone', !tup);
@@ -168,8 +168,12 @@ export function updateHud(game, force) {
     $('wave-lbl').textContent = ev ? game.director.eventDef.tag : 'Oleada';
     $('wave-stat').className = ev ? `stat ev ev-${ev}` : 'stat';
   }
-  // montado en la torreta pesada se ven sus balas
-  const w = p.manned ? { def: WEAPONS.heavy, mag: p.heavyAmmo, reserve: 0 } : p.weapon;
+  // montado en la torreta pesada se ven sus balas; en la militar, si el misil está listo
+  const w = !p.manned
+    ? p.weapon
+    : p.manned.kind === 'military'
+      ? { def: { name: 'Misiles antitanque' }, mag: p.fireCd > 0 ? 0 : 1, reserve: Infinity }
+      : { def: WEAPONS.heavy, mag: p.heavyAmmo, reserve: 0 };
   set(game, 'wname', $('wname'), 'text', w.def.name);
   set(game, 'mag', $('mag'), 'text', String(w.mag));
   set(game, 'res', $('reserve'), 'text', w.reserve === Infinity ? '∞' : String(w.reserve));
@@ -214,11 +218,11 @@ export function updateHud(game, force) {
     $('molo-count').textContent = inv.molotov;
     $('btn-molotov').classList.toggle('off', inv.molotov <= 0);
   }
-  const sig = p.manned ? 'heavy' : p.weapons.map((x) => x.id).join() + '|' + p.wi;
+  const sig = p.manned ? p.manned.kind : p.weapons.map((x) => x.id).join() + '|' + p.wi;
   if (game.cache.slots !== sig) {
     game.cache.slots = sig;
     $('slots').innerHTML = p.manned
-      ? `<button class="slot on">${WEAPONS.heavy.name}</button>`
+      ? `<button class="slot on">${p.manned.kind === 'military' ? SHOP.military.name : WEAPONS.heavy.name}</button>`
       : p.weapons
           .map(
             (x, i) =>

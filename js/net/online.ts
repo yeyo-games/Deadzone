@@ -860,10 +860,16 @@ export class Online {
     const p = g.player;
     const st = Array.isArray(s.st) ? s.st : [];
     p.heavyAmmo = Math.max(0, st[10] | 0);
-    const heavy: HeavyBlock[] = g.structures.blocks.filter((b: HeavyBlock) => b.kind === 'heavy');
+    const heavy: HeavyBlock[] = g.structures.blocks.filter(
+      (b: HeavyBlock) => b.kind === 'heavy' || b.kind === 'military',
+    );
     const at = (x: number, y: number) => heavy.find((b) => b.x === x && b.y === y) || null;
     const old = p.manned;
-    for (const b of heavy) b.manned = null;
+    for (const b of heavy) {
+      b.manned = null;
+      // la militar sola gira con sus disparos (efecto atgm), no hacia el ángulo de una foto vieja
+      if (b.kind === 'military') b.ta = undefined;
+    }
     for (const q of g.remote.peers.values()) q.manned = null;
     const hv = Array.isArray(s.hv) ? s.hv : [];
     for (let i = 0; i + 4 < hv.length; i += 5) {

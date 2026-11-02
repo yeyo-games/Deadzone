@@ -652,11 +652,16 @@ export const HEAVY = { pack: 100, price: 200, turn: 4.5, shield: 0.5, reach: 60,
 // prefiriendo a los grandes (big), y cada reload s lanza un misil antitanque que vuela recto a speed px/s
 // y estalla con el radio y el daño del misil del Bomber (ABILITY.bomber) en el primer zombi o pared que
 // toca, o donde estaba su blanco. No necesita munición. min: no dispara a los que tiene encima.
+// También se monta con E: subido en la escotilla (seat px detrás del centro) la torre gira más rápido
+// (handTurn) hacia tu mira y lanzas tú un misil cada manual s, hasta donde apuntas.
 export const MILITARY = {
   range: 720,
   min: 90,
   turn: 1.8,
+  handTurn: 3,
   reload: 2.4,
+  manual: 1.6,
+  seat: 8,
   speed: 620,
   big: ['rock', 'heavy', 'giant', 'bull', 'fat'],
 };
@@ -833,7 +838,7 @@ export const SHOP = {
   // Torre de tanque que dispara sola misiles antitanque (MILITARY): ocupa 3×3 casillas.
   military: {
     name: 'Torreta militar',
-    desc: 'Torre de tanque que lanza sola misiles antitanque: cada uno estalla como el misil del Bomber. Busca primero a los zombis grandes.',
+    desc: 'Torre de tanque que lanza sola misiles antitanque: cada uno estalla como el misil del Bomber. Busca primero a los zombis grandes. Súbete con E para dispararlos tú.',
     price: 50000,
     hp: 9000,
     w: 60,

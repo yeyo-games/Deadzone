@@ -28,8 +28,8 @@ export function toggleRobot(game) {
   }
   const rb = game.robot;
   if (!rb.owned) {
-    if (game.structures.blocks.some((b) => b.kind === 'heavy'))
-      return game.toast('Acércate a la torreta pesada para montarla');
+    if (game.structures.blocks.some((b) => b.kind === 'heavy' || b.kind === 'military'))
+      return game.toast('Acércate a la torreta para montarla');
     return game.toast('Compra el robot de combate en la tienda');
   }
   // en línea se sube o se baja en el servidor (que repite estas mismas comprobaciones)
@@ -55,7 +55,7 @@ export function mountHeavy(game, b) {
   game.structures.mountHeavy(p, b);
   game.sfx.build();
   game.camera.shake(0.12);
-  if (p.heavyAmmo <= 0) game.toast('Torreta sin balas: cómpralas en la tienda');
+  if (b.kind === 'heavy' && p.heavyAmmo <= 0) game.toast('Torreta sin balas: cómpralas en la tienda');
 }
 
 export function leaveHeavy(game) {
