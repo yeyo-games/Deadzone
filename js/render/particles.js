@@ -508,6 +508,80 @@ export class Particles {
     );
   }
 
+  // estela del misil antitanque: humo gris oscuro y brasas encendidas que quedan marcando su recorrido
+  atgmTrail(x, y, dx, dy) {
+    this.add(
+      SMOKE,
+      x - dx * 14 + rand(-3, 3),
+      y - dy * 14 + rand(-3, 3),
+      -dx * 20 + rand(-12, 12),
+      -dy * 20 + rand(-12, 12),
+      rand(0.9, 1.5),
+      rand(4, 6),
+      pick(['60,56,52', '40,37,34', '88,84,78']),
+      1.6,
+      14,
+    );
+    for (let i = 0; i < 2; i++)
+      this.add(
+        EMBER,
+        x - dx * (12 + i * 6) + rand(-1.5, 1.5),
+        y - dy * (12 + i * 6) + rand(-1.5, 1.5),
+        -dx * 40 + rand(-20, 20),
+        -dy * 40 + rand(-20, 20),
+        rand(0.3, 0.55),
+        rand(1.6, 2.6),
+        pick(['#fff2c0', '#ffd070', '#ffa040']),
+        5,
+      );
+  }
+
+  // disparo de la torreta militar: fogonazo y una nube de humo negro que sale de la boca y del rebufo
+  militaryFire(x, y, a) {
+    const ca = Math.cos(a);
+    const sa = Math.sin(a);
+    this.add(FIREBALL, x + ca * 6, y + sa * 6, ca * 120, sa * 120, 0.16, 18, '', 6);
+    this.flash(x, y, 150, 0.12);
+    for (let i = 0; i < 18; i++) {
+      const aa = a + rand(-0.6, 0.6);
+      const s = rand(40, 180);
+      this.add(
+        SMOKE,
+        x,
+        y,
+        Math.cos(aa) * s,
+        Math.sin(aa) * s,
+        rand(1.4, 2.6),
+        rand(6, 11),
+        pick(['18,16,15', '28,25,23', '40,36,33']),
+        2.4,
+        rand(14, 24),
+      );
+    }
+    // el humo que escupe hacia atrás la torre
+    for (let i = 0; i < 10; i++) {
+      const aa = a + Math.PI + rand(-0.7, 0.7);
+      const s = rand(30, 110);
+      this.add(
+        SMOKE,
+        x - ca * 70,
+        y - sa * 70,
+        Math.cos(aa) * s,
+        Math.sin(aa) * s,
+        rand(1.2, 2),
+        rand(6, 10),
+        pick(['22,20,18', '36,33,30']),
+        2.4,
+        18,
+      );
+    }
+    for (let i = 0; i < 8; i++) {
+      const aa = a + rand(-0.3, 0.3);
+      const s = rand(250, 520);
+      this.add(SPARK, x, y, Math.cos(aa) * s, Math.sin(aa) * s, rand(0.08, 0.16), 1, '#ffd890', 7);
+    }
+  }
+
   // rebufo de la bazuca hacia atrás
   backblast(x, y, a) {
     for (let i = 0; i < 10; i++) {

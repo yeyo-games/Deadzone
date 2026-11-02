@@ -18,7 +18,7 @@ de un cerco, no para pasear.
 | Velocista | 26 | rápida        | Desde la primera oleada. Te alcanza si no corres              |
 | Gordo   | 130  | más lenta     | Más grande, aguanta unas 3× más disparos. **Al morir revienta en ácido verde**: si te salpica te quema 5 s (2 de vida por segundo) y la vista se pone verde y borrosa |
 | Toro    | 294  | rápida al embestir | Desde la oleada 3. Musculoso, bronceado y con cuernos de hueso. Al verte escarba y **embiste**: si te da te lanza y te quita 40. Si choca con una barricada la embiste una y otra vez (250 la embestida larga, 40 las cortas) hasta romperla |
-| Rocoso  | 1050 | lenta (la más lenta) | Desde la oleada 5: uno al principio y unos más cada oleada. Zombi recubierto de roca, más ancho que un gordo; aparta a la horda al caminar y las balas no lo frenan. **Va recto hacia ti** y destroza lo que le estorba: árboles y coches (desaparecen del mapa), aplasta la madera, abolla y avienta el metal, empuja vallas y sacos hasta quebrarlos, embiste el concreto (350 por golpe) y a la HESCO y al concreto reforzado se aleja y los embiste (700). Si te alcanza **te agarra y te lanza** hacia donde hay más zombis: te quita 50 y los que tocas al volar mueren (los grandes sólo se apartan) |
+| Rocoso  | 1050 | lenta (la más lenta) | Desde la oleada 5: uno al principio y unos más cada oleada. Zombi recubierto de roca, mucho más grande que un gordo; aparta a la horda al caminar y las balas no lo frenan. **Va recto hacia ti** y destroza lo que le estorba: árboles y coches (desaparecen del mapa), aplasta la madera; contra el metal, las vallas y los sacos se recarga y los golpea (150 cada 0,6 s) sin moverlos, y sólo si sigue pegado al mismo muro más de 5 s abolla y avienta el metal o empuja la valla o los sacos hasta quebrarlos; embiste el concreto (350 por golpe) y a la HESCO y al concreto reforzado se aleja y los embiste (700). Si te alcanza **te agarra y te lanza** hacia donde hay más zombis: te quita 50 y los que tocas al volar mueren (los grandes sólo se apartan) |
 | Dorado  | 126  | rápida        | Raro (uno cada 35–65 s de ronda). No ataca: huye y desaparece a los 26 s. Si lo matas, da **$100–$250** |
 
 Cuando un zombi te golpea **pierdes dinero** ($16–$40 al azar, nunca te deja en negativo) y lo ves en un
@@ -83,6 +83,8 @@ de elegir tu mejora de nivel) se abre la tienda:
 | Barrera HESCO | $800 | Gaviones de malla con arena, casi indestructibles (10000) |
 | Barrera de concreto reforzado | $1300 | Concreto con placas de acero y vigas; recibe 10 % menos daño (18000) |
 | Torreta automática | $500 | Dispara sola al zombi más cercano |
+| Torreta pesada | $15 000 | Cañón doble que manejas tú (ver abajo) |
+| Torreta militar | $50 000 | Torre de tanque que lanza sola misiles antitanque (ver abajo) |
 | Alambre de púas | $20 | No bloquea: frena y hiere |
 | Trampa de pinchos | $60 | Frena y hiere mucho más |
 | Mina terrestre | $45 | Explota al pisarla |
@@ -125,13 +127,23 @@ que se compran en la tienda. Junto a ella (o montado) pulsa `M` (botón de la **
 para abrir su **taller**: cada torreta tiene sus propias mejoras, se compran en cualquier momento y se
 ven en la torreta.
 
-| Mejora | Niveles | Efecto |
-|--------|---------|--------|
-| Calibre | $1000 · $2500 · $5000 | Daño ×1,2 · ×1,4 · ×1,6 (al pegar y al estallar) |
-| Cadencia | $1000 · $2500 · $5000 | 11 · 13 · 15 disparos por segundo (de 9) |
-| Carga explosiva | $1200 · $3000 · $6000 | Radio de la explosión 75 · 90 · 105 px (de 60) |
-| Blindaje | $800 · $2000 · $4000 | Vida 6000 · 8000 · 10 000 (de 4000) y repara 15 · 25 · 35 % al acabar cada oleada |
+Calibre, cadencia, carga explosiva y blindaje tienen **10 niveles** cada uno (cada nivel cuesta más):
+
+| Mejora | Niveles (precio) | Efecto (de fábrica → nivel 10) |
+|--------|------------------|--------------------------------|
+| Calibre | $1000 · $2500 · $5000 · $8000 · $12 000 · $17 000 · $23 000 · $30 000 · $40 000 · $50 000 | Daño ×1,2 · ×1,4 · ×1,6 · ×1,8 · ×2 · ×2,25 · ×2,5 · ×2,75 · ×3 · ×3,3 (al pegar y al estallar) |
+| Cadencia | los mismos que el calibre | 11 · 13 · 15 · 16 · 17 · 18 · 19 · 20 · 21 · 22 disparos por segundo (de 9) |
+| Carga explosiva | $1200 · $3000 · $6000 · $9000 · $13 000 · $18 000 · $24 000 · $31 000 · $40 000 · $50 000 | Radio de la explosión 75 · 90 · 105 · 115 · 125 · 135 · 145 · 155 · 165 · 175 px (de 60) |
+| Blindaje | $800 · $2000 · $4000 · $6500 · $9500 · $13 000 · $17 000 · $22 000 · $28 000 · $35 000 | Vida 6000 · 8000 · 10 000 · 12 500 · 15 000 · 17 500 · 20 000 · 23 000 · 26 000 · 30 000 (de 4000) y repara del 15 al 70 % al acabar cada oleada |
 | Piloto automático | $6000 | Sin nadie a los mandos dispara sola a media cadencia (hasta 520 px) con las balas de quien la puso |
+
+### Torreta militar
+
+La **torreta militar** ($50 000) es la parte de arriba de un tanque: ocupa 3×3 casillas, aguanta 9000 y
+dispara sola, sin munición. Gira despacio hacia el zombi a su alcance (hasta 720 px, y no a los que tiene
+encima), **primero a los grandes** (rocosos, super blindados, gigantes, toros y gordos), y cada 2,4 s
+lanza un **misil antitanque** que sale con una nube de humo negro, deja un recorrido luminoso y estalla
+en el primer zombi o pared que toca (o donde estaba su blanco) con el radio y el daño del misil del Bomber.
 
 ### Armas y munición
 

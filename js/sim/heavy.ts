@@ -1,5 +1,5 @@
 // Mejoras de la torreta pesada (HEAVY_UP en config): cada torreta guarda sus niveles en `up`, un número
-// con 2 bits por mejora en el orden de HEAVY_UP_ORDER (así viaja en la foto y en la partida guardada).
+// con 4 bits por mejora en el orden de HEAVY_UP_ORDER (así viaja en la foto y en la partida guardada).
 // También el disparo del cañón doble, que comparten quien la maneja (Player.actMounted) y el piloto automático.
 import { HEAVY, HEAVY_UP, HEAVY_UP_ORDER, WEAPONS } from '../core/config.ts';
 import { angleTo, rand } from '../core/util.ts';
@@ -28,10 +28,19 @@ export interface HeavyGun {
 const GUN = (WEAPONS as Record<string, { damage: number; speed: number; range: number; spread: number; knock: number }>)
   .heavy;
 
+const BITS = 4;
+
 /** Nivel de la mejora id en la torreta (0 = de fábrica). */
 export function heavyLevel(b: Pick<HeavyGun, 'up'>, id: string) {
   const i = HEAVY_UP_ORDER.indexOf(id);
-  return i < 0 ? 0 : ((b.up || 0) >> (i * 2)) & 3;
+  return i < 0 ? 0 : ((b.up || 0) >> (i * BITS)) & ((1 << BITS) - 1);
+}
+
+/** `up` de una partida guardada antes de que hubiera más de 3 niveles (2 bits por mejora). */
+export function widenHeavyUp(old: number) {
+  let up = 0;
+  for (let i = 0; i < HEAVY_UP_ORDER.length; i++) up += ((old >> (i * 2)) & 3) << (i * BITS);
+  return up;
 }
 
 /** Niveles de todas las mejoras ({ cal: 1, rate: 0, ... }). */
@@ -62,7 +71,7 @@ export function upgradeHeavy(b: HeavyGun, id: string) {
   const i = HEAVY_UP_ORDER.indexOf(id);
   if (i < 0 || !heavyPrice(b, id)) return false;
   const before = heavyMaxHp(b);
-  b.up = (b.up || 0) + (1 << (i * 2));
+  b.up = (b.up || 0) + (1 << (i * BITS));
   if (id === 'armor') {
     b.max = heavyMaxHp(b);
     b.hp = Math.min(b.max, b.hp + b.max - before);

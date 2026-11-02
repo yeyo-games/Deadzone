@@ -861,7 +861,7 @@ export function zombieSprites() {
     swat: { r: 14, frames: 6, scale: 2.5, pad: 1.7 },
     heavy: { r: 22, frames: 6, scale: 2.4, pad: 1.45 },
     bull: { r: 17, frames: 6, scale: 2.5, pad: 1.65 },
-    rock: { r: 26, frames: 6, scale: 2.4, pad: 1.5 },
+    rock: { r: 34, frames: 6, scale: 2.3, pad: 1.5 },
   };
   for (const type of /** @type {ZType[]} */ (Object.keys(conf))) {
     const k = conf[type];

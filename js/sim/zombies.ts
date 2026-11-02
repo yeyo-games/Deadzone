@@ -581,7 +581,7 @@ export class Horde {
       if (bumped) z.touchT = 0.5;
       if (z.type === 'bull' && !z.dead) this.bullImpact(z, bumped, world.lastBlock as Block | null, game);
       if (z.type === 'rock' && !z.dead)
-        this.rockImpact(z, bumped, world.lastBlock as Block | null, world.lastObs, game);
+        this.rockImpact(z, bumped, world.lastBlock as Block | null, world.lastObs, game, dt);
       // detector de atasco: si en 1,2 s casi no avanzó y no está pegado al jugador
       z.chkT = (z.chkT || 0) + dt;
       if (z.chkT > 1.2) {
@@ -961,7 +961,12 @@ export class Horde {
   }
 
   // Choque del rocoso: decide qué hacer con lo que le cerró el paso.
-  rockImpact(z: Zombie, bumped: boolean, block: Block | null, obs: Obstacle | null, game: GameHost) {
+  rockImpact(z: Zombie, bumped: boolean, block: Block | null, obs: Obstacle | null, game: GameHost, dt = 0) {
+    // se separó del muro en el que se recargaba: la cuenta de lean vuelve a empezar
+    if (z.leanB && block !== z.leanB) {
+      z.leanGap = (z.leanGap || 0) + dt;
+      if (z.leanGap > 0.5) z.leanB = null;
+    }
     if (z.bs === 'ramIn') {
       if (!block) {
         if (bumped) z.bs = 'walk';
@@ -984,6 +989,25 @@ export class Horde {
       const a = Math.atan2(clamp(z.y, block.y, block.y + block.h) - z.y, clamp(z.x, block.x, block.x + block.w) - z.x);
       const dx = Math.cos(a);
       const dy = Math.sin(a);
+      if (k === 'metal' || k === 'fence' || k === 'sandbag') {
+        // no lo mueve enseguida: se recarga contra el muro y lo va golpeando
+        if (z.leanB !== block) {
+          z.leanB = block;
+          z.leanT = 0;
+          z.leanHitT = ROCK.leanRate * 0.5;
+        }
+        z.leanGap = 0;
+        z.leanT += dt;
+        z.leanHitT -= dt;
+        if (z.leanHitT <= 0) {
+          z.leanHitT = ROCK.leanRate;
+          z.lunge = 1;
+          game.structures.damageBlock(game, block, ROCK.leanHit);
+        }
+        // sólo si sigue pegado al mismo muro ROCK.lean s lo avienta o lo empuja
+        if (block.hp <= 0 || z.leanT < ROCK.lean) return;
+        z.leanB = null;
+      }
       z.lunge = 1;
       if (k === 'wood') {
         // la madera la aplasta al pasar

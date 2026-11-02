@@ -285,6 +285,8 @@ export class ServerSim {
       },
       // la bala de la torreta no va en la foto: cada cliente lanza la suya al recibir el disparo
       onTurretShot: (x: number, y: number, a: number) => this.record('t', 'shot', [x, y, a]),
+      // igual el misil de la torreta militar (su humo y su sonido llegan como efectos aparte)
+      onMilitaryShot: (x: number, y: number, a: number, d: number) => this.record('t', 'atgm', [x, y, a, d]),
       banner: rec('g', 'banner'),
       toast: (m: string) => (this.toastTo ? this.slots.get(this.toastTo)?.toasts.push(m) : this.toastAll(m)),
     };

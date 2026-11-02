@@ -11,7 +11,7 @@ import {
 } from './core/config.ts';
 import { storage } from './core/util.ts';
 import { isClass } from './sim/abilities.ts';
-import { heavyMaxHp } from './sim/heavy.ts';
+import { heavyMaxHp, widenHeavyUp } from './sim/heavy.ts';
 
 // Cada cuenta tiene dos guardados: el automático (también a mitad de ronda) y el punto
 // de control al terminar cada ronda, para continuar tras morir (ver accounts.js).
@@ -28,6 +28,8 @@ export function saveProgress(game) {
   for (const t of game.director.queue) queue[t] = (queue[t] || 0) + 1;
   const data = {
     v: 1,
+    // mejoras de la torreta pesada con 4 bits cada una (las partidas sin esto tienen 2)
+    upBits: 4,
     savedAt: Date.now(),
     dstate: ds,
     queue,
@@ -142,7 +144,7 @@ export function loadProgress(game, kind = 'save') {
       cd: 0,
       ang: 0,
       // mejoras de la torreta pesada (partidas de antes: ninguna)
-      up: Math.max(0, Number(b.up) | 0),
+      up: d.upBits === 4 ? Math.max(0, Number(b.up) | 0) : widenHeavyUp(Math.max(0, Number(b.up) | 0)),
       owner: null,
     };
     if (o.kind === 'heavy') o.max = heavyMaxHp(o);

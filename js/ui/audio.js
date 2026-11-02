@@ -405,6 +405,14 @@ export class Sfx {
     this.burst({ dur: 1.3, freq: 3000, sweep: 900, gain: 0.12, type: 'bandpass', q: 3, attack: 0.4 });
   }
 
+  // Misil antitanque de la torreta militar: estampido grave del lanzamiento y el silbido del motor.
+  atgm() {
+    if (!this.ok('atgm', 0.3, true)) return;
+    this.tone({ freq: 120, to: 40, dur: 0.45, gain: 0.7 });
+    this.burst({ dur: 0.5, freq: 1400, sweep: 200, gain: 0.55 });
+    this.burst({ dur: 0.9, freq: 3200, sweep: 1800, gain: 0.14, type: 'bandpass', q: 4, attack: 0.05 });
+  }
+
   // Impulso del Booster: zumbido que sube.
   boost() {
     if (!this.ok('boost', 0.2, true)) return;

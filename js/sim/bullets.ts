@@ -41,6 +41,7 @@ export class Bullets {
         b.dy = Math.sin(a);
         game.particles.rocketTrail(b.x, b.y, b.dx, b.dy);
       }
+      if (b.atgm) game.particles.atgmTrail(b.x, b.y, b.dx, b.dy);
       let step = b.speed * dt;
       if (step > b.life) step = b.life;
       const x = b.x;
@@ -84,6 +85,15 @@ export class Bullets {
         (b.hits || (b.hits = [])).push(best);
         const hx = x + (ex - x) * bt;
         const hy = y + (ey - y) * bt;
+        if (b.atgm) {
+          // misil antitanque: estalla en el primero que toca
+          b.exploded = true;
+          if (!b.fake) game.structures.missileBlast(game, hx, hy, b.owner);
+          dead = true;
+          wall = false;
+          endT = bt;
+          break;
+        }
         if (b.rocket) {
           // el cohete no rebota ni atraviesa: impacta en el primero que toca
           game.rocketHit(best, hx, hy, b);
@@ -143,7 +153,11 @@ export class Bullets {
         b.pierce = 0;
         b.life = Math.min(b.life, 240);
       }
-      if (b.rocket && !b.exploded && (wall || b.life <= 0)) game.rocketBlast(b.x - b.dx * 4, b.y - b.dy * 4, b.owner);
+      if (b.atgm && !b.exploded && (wall || b.life <= 0)) {
+        b.exploded = true;
+        if (!b.fake) game.structures.missileBlast(game, b.x - b.dx * 4, b.y - b.dy * 4, b.owner);
+      } else if (b.rocket && !b.exploded && (wall || b.life <= 0))
+        game.rocketBlast(b.x - b.dx * 4, b.y - b.dy * 4, b.owner);
       else if (b.blast && wall) game.heavyBlast(b.x - b.dx * 4, b.y - b.dy * 4, b.owner, b.blastR, b.blastP);
       else if (wall) game.particles.impact(b.x, b.y, b.dx, b.dy);
       if (dead || b.life <= 0) {

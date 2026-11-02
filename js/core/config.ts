@@ -389,7 +389,7 @@ export const ZOMBIES = {
   rock: {
     hp: 42 * 25,
     speed: 0.6,
-    radius: 26,
+    radius: 34,
     damage: 18,
     attackRate: 0.6,
     xp: 40,
@@ -485,7 +485,9 @@ export const WAVES = {
 // detour s por la ruta normal. Contra lo que le estorba:
 //   árboles y coches: se planta smash s y los hace pedazos (desaparecen del mapa)
 //   madera: la aplasta al pasar · metal: la abolla (dent de su vida) y la lanza throw px
-//   valla y sacos: los empuja (push px/s) mientras les quita pushDps hasta quebrarlos
+//   metal, valla y sacos: no los mueve enseguida; se recarga contra ellos y los golpea (leanHit cada
+//   leanRate s). Si sigue pegado al mismo muro lean s: el metal lo avienta y la valla y los sacos los
+//   empuja (push px/s) mientras les quita pushDps hasta quebrarlos
 //   concreto, torretas: embestida corta (short px de impulso) de shortHit
 //   HESCO y concreto reforzado: se aleja long px, carga y embiste con longHit
 // Si te alcanza te agarra (hold s), te quita grab.hit y te lanza (throw px/s) hacia donde hay más
@@ -497,6 +499,9 @@ export const ROCK = {
   detour: 2.5,
   smash: 0.5,
   dent: 0.7,
+  lean: 5,
+  leanHit: 150,
+  leanRate: 0.6,
   throw: 70,
   push: 70,
   pushDps: 750,
@@ -643,8 +648,22 @@ export const ROBOT = { hp: 10000, radius: 42, mass: 40, price: 10000, repairPerH
 // microexplosión de cada bala (radio en px y daño en el centro; la granada es 140 y 330).
 export const HEAVY = { pack: 100, price: 200, turn: 4.5, shield: 0.5, reach: 60, blastR: 60, blastPower: 55 };
 
+// Torreta militar (SHOP.military): gira despacio (turn rad/s) hacia el zombi a su alcance (range px),
+// prefiriendo a los grandes (big), y cada reload s lanza un misil antitanque que vuela recto a speed px/s
+// y estalla con el radio y el daño del misil del Bomber (ABILITY.bomber) en el primer zombi o pared que
+// toca, o donde estaba su blanco. No necesita munición. min: no dispara a los que tiene encima.
+export const MILITARY = {
+  range: 720,
+  min: 90,
+  turn: 1.8,
+  reload: 2.4,
+  speed: 620,
+  big: ['rock', 'heavy', 'giant', 'bull', 'fat'],
+};
+
 // Mejoras de cada torreta pesada: se compran junto a ella (tecla M o el botón Mejorar) y son de esa
 // torreta. price: lo que cuesta cada nivel; los arreglos de efecto empiezan en el nivel 0 (de fábrica).
+// Cada mejora llega a 15 niveles como mucho (4 bits por mejora en `up`, ver heavy.ts).
 //   cal: multiplica el daño de la bala y de su explosión · rate: disparos por segundo
 //   blast: radio de la explosión (px) · armor: vida, y la parte de la vida que repara al acabar la oleada
 //   auto: sin nadie a los mandos dispara sola (a rate de su cadencia, hasta range px) con las balas del dueño
@@ -663,27 +682,27 @@ export const HEAVY_UP: Record<string, HeavyUpDef> = {
   cal: {
     name: 'Calibre',
     desc: 'Balas más pesadas: más daño al pegar y al estallar.',
-    price: [1000, 2500, 5000],
-    dmg: [1, 1.2, 1.4, 1.6],
+    price: [1000, 2500, 5000, 8000, 12000, 17000, 23000, 30000, 40000, 50000],
+    dmg: [1, 1.2, 1.4, 1.6, 1.8, 2, 2.25, 2.5, 2.75, 3, 3.3],
   },
   rate: {
     name: 'Cadencia',
     desc: 'Alimentador más rápido: más balas por segundo.',
-    price: [1000, 2500, 5000],
-    rate: [9, 11, 13, 15],
+    price: [1000, 2500, 5000, 8000, 12000, 17000, 23000, 30000, 40000, 50000],
+    rate: [9, 11, 13, 15, 16, 17, 18, 19, 20, 21, 22],
   },
   blast: {
     name: 'Carga explosiva',
     desc: 'Cada bala estalla en un radio más grande.',
-    price: [1200, 3000, 6000],
-    r: [60, 75, 90, 105],
+    price: [1200, 3000, 6000, 9000, 13000, 18000, 24000, 31000, 40000, 50000],
+    r: [60, 75, 90, 105, 115, 125, 135, 145, 155, 165, 175],
   },
   armor: {
     name: 'Blindaje',
     desc: 'Placas y sacos de arena: más vida, y se repara sola al acabar cada oleada.',
-    price: [800, 2000, 4000],
-    hp: [4000, 6000, 8000, 10000],
-    repair: [0, 0.15, 0.25, 0.35],
+    price: [800, 2000, 4000, 6500, 9500, 13000, 17000, 22000, 28000, 35000],
+    hp: [4000, 6000, 8000, 10000, 12500, 15000, 17500, 20000, 23000, 26000, 30000],
+    repair: [0, 0.15, 0.25, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7],
   },
   auto: {
     name: 'Piloto automático',
@@ -811,6 +830,16 @@ export const SHOP = {
     turret: true,
     manned: true,
   },
+  // Torre de tanque que dispara sola misiles antitanque (MILITARY): ocupa 3×3 casillas.
+  military: {
+    name: 'Torreta militar',
+    desc: 'Torre de tanque que lanza sola misiles antitanque: cada uno estalla como el misil del Bomber. Busca primero a los zombis grandes.',
+    price: 50000,
+    hp: 9000,
+    w: 60,
+    h: 60,
+    turret: true,
+  },
   wire: {
     name: 'Alambre de púas',
     desc: 'No bloquea el paso: frena mucho y hiere a los zombis que lo cruzan.',
@@ -862,6 +891,7 @@ export const BUILD_ORDER = [
   'reinforced',
   'turret',
   'heavy',
+  'military',
   'wire',
   'spikes',
   'mine',

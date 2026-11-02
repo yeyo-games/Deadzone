@@ -201,12 +201,15 @@ export function drawShopIcon(game, c, k) {
     drawGrenades(g, { grenades: [{ x: 10, y: 11, h: 0, rot: -0.6, t: 0, dur: 1 }] });
     return;
   }
-  if (k === 'heavy') {
-    // el cañón sobresale del trípode: se centra todo el conjunto
-    g.setTransform(1.15, 0, 0, 1.15, 33 - 1.15 * 20, 48 - 1.15 * 20);
+  if (k === 'heavy' || k === 'military') {
+    // el cañón sobresale de la base: se centra todo el conjunto
+    const big = k === 'military';
+    const s = big ? 1.1 : 1.15;
+    const half = big ? 30 : 20;
+    g.setTransform(s, 0, 0, s, (big ? 37 : 33) - s * half, 48 - s * half);
     drawBlocks(
       g,
-      { blocks: [{ kind: k, x: 0, y: 0, w: 40, h: 40, hp: 1, max: 1, hitT: 0, ang: 0 }] },
+      { blocks: [{ kind: k, x: 0, y: 0, w: half * 2, h: half * 2, hp: 1, max: 1, hitT: 0, ang: 0 }] },
       {
         x0: -1e4,
         y0: -1e4,

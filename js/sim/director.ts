@@ -347,7 +347,7 @@ export class Director {
         const type = this.queue[0];
         const r =
           type === 'rock'
-            ? 28
+            ? 36
             : type === 'fat' || type === 'heavy' || type === 'bull'
               ? 24
               : type === 'sprinter'

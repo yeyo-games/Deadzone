@@ -244,7 +244,8 @@ export function drawBars(ctx, st, v) {
 function drawHeavy(ctx, b) {
   const cx = b.x + b.w / 2;
   const cy = b.y + b.h / 2;
-  const armor = heavyLevel(b, 'armor');
+  // el dibujo crece hasta el nivel 3; los niveles de más se notan en el taller
+  const armor = Math.min(3, heavyLevel(b, 'armor'));
   ctx.fillStyle = 'rgba(0,0,0,0.35)';
   ctx.beginPath();
   ctx.ellipse(cx + 4, cy + 6, 24 + armor * 3, 20 + armor * 3, 0, 0, TAU);
@@ -315,7 +316,7 @@ const FIN = ['#4c5258', '#6e5a44', '#8d6236', '#b0702a'];
 const STRIPE = ['#c9a54a', '#d98a3a', '#d9603a', '#e8402c'];
 
 function drawHeavyGun(ctx, b) {
-  const lv = heavyLevels(b);
+  const lv = Object.fromEntries(Object.entries(heavyLevels(b)).map(([k, n]) => [k, Math.min(3, n)]));
   const now = performance.now() / 1000;
   ctx.save();
   ctx.translate(b.x + b.w / 2, b.y + b.h / 2);
@@ -687,8 +688,142 @@ function drawReinforced(ctx, b) {
   ctx.restore();
 }
 
+// Torreta militar: la parte de arriba de un tanque sobre su anillo de acero. La torre angulosa gira con
+// el cañón largo (de él salen los misiles), la escotilla del jefe, el periscopio y cajas de equipo.
+function drawMilitary(ctx, b) {
+  const cx = b.x + b.w / 2;
+  const cy = b.y + b.h / 2;
+  ctx.fillStyle = 'rgba(0,0,0,0.42)';
+  ctx.beginPath();
+  ctx.ellipse(cx + 5, cy + 7, 32, 30, 0, 0, TAU);
+  ctx.fill();
+  // placa de la base con pernos y el anillo de giro
+  ctx.fillStyle = '#3a3e36';
+  ctx.strokeStyle = OUT;
+  ctx.lineWidth = 2;
+  roundRect(ctx, b.x + 2, b.y + 2, b.w - 4, b.h - 4, 6);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = '#23261f';
+  for (const [px, py] of [
+    [b.x + 8, b.y + 8],
+    [b.x + b.w - 8, b.y + 8],
+    [b.x + 8, b.y + b.h - 8],
+    [b.x + b.w - 8, b.y + b.h - 8],
+  ]) {
+    ctx.beginPath();
+    ctx.arc(px, py, 2.2, 0, TAU);
+    ctx.fill();
+  }
+  ctx.fillStyle = '#2a2d26';
+  ctx.beginPath();
+  ctx.arc(cx, cy, 25, 0, TAU);
+  ctx.fill();
+  ctx.strokeStyle = '#5b5f55';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(b.ang || 0);
+  const rk = (b.recoil || 0) * 7;
+  // cañón: tubo largo con evacuador de humos y freno de boca; retrocede al disparar
+  ctx.strokeStyle = OUT;
+  ctx.lineWidth = 1.6;
+  ctx.fillStyle = '#4b5239';
+  ctx.fillRect(14 - rk, -3.2, 32, 6.4);
+  ctx.strokeRect(14 - rk, -3.2, 32, 6.4);
+  ctx.fillStyle = '#5c6447';
+  ctx.fillRect(25 - rk, -4.6, 8, 9.2);
+  ctx.strokeRect(25 - rk, -4.6, 8, 9.2);
+  ctx.fillStyle = '#2c3022';
+  ctx.fillRect(42 - rk, -4.4, 6, 8.8);
+  ctx.strokeRect(42 - rk, -4.4, 6, 8.8);
+  // torre angulosa (más ancha atrás, en punta hacia el cañón) con la cesta trasera
+  ctx.fillStyle = '#3f4532';
+  ctx.fillRect(-27, -14, 8, 28);
+  ctx.strokeRect(-27, -14, 8, 28);
+  ctx.beginPath();
+  ctx.moveTo(-21, -17);
+  ctx.lineTo(4, -18);
+  ctx.lineTo(17, -9);
+  ctx.lineTo(17, 9);
+  ctx.lineTo(4, 18);
+  ctx.lineTo(-21, 17);
+  ctx.closePath();
+  ctx.fillStyle = '#5a6340';
+  ctx.fill();
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  // luz de arriba: el frente brilla un poco más
+  ctx.fillStyle = 'rgba(214,220,170,0.12)';
+  ctx.beginPath();
+  ctx.moveTo(4, -18);
+  ctx.lineTo(17, -9);
+  ctx.lineTo(17, 9);
+  ctx.lineTo(4, 18);
+  ctx.closePath();
+  ctx.fill();
+  // mantelete del cañón
+  ctx.fillStyle = '#4a5236';
+  ctx.fillRect(12, -6, 6, 12);
+  ctx.lineWidth = 1.4;
+  ctx.strokeRect(12, -6, 6, 12);
+  // cajas de equipo a los lados y lanzahumos al frente
+  ctx.fillStyle = '#4c5438';
+  ctx.fillRect(-16, -17, 14, 4);
+  ctx.fillRect(-16, 13, 14, 4);
+  ctx.strokeRect(-16, -17, 14, 4);
+  ctx.strokeRect(-16, 13, 14, 4);
+  ctx.fillStyle = '#2d3224';
+  for (const s of [-1, 1])
+    for (let i = 0; i < 3; i++) {
+      ctx.beginPath();
+      ctx.arc(6 + i * 3.5, s * 14.5, 1.4, 0, TAU);
+      ctx.fill();
+    }
+  // escotilla del jefe con el periscopio y la ametralladora
+  ctx.fillStyle = '#4e5638';
+  ctx.beginPath();
+  ctx.arc(-8, -5, 6.5, 0, TAU);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = '#3a4029';
+  ctx.beginPath();
+  ctx.arc(-8, -5, 3.6, 0, TAU);
+  ctx.fill();
+  ctx.fillStyle = '#1d211a';
+  ctx.fillRect(-6, -6, 12, 2);
+  ctx.fillStyle = '#8fb4c0';
+  ctx.fillRect(-1, 5, 4, 5);
+  ctx.strokeRect(-1, 5, 4, 5);
+  // estrella y número
+  ctx.fillStyle = 'rgba(230,226,205,0.7)';
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const r = i % 2 ? 1.6 : 4;
+    const aa = -Math.PI / 2 + (i * Math.PI) / 5;
+    ctx.lineTo(-17 + Math.cos(aa) * r, 8 + Math.sin(aa) * r);
+  }
+  ctx.closePath();
+  ctx.fill();
+  if (b.flash > 0) {
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.fillStyle = `rgba(255,214,140,${Math.min(1, b.flash * 8)})`;
+    ctx.beginPath();
+    ctx.ellipse(54 - rk, 0, 10, 6, 0, 0, TAU);
+    ctx.fill();
+    ctx.globalCompositeOperation = 'source-over';
+  }
+  if (b.hitT > 0) {
+    ctx.fillStyle = 'rgba(255,240,220,0.3)';
+    ctx.fillRect(-27, -18, 44, 36);
+  }
+  ctx.restore();
+}
+
 function drawBlock(ctx, b) {
   if (b.kind === 'heavy') return drawHeavy(ctx, b);
+  if (b.kind === 'military') return drawMilitary(ctx, b);
   if (b.kind === 'reinforced') return drawReinforced(ctx, b);
   const { x, y, w, h } = b;
   ctx.fillStyle = 'rgba(0,0,0,0.4)';

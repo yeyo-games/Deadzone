@@ -621,6 +621,8 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .touch .tup-item .key { display: none; }
 .pips { display: inline-flex; gap: 3px; }
 .pips i { width: 14px; height: 6px; background: rgba(230, 224, 210, 0.14); transform: skewX(-20deg); }
+.pips.many { gap: 2px; }
+.pips.many i { width: 7px; }
 .pips i.on { background: var(--st); box-shadow: 0 0 6px rgba(199, 162, 74, 0.6); }
 .tup-item.done .pips i.on { background: var(--xp); box-shadow: 0 0 6px rgba(134, 168, 146, 0.6); }
 .tup-max { font-family: var(--display); font-size: 20px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--xp); padding: 0 6px; }

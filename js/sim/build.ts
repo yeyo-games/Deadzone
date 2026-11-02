@@ -1,5 +1,5 @@
 // Barricadas compradas en la tienda (madera, metal, vallas, alambre) y granadas.
-import { SHOP, MOLOTOV, ROCKET, ABILITY, HEAVY, AIR } from '../core/config.ts';
+import { SHOP, MOLOTOV, ROCKET, ABILITY, HEAVY, AIR, MILITARY } from '../core/config.ts';
 import { TAU, rand, clamp } from '../core/util.ts';
 import type { Bullet, GameHost, Zombie } from '../core/types.d.ts';
 import type { Player } from './player.ts';
@@ -41,6 +41,8 @@ export interface Block {
   // torreta pesada: niveles de sus mejoras (ver heavy.ts) y zombi al que apunta el piloto automático
   up?: number;
   aim?: Zombie | null;
+  // torreta militar: cuánto falta para buscar otro blanco
+  scanT?: number;
 }
 // Alambre, púas y minas (en el suelo).
 export interface Wire {
@@ -148,6 +150,39 @@ export function turretBullet(x: number, y: number, a: number, owner: string | nu
     turret: true,
   };
 }
+
+// Misil antitanque de la torreta militar: vuela recto dist px (hasta donde estaba su blanco) y estalla
+// en el primer zombi o pared que toca, o al llegar. fake: el de adorno de los clientes en línea, que no
+// hace daño (la explosión de verdad llega del servidor).
+export function militaryMissile(
+  x: number,
+  y: number,
+  a: number,
+  dist: number,
+  owner: string | null = null,
+  fake = false,
+) {
+  return {
+    x,
+    y,
+    sx: x,
+    sy: y,
+    dx: Math.cos(a),
+    dy: Math.sin(a),
+    speed: MILITARY.speed,
+    life: Math.max(40, dist),
+    dmg: 0,
+    pierce: 0,
+    knock: 0,
+    shot: null as unknown,
+    hits: null as Zombie[] | null,
+    owner,
+    atgm: true,
+    fake,
+  };
+}
+
+const isBig = (z: Zombie) => MILITARY.big.includes(z.type);
 
 // Distancia al jugador más cercano (en línea, el servidor tiene varios en game.targets).
 export class Structures {
@@ -388,16 +423,21 @@ export class Structures {
   }
 
   updateMissiles(dt: number, game: GameHost) {
-    const M = ABILITY.bomber;
     for (let i = this.missiles.length - 1; i >= 0; i--) {
       const m = this.missiles[i];
       m.t += dt;
       if (m.t < m.dur) continue;
       this.missiles.splice(i, 1);
-      this.explode(game, m, M.radius, M.power, 1.5);
-      game.particles.ring(m.x, m.y, M.radius * 0.3, '255,190,120');
-      game.camera.shake(0.9, m.x, m.y);
+      this.missileBlast(game, m.x, m.y, m.owner);
     }
+  }
+
+  // El estallido del misil del Bomber (también el del misil antitanque de la torreta militar).
+  missileBlast(game: GameHost, x: number, y: number, owner: string | null = null) {
+    const M = ABILITY.bomber;
+    this.explode(game, { x, y, owner }, M.radius, M.power, 1.5);
+    game.particles.ring(x, y, M.radius * 0.3, '255,190,120');
+    game.camera.shake(0.9, x, y);
   }
 
   // Los reventones de ácido se encolan: así una cadena de gordos no se pisa a sí misma.
@@ -633,6 +673,7 @@ export class Structures {
     for (const b of this.blocks) {
       b.hitT -= dt;
       if (b.kind === 'turret') this.updateTurret(b, dt, game);
+      else if (b.kind === 'military') this.updateMilitary(b, dt, game);
       else if (b.kind === 'heavy' && !b.manned) updateAutoHeavy(b, dt, game, game.ownerOf?.(b.owner) ?? null);
     }
     for (const w of this.wires) w.hitT -= dt;
@@ -671,6 +712,61 @@ export class Structures {
     if (game.onTurretShot) game.onTurretShot(cx + ca * 20, cy + sa * 20, a);
     game.particles.muzzleSmoke(cx + ca * 22, cy + sa * 22, a);
     game.sfx.turret();
+  }
+
+  // Torreta militar: la torre gira despacio hacia su blanco (los zombis grandes antes que los demás)
+  // y, ya apuntada, lanza un misil antitanque que deja humo negro al salir.
+  updateMilitary(b: Block, dt: number, game: GameHost) {
+    const M = MILITARY;
+    b.cd -= dt;
+    b.flash = Math.max(0, (b.flash || 0) - dt);
+    b.recoil = Math.max(0, (b.recoil || 0) - dt * 2.5);
+    b.scanT = (b.scanT || 0) - dt;
+    const cx = b.x + b.w / 2;
+    const cy = b.y + b.h / 2;
+    const ok = (z: Zombie | null | undefined) => {
+      if (!z || z.dead || z.spawnT > 0) return false;
+      const d = Math.hypot(z.x - cx, z.y - cy);
+      return d < M.range && d > M.min;
+    };
+    if (!ok(b.aim)) b.aim = null;
+    // busca otro blanco de vez en cuando: un grande a su alcance le gana a uno chico
+    if (!b.aim || (b.scanT <= 0 && !isBig(b.aim))) {
+      b.scanT = 0.3;
+      game.horde.grid.query(cx - M.range, cy - M.range, cx + M.range, cy + M.range, near);
+      let best = b.aim;
+      let bd = best ? (isBig(best) ? 0 : 1) * 1e9 + Math.hypot(best.x - cx, best.y - cy) : Number.POSITIVE_INFINITY;
+      for (const z of near) {
+        if (!ok(z)) continue;
+        const d = (isBig(z) ? 0 : 1) * 1e9 + Math.hypot(z.x - cx, z.y - cy);
+        if (d < bd) {
+          bd = d;
+          best = z;
+        }
+      }
+      b.aim = best;
+    }
+    const z = b.aim;
+    if (!z) return;
+    const want = Math.atan2(z.y - cy, z.x - cx);
+    let diff = want - b.ang;
+    diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+    b.ang += Math.max(-dt * M.turn, Math.min(dt * M.turn, diff));
+    if (b.cd > 0 || Math.abs(diff) > 0.08) return;
+    b.cd = M.reload;
+    b.flash = 0.12;
+    b.recoil = 1;
+    const ca = Math.cos(b.ang);
+    const sa = Math.sin(b.ang);
+    const mx = cx + ca * 46;
+    const my = cy + sa * 46;
+    const dist = Math.hypot(z.x - mx, z.y - my);
+    game.bullets.spawn(militaryMissile(mx, my, b.ang, dist, b.owner));
+    // en línea: el servidor avisa y cada cliente lanza su propio misil de adorno
+    if (game.onMilitaryShot) game.onMilitaryShot(mx, my, b.ang, dist);
+    game.particles.militaryFire(mx, my, b.ang);
+    game.camera.shake(0.3, cx, cy);
+    game.sfx.atgm();
   }
 
   /* ---------- dibujo ---------- */

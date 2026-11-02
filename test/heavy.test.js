@@ -14,6 +14,7 @@ import {
   repairHeavies,
   updateAutoHeavy,
   upgradeHeavy,
+  widenHeavyUp,
 } from '../js/sim/heavy.ts';
 import { fakeGame, silent } from './helpers.js';
 
@@ -116,4 +117,30 @@ test('piloto automático: gira hacia el zombi, dispara con las balas del dueño 
   const lejos = { heavyAmmo: 5 };
   for (let i = 0; i < 120; i++) updateAutoHeavy(sola, 1 / 60, game, lejos);
   assert.equal(lejos.heavyAmmo, 5);
+});
+
+test('se puede seguir mejorando: calibre, cadencia, carga y blindaje llegan a 10 niveles', () => {
+  for (const id of ['cal', 'rate', 'blast', 'armor']) assert.equal(HEAVY_UP[id].price.length, 10, id);
+  for (const id of HEAVY_UP_ORDER) {
+    const d = HEAVY_UP[id];
+    assert.ok(d.price.length <= 15, `${id}: cabe en 4 bits`);
+    for (const k of ['dmg', 'rate', 'r', 'hp', 'repair'])
+      if (d[k]) assert.equal(d[k].length, d.price.length + 1, `${id}.${k}: un efecto por nivel`);
+    // cada nivel cuesta más que el anterior
+    for (let i = 1; i < d.price.length; i++) assert.ok(d.price[i] > d.price[i - 1], `${id} nivel ${i + 1}`);
+  }
+  const b = torreta();
+  for (let i = 0; i < 10; i++) upgradeHeavy(b, 'armor');
+  upgradeHeavy(b, 'auto');
+  assert.equal(heavyLevel(b, 'armor'), 10);
+  assert.equal(heavyLevel(b, 'auto'), 1);
+  assert.equal(heavyLevel(b, 'cal'), 0);
+  assert.equal(b.max, HEAVY_UP.armor.hp[10]);
+});
+
+test('las partidas guardadas con 2 bits por mejora se pasan a 4 sin perder niveles', () => {
+  // calibre 3, cadencia 1, carga 2, blindaje 0, piloto 1 con 2 bits por mejora
+  const old = 3 + (1 << 2) + (2 << 4) + (1 << 8);
+  const b = { up: widenHeavyUp(old) };
+  assert.deepEqual(heavyLevels(b), { cal: 3, rate: 1, blast: 2, armor: 0, auto: 1 });
 });

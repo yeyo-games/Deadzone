@@ -114,7 +114,7 @@ export function renderTurret(game) {
       : '<span class="tup-max">Máximo</span>';
     return `<div class="tup-item${price ? '' : ' done'}">
       <span class="tup-ic">${ICONS[id]}</span>
-      <div class="shop-txt"><b>${d.name} <span class="pips">${pips}</span></b><span>${d.desc}</span><small>${stepText(b, id)}<span class="key"> · tecla ${i + 1}</span></small></div>
+      <div class="shop-txt"><b>${d.name} <span class="pips${max > 5 ? ' many' : ''}">${pips}</span></b><span>${d.desc}</span><small>${stepText(b, id)}<span class="key"> · tecla ${i + 1}</span></small></div>
       ${btn}
     </div>`;
   }).join('');

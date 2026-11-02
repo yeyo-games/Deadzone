@@ -69,6 +69,9 @@ export interface Bullet {
   blastR?: number;
   blastP?: number;
   auto?: boolean;
+  // misil antitanque de la torreta militar (fake: el de adorno de los clientes en línea)
+  atgm?: boolean;
+  fake?: boolean;
   exploded?: boolean;
   dead?: boolean;
   hits?: Zombie[];

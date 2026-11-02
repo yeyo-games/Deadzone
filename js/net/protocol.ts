@@ -15,7 +15,16 @@ export const IN_FIRE = 2;
 export const IN_RELOAD = 4;
 
 // efectos que el cliente genera por su cuenta (no hace falta mandarlos)
-export const PARTICLE_SKIP = new Set(['constructor', 'add', 'update', 'draw', 'clear', 'rocketTrail', 'burning']);
+export const PARTICLE_SKIP = new Set([
+  'constructor',
+  'add',
+  'update',
+  'draw',
+  'clear',
+  'rocketTrail',
+  'atgmTrail',
+  'burning',
+]);
 export const SFX_SYNC = [
   'shot',
   'hit',
@@ -43,6 +52,7 @@ export const SFX_SYNC = [
   'gore',
   'wave',
   'missile',
+  'atgm',
   'boost',
   'miniBoom',
 ];

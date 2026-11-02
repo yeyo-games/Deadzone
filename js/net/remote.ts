@@ -7,7 +7,7 @@
 // `game.remote` es la única instancia; se dibuja desde js/render/remote.js.
 import { NET, PLAYER_BASE, ROBOT, SHOP, WEAPON_ORDER, WEAPONS, ZOMBIES } from '../core/config.ts';
 import { angleTo, rand, TAU } from '../core/util.ts';
-import { turretBullet } from '../sim/build.ts';
+import { militaryMissile, turretBullet } from '../sim/build.ts';
 import { heavyMaxHp } from '../sim/heavy.ts';
 import { Player } from '../sim/player.ts';
 import { Robot } from '../sim/robot.ts';
@@ -560,6 +560,7 @@ export class Remote {
     for (const b of st.blocks) {
       b.hitT -= dt;
       if (b.flash) b.flash = Math.max(0, b.flash - dt);
+      if (b.kind === 'military') b.recoil = Math.max(0, (b.recoil || 0) - dt * 2.5);
       // torreta pesada de otro (o con piloto automático): el cañón se acerca al ángulo de la última foto
       if (b.manned !== g.player && b.ta !== undefined) {
         b.ang = angleTo(b.ang, b.ta, dt * 12);
@@ -597,6 +598,8 @@ export class Remote {
     try {
       if (tag === 'p' && typeof g.particles[n] === 'function' && !PARTICLE_SKIP.has(n)) g.particles[n](...args);
       else if (tag === 't' && n === 'shot') this.turretShot(Number(args[0]), Number(args[1]), Number(args[2]));
+      else if (tag === 't' && n === 'atgm')
+        this.militaryShot(Number(args[0]), Number(args[1]), Number(args[2]), Number(args[3]));
       else if (tag === 's' && SFX_SYNC.includes(n)) g.sfx[n](...args);
       else if (tag === 'c' && n === 'shake')
         g.camera.shake(Math.min(1, Number(args[0]) || 0), Number(args[1]), Number(args[2]));
@@ -615,6 +618,22 @@ export class Remote {
       }
     } catch {
       /* efecto con datos raros: se ignora */
+    }
+  }
+
+  // Misil de una torreta militar: uno de adorno que vuela igual que el del servidor (la explosión, el
+  // humo y el sonido de verdad llegan como efectos), y la torre gira hacia donde disparó.
+  militaryShot(x: number, y: number, a: number, d: number) {
+    if (![x, y, a, d].every(Number.isFinite)) return;
+    const g = this.game;
+    g.bullets.spawn(militaryMissile(x, y, a, Math.min(d, 2000), null, true));
+    const cx = x - Math.cos(a) * 46;
+    const cy = y - Math.sin(a) * 46;
+    for (const b of g.structures.blocks) {
+      if (b.kind !== 'military' || Math.abs(b.x + b.w / 2 - cx) > 4 || Math.abs(b.y + b.h / 2 - cy) > 4) continue;
+      b.ang = a;
+      b.flash = 0.12;
+      b.recoil = 1;
     }
   }
 

@@ -1,7 +1,7 @@
 // Rocoso (ZOMBIES.rock y ROCK): cuándo sale, qué hace con cada barricada, árboles y coches, y el agarre.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { EVENTS, ROCK, SHOP, WAVES } from '../js/core/config.ts';
+import { EVENTS, ROCK, SHOP, WAVES, ZOMBIES } from '../js/core/config.ts';
 import { Structures } from '../js/sim/build.ts';
 import { waveCounts } from '../js/sim/director.ts';
 import { Player } from '../js/sim/player.ts';
@@ -79,7 +79,16 @@ test('un árbol destrozado deja de estorbar, se pinta como escombros y se aplica
   assert.ok(!otro.pointBlocked(o.x, o.y, 2));
 });
 
-test('madera aplastada, metal abollado y lanzado, valla empujada hasta romperse', () => {
+// Choca contra la misma pieza `s` segundos seguidos (pasos de 1/60).
+function pegado(t, z, b, s) {
+  for (let i = 0; i < Math.round(s * 60); i++) t.horde.rockImpact(z, true, b, null, t.game, 1 / 60);
+}
+
+test('es más grande que el gordo', () => {
+  assert.ok(ZOMBIES.rock.radius >= ZOMBIES.fat.radius * 1.5);
+});
+
+test('madera aplastada; metal, valla y sacos no se mueven hasta que lleva 5 s pegado al mismo', () => {
   const t = partida();
   const { x, y } = t.world.spawn;
   const z = rocoso(t, x + 200, y);
@@ -87,23 +96,38 @@ test('madera aplastada, metal abollado y lanzado, valla empujada hasta romperse'
   const wood = pieza(t.game, 'wood', x + 240, y - 20);
   t.horde.rockImpact(z, true, wood, null, t.game);
   assert.ok(!t.structures.blocks.includes(wood));
-  // metal: pierde la mitad de su vida y sale volando (si hay sitio)
+  // metal: casi 5 s pegado lo golpea pero no lo mueve; al pasar los 5 s lo abolla y lo avienta
   z.bs = 'walk';
   const metal = pieza(t.game, 'metal', x + 240, y - 20);
+  metal.hp = metal.max = 1e6;
   const mx = metal.x;
-  t.horde.rockImpact(z, true, metal, null, t.game);
-  assert.ok(Math.abs(metal.hp - SHOP.metal.hp * (1 - ROCK.dent)) < 1e-6, `abollado (${metal.hp})`);
-  assert.equal(metal.x - mx, ROCK.throw);
-  // valla: la empuja y la va quebrando
+  pegado(t, z, metal, ROCK.lean - 0.2);
+  assert.equal(metal.x, mx, 'todavía no lo mueve');
+  assert.ok(metal.hp < 1e6, 'pero lo golpea');
+  const golpes = (1e6 - metal.hp) / ROCK.leanHit;
+  assert.ok(golpes >= 7 && golpes <= 9, `golpes: ${golpes}`);
+  pegado(t, z, metal, 0.3);
+  assert.equal(metal.x - mx, ROCK.throw, 'lo avienta');
   t.structures.crush(t.game, metal);
+  // si se despega un rato, la cuenta vuelve a empezar
+  z.bs = 'walk';
+  const sacos = pieza(t.game, 'sandbag', x + 240, y - 40, 24, 80);
+  sacos.hp = sacos.max = 1e6;
+  pegado(t, z, sacos, 3);
+  for (let i = 0; i < 60; i++) t.horde.rockImpact(z, false, null, null, t.game, 1 / 60);
+  pegado(t, z, sacos, 3);
+  assert.equal(z.bs, 'walk', 'se despegó: no lo empuja');
+  t.structures.crush(t.game, sacos);
+  // valla: tras 5 s pegado la empuja y la va quebrando
   z.bs = 'walk';
   const fence = pieza(t.game, 'fence', x + 240, y - 40, 24, 80);
+  fence.hp = fence.max = SHOP.fence.hp * 3;
   const fx = fence.x;
-  t.horde.rockImpact(z, true, fence, null, t.game);
+  pegado(t, z, fence, ROCK.lean + 0.1);
   assert.equal(z.bs, 'push');
   for (let i = 0; i < 60; i++) t.horde.rockThink(z, t.player, 999, 1 / 60, t.game);
   assert.ok(fence.x > fx, 'la movió');
-  assert.ok(fence.hp < SHOP.fence.hp - ROCK.pushDps * 0.5, `la quebranta (${fence.hp})`);
+  assert.ok(fence.hp < SHOP.fence.hp * 3 - ROCK.pushDps * 0.5, `la quebranta (${fence.hp})`);
 });
 
 test('concreto: embestida corta de 200; HESCO y concreto reforzado: se aleja y pega 400', () => {
@@ -164,5 +188,5 @@ test('te agarra, te quita 50 y te lanza hacia la horda: los zombis que tocas mue
 });
 
 function z0r() {
-  return 26 + 14 + 6;
+  return ZOMBIES.rock.radius + 14 + 6;
 }
