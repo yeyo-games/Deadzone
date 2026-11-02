@@ -145,11 +145,11 @@ export function loadProgress(game, kind = 'save') {
       hitT: 0,
       cd: 0,
       ang: 0,
-      // mejoras de la torreta pesada (partidas de antes: ninguna)
+      // mejoras de las torretas pesada y militar (partidas de antes: ninguna)
       up: d.upBits === 4 ? Math.max(0, Number(b.up) | 0) : widenHeavyUp(Math.max(0, Number(b.up) | 0)),
       owner: null,
     };
-    if (o.kind === 'heavy') o.max = heavyMaxHp(o);
+    if (o.kind === 'heavy' || o.kind === 'military') o.max = heavyMaxHp(o);
     game.structures.blocks.push(o);
     game.world.addDynamic(o);
   }

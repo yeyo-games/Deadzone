@@ -16,7 +16,7 @@ import {
 import { clamp, rand, angleTo } from '../core/util.ts';
 import { flameBullet } from './bullets.ts';
 import { newCombo } from './combo.ts';
-import { fireHeavy, heavyRate } from './heavy.ts';
+import { fireHeavy, heavyRate, milRange, milReload, milTurn } from './heavy.ts';
 import type { GameHost, Vec, Weapon, Zombie } from '../core/types.d.ts';
 import type { Block } from './build.ts';
 import type { Combo } from './combo.ts';
@@ -516,20 +516,22 @@ export class Player {
     const cx = b.x + b.w / 2;
     const cy = b.y + b.h / 2;
     let want = b.ang;
-    let dist = M.range;
+    // el radar y el cargador mejorados también rinden subido
+    const range = milRange(b);
+    let dist = range;
     if (game.input.mode === 'mouse') {
       const m = game.mouseWorld();
       want = Math.atan2(m.y - cy, m.x - cx);
       dist = Math.hypot(m.x - cx, m.y - cy) - 46;
       this.target = null;
     } else {
-      this.target = game.horde.findTarget(cx, cy, M.range, this.target);
+      this.target = game.horde.findTarget(cx, cy, range, this.target);
       if (this.target) {
         want = Math.atan2(this.target.y - cy, this.target.x - cx);
         dist = Math.hypot(this.target.x - cx, this.target.y - cy) - 46;
       } else if (Math.hypot(mv.x, mv.y) > 0.12) want = Math.atan2(mv.y, mv.x);
     }
-    b.ang = angleTo(b.ang, want, dt * M.handTurn);
+    b.ang = angleTo(b.ang, want, (dt * M.handTurn * milTurn(b)) / M.turn);
     this.angle = b.ang;
     this.fireCd -= dt;
     this.hurtT -= dt;
@@ -539,12 +541,12 @@ export class Player {
     game.input.consume('swap');
     game.input.consume('slot');
     if (!game.input.firing || this.fireCd > 0) return;
-    this.fireCd = M.manual / this.stats.rateMult;
+    this.fireCd = (M.manual * milReload(b)) / M.reload / this.stats.rateMult;
     this.shotsFired++;
     // en línea lo lanza el servidor (y llega como efecto a todos, también a quien la maneja)
     if (!game.mode.authority()) return;
     // el servidor sólo sabe hacia dónde apuntas, no a qué distancia: ahí vuela hasta lo primero que toque
-    const far = game.targets ? M.range : Math.max(40, Math.min(dist, M.range));
+    const far = game.targets ? range : Math.max(40, Math.min(dist, range));
     game.structures.fireMilitary(game, b, far, null);
     if (this === game.player) game.camera.kick(-Math.cos(b.ang) * 9, -Math.sin(b.ang) * 9);
   }

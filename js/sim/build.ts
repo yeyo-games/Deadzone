@@ -3,7 +3,7 @@ import { SHOP, MOLOTOV, ROCKET, ABILITY, HEAVY, AIR, MILITARY, IMPROV, BUILD } f
 import { TAU, rand, clamp } from '../core/util.ts';
 import type { Bullet, GameHost, Zombie } from '../core/types.d.ts';
 import type { Player } from './player.ts';
-import { repairHeavies, updateAutoHeavy } from './heavy.ts';
+import { milBlastR, milDmg, milRange, milReload, milSalvo, milTurn, repairHeavies, updateAutoHeavy } from './heavy.ts';
 
 // Ficha de la tienda: sólo los campos que usa este módulo; w/h/hp existen en todas las piezas que se construyen.
 interface ShopDef {
@@ -174,7 +174,7 @@ export function improvMissile(x: number, y: number, a: number, owner: string | n
 
 // Misil antitanque de la torreta militar: vuela recto dist px (hasta donde estaba su blanco) y estalla
 // en el primer zombi o pared que toca, o al llegar. fake: el de adorno de los clientes en línea, que no
-// hace daño (la explosión de verdad llega del servidor).
+// hace daño (la explosión de verdad llega del servidor). k y rk: daño y radio de la ojiva (mejoras).
 export function militaryMissile(
   x: number,
   y: number,
@@ -182,6 +182,8 @@ export function militaryMissile(
   dist: number,
   owner: string | null = null,
   fake = false,
+  k = 1,
+  rk = 1,
 ) {
   return {
     x,
@@ -200,6 +202,8 @@ export function militaryMissile(
     owner,
     atgm: true,
     fake,
+    blastK: k,
+    blastRK: rk,
   };
 }
 
@@ -488,11 +492,12 @@ export class Structures {
     }
   }
 
-  // El estallido del misil del Bomber (también el del misil antitanque de la torreta militar).
-  missileBlast(game: GameHost, x: number, y: number, owner: string | null = null) {
+  // El estallido del misil del Bomber (también el del misil antitanque de la torreta militar, que con
+  // la ojiva mejorada multiplica el daño por k y el radio por rk).
+  missileBlast(game: GameHost, x: number, y: number, owner: string | null = null, k = 1, rk = 1) {
     const M = ABILITY.bomber;
-    this.explode(game, { x, y, owner }, M.radius, M.power, 1.5);
-    game.particles.ring(x, y, M.radius * 0.3, '255,190,120');
+    this.explode(game, { x, y, owner }, M.radius * rk, M.power * k, 1.5);
+    game.particles.ring(x, y, M.radius * rk * 0.3, '255,190,120');
     game.camera.shake(0.9, x, y);
   }
 
@@ -774,6 +779,7 @@ export class Structures {
   // y, ya apuntada, lanza un misil antitanque que deja humo negro al salir.
   updateMilitary(b: Block, dt: number, game: GameHost) {
     const M = MILITARY;
+    const range = milRange(b);
     b.cd -= dt;
     b.flash = Math.max(0, (b.flash || 0) - dt);
     b.recoil = Math.max(0, (b.recoil || 0) - dt * 2.5);
@@ -783,13 +789,13 @@ export class Structures {
     const ok = (z: Zombie | null | undefined) => {
       if (!z || z.dead || z.spawnT > 0) return false;
       const d = Math.hypot(z.x - cx, z.y - cy);
-      return d < M.range && d > M.min;
+      return d < range && d > M.min;
     };
     if (!ok(b.aim)) b.aim = null;
     // busca otro blanco de vez en cuando: un grande a su alcance le gana a uno chico
     if (!b.aim || (b.scanT <= 0 && !isBig(b.aim))) {
       b.scanT = 0.3;
-      game.horde.grid.query(cx - M.range, cy - M.range, cx + M.range, cy + M.range, near);
+      game.horde.grid.query(cx - range, cy - range, cx + range, cy + range, near);
       let best = b.aim;
       let bd = best ? (isBig(best) ? 0 : 1) * 1e9 + Math.hypot(best.x - cx, best.y - cy) : Number.POSITIVE_INFINITY;
       for (const z of near) {
@@ -807,28 +813,40 @@ export class Structures {
     const want = Math.atan2(z.y - cy, z.x - cx);
     let diff = want - b.ang;
     diff = Math.atan2(Math.sin(diff), Math.cos(diff));
-    b.ang += Math.max(-dt * M.turn, Math.min(dt * M.turn, diff));
+    const turn = milTurn(b);
+    b.ang += Math.max(-dt * turn, Math.min(dt * turn, diff));
     if (b.cd > 0 || Math.abs(diff) > 0.08) return;
-    b.cd = M.reload;
+    b.cd = milReload(b);
     this.fireMilitary(game, b, Math.hypot(z.x - cx, z.y - cy) - 46, b.owner);
   }
 
   // Lanza un misil antitanque por el cañón de la torreta militar, que llega dist px más allá de la boca
-  // (lo usan la torreta sola y quien la maneja).
+  // (lo usan la torreta sola y quien la maneja). Con la salva, también uno por cada tubo de los lados,
+  // un poco abierto. La ojiva mejorada viaja en cada misil.
   fireMilitary(game: GameHost, b: Block, dist: number, owner: string | null = null) {
     b.flash = 0.12;
     b.recoil = 1;
     const cx = b.x + b.w / 2;
     const cy = b.y + b.h / 2;
-    const ca = Math.cos(b.ang);
-    const sa = Math.sin(b.ang);
-    const mx = cx + ca * 46;
-    const my = cy + sa * 46;
-    game.bullets.spawn(militaryMissile(mx, my, b.ang, dist, owner));
-    // en línea: el servidor avisa y cada cliente lanza su propio misil de adorno
-    if (game.onMilitaryShot) game.onMilitaryShot(mx, my, b.ang, dist);
-    game.particles.militaryFire(mx, my, b.ang);
-    game.camera.shake(0.3, cx, cy);
+    const k = milDmg(b);
+    const rk = milBlastR(b);
+    const n = milSalvo(b);
+    // cañón, tubo izquierdo, tubo derecho: [adelante, al lado, giro]
+    const tubes = [
+      [46, 0, 0],
+      [22, -19, -0.09],
+      [22, 19, 0.09],
+    ].slice(0, n);
+    for (const [fw, sd, da] of tubes) {
+      const a = b.ang + da;
+      const mx = cx + Math.cos(b.ang) * fw - Math.sin(b.ang) * sd;
+      const my = cy + Math.sin(b.ang) * fw + Math.cos(b.ang) * sd;
+      game.bullets.spawn(militaryMissile(mx, my, a, dist, owner, false, k, rk));
+      // en línea: el servidor avisa y cada cliente lanza su propio misil de adorno
+      if (game.onMilitaryShot) game.onMilitaryShot(mx, my, a, dist);
+      game.particles.militaryFire(mx, my, a);
+    }
+    game.camera.shake(0.3 + (n - 1) * 0.15, cx, cy);
     game.sfx.atgm();
   }
 
@@ -864,14 +882,15 @@ export class Structures {
     repairHeavies(this.blocks);
   }
 
-  // La torreta pesada que p puede mejorar: la que maneja o la más cercana a su alcance (aunque la maneje otro).
+  // La torreta (pesada o militar) que p puede mejorar: la que maneja o la más cercana a su alcance
+  // (aunque la maneje otro).
   heavyFor(p: Player) {
-    if (p.manned) return p.manned.kind === 'heavy' ? p.manned : null;
+    if (p.manned) return p.manned;
     let best = null;
     let bd = HEAVY.reach + p.r;
     for (const b of this.blocks) {
-      if (b.kind !== 'heavy') continue;
-      const d = Math.hypot(b.x + b.w / 2 - p.x, b.y + b.h / 2 - p.y);
+      if (!MOUNTS.includes(b.kind)) continue;
+      const d = Math.hypot(b.x + b.w / 2 - p.x, b.y + b.h / 2 - p.y) - (b.w - 40) / 2;
       if (d < bd) {
         bd = d;
         best = b;

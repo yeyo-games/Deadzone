@@ -7,7 +7,7 @@
 // `game.remote` es la única instancia; se dibuja desde js/render/remote.js.
 import { NET, PLAYER_BASE, ROBOT, SHOP, WEAPON_ORDER, WEAPONS, ZOMBIES } from '../core/config.ts';
 import { angleTo, rand, TAU } from '../core/util.ts';
-import { militaryMissile, turretBullet } from '../sim/build.ts';
+import { MOUNTS, militaryMissile, turretBullet } from '../sim/build.ts';
 import { flameBullet } from '../sim/bullets.ts';
 import { heavyMaxHp } from '../sim/heavy.ts';
 import { Player } from '../sim/player.ts';
@@ -525,7 +525,7 @@ export class Remote {
           w: q[3],
           h: q[4],
           hp: q[5],
-          max: q[0] === 'heavy' ? heavyMaxHp({ up: q[7] || 0 }) : (shopDef(q[0])?.hp ?? 0),
+          max: MOUNTS.includes(q[0]) ? heavyMaxHp({ kind: q[0], up: q[7] || 0 }) : (shopDef(q[0])?.hp ?? 0),
           ang: q[6] / 100,
           up: q[7] || 0,
           owner: q[8] || null,
@@ -543,10 +543,10 @@ export class Remote {
           if (q[5] < b.hp) b.hitT = 0.12;
           b.hp = q[5];
           b.shared = !!q[9];
-          // mejoras de la torreta pesada (el blindaje sube su vida máxima)
+          // mejoras de las torretas pesada y militar (el blindaje sube su vida máxima)
           if ((q[7] || 0) !== (b.up || 0)) {
             b.up = q[7] || 0;
-            if (b.kind === 'heavy') b.max = heavyMaxHp(b);
+            if (MOUNTS.includes(b.kind)) b.max = heavyMaxHp(b);
           }
           // el cañón de la torreta pesada propia gira con la predicción, no con la foto
           if (b.manned !== g.player) b.ang = q[6] / 100;

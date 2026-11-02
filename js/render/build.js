@@ -3,7 +3,7 @@ import { ABILITY, BUILD, SHOP } from '../core/config.ts';
 import { TAU, roundRect } from '../core/util.ts';
 import { OUT, flameSprite } from './sprites.js';
 import { drawRocket } from './bullets.js';
-import { heavyLevel, heavyLevels } from '../sim/heavy.ts';
+import { heavyLevel, heavyLevels, milSalvo } from '../sim/heavy.ts';
 
 // Mira roja en el suelo que se cierra y el misil cayendo en picada sobre ella.
 export function drawMissiles(ctx, st, time) {
@@ -489,15 +489,16 @@ function drawHeavyGun(ctx, b) {
 export function drawHeavyPreview(ctx, b, W, H, t, pulse) {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, W, H);
-  // el cañón apunta hacia arriba: el centro va un poco abajo para que quepa entero
-  const s = Math.min(W, H) / 95;
+  // el cañón apunta hacia arriba: el centro va un poco abajo para que quepa entero (la militar es más grande)
+  const mil = b.kind === 'military';
+  const s = Math.min(W, H) / (mil ? 112 : 95);
   ctx.setTransform(s, 0, 0, s, W / 2, H * 0.6);
-  const ph = (t * 2.2) % 1;
+  const ph = (t * (mil ? 0.8 : 2.2)) % 1;
   const shot = Math.floor(t * 2.2);
   const v = {
     ...b,
-    x: -20,
-    y: -20,
+    x: -b.w / 2,
+    y: -b.h / 2,
     ang: -Math.PI / 2 + Math.sin(t * 0.6) * 0.9,
     manned: null,
     hitT: 0,
@@ -505,13 +506,14 @@ export function drawHeavyPreview(ctx, b, W, H, t, pulse) {
     recoil: Math.max(0, 1 - ph * 5),
     flash: ph < 0.08 ? 1 : 0,
   };
-  drawHeavy(ctx, v);
+  if (mil) drawMilitary(ctx, v);
+  else drawHeavy(ctx, v);
   if (pulse > 0) {
     ctx.globalAlpha = pulse;
     ctx.strokeStyle = '#c7a24a';
     ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.arc(0, 0, 30 + (1 - pulse) * 30, 0, TAU);
+    ctx.arc(0, 0, (mil ? 45 : 30) + (1 - pulse) * 30, 0, TAU);
     ctx.stroke();
     ctx.globalAlpha = 1;
   }
@@ -524,8 +526,7 @@ export function drawHeavyPrompt(ctx, game) {
   if (game.input.mode !== 'mouse' || !p.alive || p.inRobot || (p.manned && game.input.firing)) return;
   const b = p.manned || game.structures.nearHeavy(p) || game.structures.heavyFor(p);
   if (!b) return;
-  // la militar no tiene taller
-  const up = b.kind === 'heavy' ? [['M', 'mejorar']] : [];
+  const up = [['M', 'mejorar']];
   const parts = p.manned ? [...up, ['E', 'bajar']] : b.manned ? up : [['E', 'montar'], ...up];
   if (!parts.length) return;
   ctx.font = '600 12px "Barlow Condensed", "Arial Narrow", sans-serif';
@@ -793,7 +794,52 @@ function drawMilitary(ctx, b) {
       ctx.arc(6 + i * 3.5, s * 14.5, 1.4, 0, TAU);
       ctx.fill();
     }
+  // blindaje: placas atornilladas a los lados de la torre (desde el nivel 2, más con el 5)
+  const armor = heavyLevel(b, 'armor');
+  if (armor >= 2) {
+    ctx.fillStyle = '#4a5136';
+    ctx.lineWidth = 1.3;
+    const len = armor >= 5 ? 22 : 13;
+    for (const sd of [-1, 1]) {
+      ctx.fillRect(-20, sd > 0 ? 17 : -20, len, 3);
+      ctx.strokeRect(-20, sd > 0 ? 17 : -20, len, 3);
+    }
+  }
+  // salva: tubos lanzamisiles a los lados (izquierdo con el nivel 1, los dos con el 2)
+  const tubes = milSalvo(b);
+  for (let i = 1; i < tubes; i++) {
+    const sd = i === 1 ? -1 : 1;
+    ctx.fillStyle = '#3f4630';
+    ctx.lineWidth = 1.4;
+    ctx.fillRect(-6, sd * 21 - 3.5, 30, 7);
+    ctx.strokeRect(-6, sd * 21 - 3.5, 30, 7);
+    ctx.fillStyle = '#1c1f17';
+    ctx.beginPath();
+    ctx.arc(24, sd * 21, 2.4, 0, TAU);
+    ctx.fill();
+    ctx.fillStyle = '#6d7652';
+    ctx.fillRect(4, sd * 21 - 3.5, 2, 7);
+  }
+  // radar: mástil con antena detrás de la escotilla (gira sola)
+  if (heavyLevel(b, 'radar') >= 1) {
+    ctx.strokeStyle = OUT;
+    ctx.fillStyle = '#5d6648';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.arc(-23, -8, 3, 0, TAU);
+    ctx.fill();
+    ctx.stroke();
+    const ra = performance.now() / 330;
+    ctx.strokeStyle = '#9aa58a';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-23 - Math.cos(ra) * 6, -8 - Math.sin(ra) * 6);
+    ctx.lineTo(-23 + Math.cos(ra) * 6, -8 + Math.sin(ra) * 6);
+    ctx.stroke();
+    ctx.strokeStyle = OUT;
+  }
   // escotilla del jefe con el periscopio y la ametralladora
+  ctx.lineWidth = 1.4;
   ctx.fillStyle = '#4e5638';
   ctx.beginPath();
   ctx.arc(-8, -5, 6.5, 0, TAU);

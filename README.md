@@ -159,10 +159,21 @@ torre, que gira más rápido hacia tu mira, y lanzas tú un misil cada 1,6 s has
 celular, al zombi más cercano). Encima recibes la mitad del daño, como en la torreta pesada, y nadie te
 puede agarrar. Te bajas con `E` por detrás de la torre.
 
+Tiene su propio **taller**, como la pesada (`M` junto a ella o montado, botón de la **llave** en el
+celular). Sus mejoras son de esa torreta y se ven en ella (tubos a los lados, placas y antena de radar):
+
+| Mejora | Niveles (precio) | Efecto (de fábrica → máximo) |
+|--------|------------------|------------------------------|
+| Ojiva | $3000 · $6000 · $10 000 · $15 000 · $21 000 · $28 000 · $36 000 · $45 000 | Daño del estallido ×1,2 · ×1,4 · ×1,6 · ×1,85 · ×2,1 · ×2,4 · ×2,7 · ×3 y radio ×1,05 … ×1,4 |
+| Cargador automático | los mismos que la ojiva | Un misil cada 2,1 · 1,85 · 1,65 · 1,5 · 1,35 · 1,2 · 1,1 · 1 s (de 2,4); subido también disparas más seguido |
+| Radar | $2500 · $5000 · $9000 · $14 000 · $20 000 | Alcance 800 · 880 · 960 · 1040 · 1120 px (de 720) y la torre gira más rápido |
+| Blindaje | $2000 · $4500 · $8000 · $12 000 · $17 000 · $23 000 · $30 000 · $38 000 | Vida 12 000 · 15 000 · 18 000 · 22 000 · 26 000 · 30 000 · 35 000 · 40 000 (de 9000) y repara del 15 al 60 % al acabar cada oleada |
+| Salva | $25 000 · $60 000 | 2 y luego 3 misiles por disparo, en abanico (por el cañón y los tubos de los lados) |
+
 ### Torretas en multijugador
 
 En línea, a tu torreta pesada o militar **sólo te subes tú**. Para prestarla, junto a ella (o montado)
-pulsa `L` o el botón del **candado** (en la torreta pesada también está en su taller): el candado se
+pulsa `L` o el botón del **candado** (también está en su taller): el candado se
 abre y los demás ya pueden subirse. Si vuelves a cerrarlo, quien la esté manejando se baja.
 
 ### Armas y munición
@@ -227,7 +238,7 @@ tienes.
 | `1`–`9`, `Q` o `Tab`: cambiar arma | Botón de cambio de arma |
 | `F`: modo construir (clic coloca, rueda o `1`–`9` cambia de pieza) | Botón **Construir**, toca el mapa o ✓ |
 | `G`: lanzar granada · `T`: molotov · `Z`: misil improvisado · `E`: robot o torreta pesada | Botones pequeños de **granada**, **molotov** y **misil** (apuntan solos) |
-| `M`: taller de la torreta pesada (junto a ella) | Botón de la **llave** |
+| `M`: taller de la torreta pesada o militar (junto a ella) | Botón de la **llave** |
 | `L`: en línea, dejar o no que otros se suban a tu torreta | Botón del **candado** |
 | `Enter`: iniciar siguiente ronda (en línea: estoy listo) | Botón del panel **Ronda completada** |
 | `Esc` / `P`: pausa | Botón de pausa |

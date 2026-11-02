@@ -469,7 +469,7 @@ export class ServerSim {
     return true;
   }
 
-  // Mejora de la torreta pesada que maneja o que tiene al lado (la paga quien la compra).
+  // Mejora de la torreta (pesada o militar) que maneja o que tiene al lado (la paga quien la compra).
   buyHeavyUp(s: Slot, up: string) {
     const b = this.structures.heavyFor(s.p);
     if (!b) return false;

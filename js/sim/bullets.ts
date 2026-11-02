@@ -115,7 +115,7 @@ export class Bullets {
         if (b.atgm) {
           // misil antitanque: estalla en el primero que toca
           b.exploded = true;
-          if (!b.fake) game.structures.missileBlast(game, hx, hy, b.owner);
+          if (!b.fake) game.structures.missileBlast(game, hx, hy, b.owner, b.blastK, b.blastRK);
           dead = true;
           wall = false;
           endT = bt;
@@ -200,7 +200,7 @@ export class Bullets {
       }
       if (b.atgm && !b.exploded && (wall || b.life <= 0)) {
         b.exploded = true;
-        if (!b.fake) game.structures.missileBlast(game, b.x - b.dx * 4, b.y - b.dy * 4, b.owner);
+        if (!b.fake) game.structures.missileBlast(game, b.x - b.dx * 4, b.y - b.dy * 4, b.owner, b.blastK, b.blastRK);
       } else if (b.improv && !b.exploded && (wall || b.life <= 0)) {
         b.exploded = true;
         game.structures.improvBlast(game, b.x - b.dx * 4, b.y - b.dy * 4, b.owner);

@@ -239,7 +239,7 @@ export function encodeWorld(
 export function encodeStatic(st: StaticStructures, smashed: number[] = []) {
   return {
     wd: smashed,
-    // al final: niveles de las mejoras de la torreta pesada (ver heavy.ts; 0 en el resto), el dueño
+    // al final: niveles de las mejoras de las torretas pesada y militar (ver heavy.ts; 0 en el resto), el dueño
     // y si dejó que otros se suban (torretas pesada y militar)
     blk: st.blocks.map((b) => [
       b.kind,

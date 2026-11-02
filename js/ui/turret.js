@@ -1,7 +1,7 @@
-// Taller de la torreta pesada: junto a una (o montado en ella) se abre con M o el botón Mejorar y se
-// compran sus mejoras (HEAVY_UP), que son de esa torreta. En solitario pausa; en línea el mundo sigue
-// y la compra la hace el servidor (llega de vuelta con la foto).
-import { HEAVY, HEAVY_UP, HEAVY_UP_ORDER, WEAPONS } from '../core/config.ts';
+// Taller de las torretas pesada y militar: junto a una (o montado en ella) se abre con M o el botón
+// Mejorar y se compran sus mejoras (HEAVY_UP o MILITARY_UP), que son de esa torreta. En solitario
+// pausa; en línea el mundo sigue y la compra la hace el servidor (llega de vuelta con la foto).
+import { ABILITY, HEAVY, MILITARY, SHOP, WEAPONS } from '../core/config.ts';
 import {
   heavyAuto,
   heavyBlastR,
@@ -12,8 +12,16 @@ import {
   heavyMaxHp,
   heavyPrice,
   heavyRate,
+  milBlastR,
+  milDmg,
+  milRange,
+  milReload,
+  milSalvo,
+  upDefs,
   upgradeHeavy,
+  upOrder,
 } from '../sim/heavy.ts';
+import { MOUNTS } from '../sim/build.ts';
 import { drawHeavyPreview } from '../render/build.js';
 import { shareTurret } from '../actions.js';
 import { closest, on } from './dom.js';
@@ -25,21 +33,30 @@ const ICONS = {
   blast: `<svg viewBox="0 0 24 24" ${P}><path d="M12 2l2 6 6-2-3 5 5 3-6 1 1 6-5-4-4 5 0-6-6-1 5-4-3-5 6 2z"/></svg>`,
   armor: `<svg viewBox="0 0 24 24" ${P}><path d="M12 3 5 6v6c0 4.5 3 7.5 7 9 4-1.5 7-4.5 7-9V6z"/><path d="M9 12h6M12 9v6"/></svg>`,
   auto: `<svg viewBox="0 0 24 24" ${P}><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>`,
+  warhead: `<svg viewBox="0 0 24 24" ${P}><path d="M3 12h10l5-4v8l-5-4"/><path d="M13 9.5v5M18 12h3"/></svg>`,
+  reload: `<svg viewBox="0 0 24 24" ${P}><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v4h-4"/><path d="M9 12h6"/></svg>`,
+  radar: `<svg viewBox="0 0 24 24" ${P}><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><path d="M12 12l6-6"/></svg>`,
+  salvo: `<svg viewBox="0 0 24 24" ${P}><path d="M4 12h12l3-2M4 7h9l3-2M4 17h9l3 2"/></svg>`,
 };
 
 const GUN_DMG = WEAPONS.heavy.damage;
+const MIS_DMG = ABILITY.bomber.power;
+const MIS_R = ABILITY.bomber.radius;
 
 // La torreta abierta: se busca por su lugar (en línea las piezas se rehacen con cada foto).
 function current(game) {
   const k = game.tupAt;
-  return k ? game.structures.blocks.find((b) => b.kind === 'heavy' && b.x === k.x && b.y === k.y) || null : null;
+  return k ? game.structures.blocks.find((b) => MOUNTS.includes(b.kind) && b.x === k.x && b.y === k.y) || null : null;
 }
+const isMil = (b) => b.kind === 'military';
+// Segundos entre misiles subido en la militar (el cargador también lo acorta).
+const manualCd = (b) => Math.round(((MILITARY.manual * milReload(b)) / MILITARY.reload) * 10) / 10;
 
 export function openTurret(game) {
   const p = game.player;
   if (game.state !== 'play' || !p.alive || p.inRobot) return;
   const b = game.structures.heavyFor(p);
-  if (!b) return game.toast('Acércate a una torreta pesada para mejorarla');
+  if (!b) return game.toast('Acércate a una torreta pesada o militar para mejorarla');
   game.tupAt = { x: b.x, y: b.y };
   game.tupSig = '';
   game.tupUp = b.up || 0;
@@ -62,9 +79,9 @@ export function closeTurret(game) {
 // Compra el siguiente nivel de la mejora id (en línea lo pide al servidor).
 export function buyTurretUp(game, id) {
   const b = current(game);
-  if (!b || !HEAVY_UP[id]) return;
+  if (!b || !upDefs(b)[id]) return;
   const price = heavyPrice(b, id);
-  if (!price) return game.toast(`${HEAVY_UP[id].name}: ya está al máximo`);
+  if (!price) return game.toast(`${upDefs(b)[id].name}: ya está al máximo`);
   if (game.money < price) return game.toast(`Te faltan $${price - game.money}`);
   if (game.mode.viaServer()) return game.online.buy('tup', id);
   game.money -= price;
@@ -75,9 +92,15 @@ export function buyTurretUp(game, id) {
 // Lo que dice la fila de cada mejora: el efecto de ahora y el del siguiente nivel.
 function stepText(b, id) {
   const lv = heavyLevel(b, id);
-  const d = HEAVY_UP[id];
-  const next = lv < heavyMax(id) ? lv + 1 : -1;
+  const d = upDefs(b)[id];
+  const next = lv < heavyMax(b, id) ? lv + 1 : -1;
   const arrow = (a, z, u = '') => (next < 0 ? `${a}${u}` : `${a}${u} → <em>${z}${u}</em>`);
+  const at = (a) => a[next < 0 ? lv : next];
+  if (id === 'warhead')
+    return `Daño ${arrow(Math.round(MIS_DMG * d.dmg[lv]), Math.round(MIS_DMG * at(d.dmg)))} · radio ${arrow(Math.round(MIS_R * d.r[lv]), Math.round(MIS_R * at(d.r)), ' px')}`;
+  if (id === 'reload') return `Un misil cada ${arrow(d.cd[lv], at(d.cd), ' s')}`;
+  if (id === 'radar') return `Alcance ${arrow(d.reach[lv], at(d.reach), ' px')} · giro más rápido`;
+  if (id === 'salvo') return `${arrow(d.n[lv], at(d.n))} ${at(d.n) === 1 ? 'misil' : 'misiles'} por disparo`;
   if (id === 'cal') return `Daño ${arrow(Math.round(GUN_DMG * d.dmg[lv]), Math.round(GUN_DMG * d.dmg[next]))}`;
   if (id === 'rate') return arrow(d.rate[lv], d.rate[next], ' disp/s');
   if (id === 'blast') return `Radio ${arrow(d.r[lv], d.r[next], ' px')}`;
@@ -92,33 +115,44 @@ export function renderTurret(game) {
   const p = game.player;
   game.$('tup-money').textContent = `$${game.money}`;
   const lv = heavyLevels(b);
-  const total = HEAVY_UP_ORDER.reduce((n, id) => n + lv[id], 0);
-  const all = HEAVY_UP_ORDER.reduce((n, id) => n + heavyMax(id), 0);
+  const order = upOrder(b);
+  const total = order.reduce((n, id) => n + lv[id], 0);
+  const all = order.reduce((n, id) => n + heavyMax(b, id), 0);
+  game.$('tup-name').textContent = SHOP[b.kind].name;
   game.$('tup-kicker').textContent = total ? `Taller · ${total} de ${all} mejoras` : 'Taller · de fábrica';
   const hp = Math.max(0, Math.round(b.hp));
   const stat = (k, v, cls = '') => `<div class="tup-stat${cls}"><dt>${k}</dt><dd>${v}</dd></div>`;
-  game.$('tup-stats').innerHTML =
-    stat('Daño', Math.round(GUN_DMG * heavyDmg(b))) +
-    stat('Cadencia', `${heavyRate(b)}<small>/s</small>`) +
-    stat('Explosión', `${heavyBlastR(b)}<small>px</small>`) +
-    stat('Vida', `${hp}<small>/${heavyMaxHp(b)}</small>`, hp < heavyMaxHp(b) * 0.35 ? ' low' : '') +
-    stat('Piloto', heavyAuto(b) ? 'Sí' : 'No', heavyAuto(b) ? ' on' : '') +
-    stat('Balas', p.heavyAmmo, p.heavyAmmo ? '' : ' low');
-  game.$('tup-list').innerHTML = HEAVY_UP_ORDER.map((id, i) => {
-    const d = HEAVY_UP[id];
-    const max = heavyMax(id);
-    const price = heavyPrice(b, id);
-    const poor = price && game.money < price;
-    const pips = Array.from({ length: max }, (_, k) => `<i class="${k < lv[id] ? 'on' : ''}"></i>`).join('');
-    const btn = price
-      ? `<button class="btn buy${poor ? ' poor' : ''}" data-tup="${id}" ${poor ? 'disabled' : ''}>$${price}</button>`
-      : '<span class="tup-max">Máximo</span>';
-    return `<div class="tup-item${price ? '' : ' done'}">
+  const life = stat('Vida', `${hp}<small>/${heavyMaxHp(b)}</small>`, hp < heavyMaxHp(b) * 0.35 ? ' low' : '');
+  game.$('tup-stats').innerHTML = isMil(b)
+    ? stat('Daño', Math.round(MIS_DMG * milDmg(b))) +
+      stat('Recarga', `${milReload(b)}<small>s</small>`) +
+      stat('Explosión', `${Math.round(MIS_R * milBlastR(b))}<small>px</small>`) +
+      life +
+      stat('Alcance', `${milRange(b)}<small>px</small>`) +
+      stat('Misiles', milSalvo(b), milSalvo(b) > 1 ? ' on' : '')
+    : stat('Daño', Math.round(GUN_DMG * heavyDmg(b))) +
+      stat('Cadencia', `${heavyRate(b)}<small>/s</small>`) +
+      stat('Explosión', `${heavyBlastR(b)}<small>px</small>`) +
+      life +
+      stat('Piloto', heavyAuto(b) ? 'Sí' : 'No', heavyAuto(b) ? ' on' : '') +
+      stat('Balas', p.heavyAmmo, p.heavyAmmo ? '' : ' low');
+  game.$('tup-list').innerHTML = order
+    .map((id, i) => {
+      const d = upDefs(b)[id];
+      const max = heavyMax(b, id);
+      const price = heavyPrice(b, id);
+      const poor = price && game.money < price;
+      const pips = Array.from({ length: max }, (_, k) => `<i class="${k < lv[id] ? 'on' : ''}"></i>`).join('');
+      const btn = price
+        ? `<button class="btn buy${poor ? ' poor' : ''}" data-tup="${id}" ${poor ? 'disabled' : ''}>$${price}</button>`
+        : '<span class="tup-max">Máximo</span>';
+      return `<div class="tup-item${price ? '' : ' done'}">
       <span class="tup-ic">${ICONS[id]}</span>
       <div class="shop-txt"><b>${d.name} <span class="pips${max > 5 ? ' many' : ''}">${pips}</span></b><span>${d.desc}</span><small>${stepText(b, id)}<span class="key"> · tecla ${i + 1}</span></small></div>
       ${btn}
     </div>`;
-  }).join('');
+    })
+    .join('');
   // en línea, en tu torreta: el permiso para que los demás se suban
   const mine = game.mode.viaServer() && !!b.owner && b.owner === p.sid;
   const sh = game.$('btn-tup-share');
@@ -128,6 +162,10 @@ export function renderTurret(game) {
   game.$('tup-share-d').textContent = b.shared
     ? 'Toca para quitar el permiso (quien la maneje se baja) · tecla L'
     : 'Toca para dejar que los demás se suban · tecla L';
+  // la munición de la pesada se sigue comprando en la tienda; aquí sólo se recuerda el precio
+  game.$('tup-note').textContent = isMil(b)
+    ? `Las mejoras son de esta torreta. No necesita munición: lanza sola un misil cada ${milReload(b)} s y, si te subes con E, tú lanzas uno cada ${manualCd(b)} s.`
+    : `Las mejoras son de esta torreta. Sus balas (${HEAVY.pack} por $${HEAVY.price}) se compran en la tienda y las comparte cualquier torreta que montes.`;
   game.tupSig = sig(game, b);
 }
 
@@ -140,10 +178,11 @@ export function updateTurret(game, dt) {
   if (inp.consume('pause') || inp.consume('turret')) return closeTurret(game);
   if (inp.consume('share')) shareTurret(game, current(game));
   const s = inp.consume('slot');
-  if (s && HEAVY_UP_ORDER[s - 1]) buyTurretUp(game, HEAVY_UP_ORDER[s - 1]);
+  const was = current(game);
+  if (s && was && upOrder(was)[s - 1]) buyTurretUp(game, upOrder(was)[s - 1]);
   const b = current(game);
   if (!b || b.hp <= 0 || !game.player.alive) {
-    if (b?.hp <= 0 || !b) game.toast('La torreta pesada fue destruida');
+    if (b?.hp <= 0 || !b) game.toast('La torreta fue destruida');
     return closeTurret(game);
   }
   if ((b.up || 0) !== game.tupUp) {
@@ -168,7 +207,4 @@ export function bindTurret(game) {
     const t = closest(e.target, '[data-tup]');
     if (t) buyTurretUp(game, t.dataset.tup);
   });
-  // la munición se sigue comprando en la tienda; aquí sólo se recuerda el precio
-  game.$('tup-note').textContent =
-    `Las mejoras son de esta torreta. Sus balas (${HEAVY.pack} por $${HEAVY.price}) se compran en la tienda y las comparte cualquier torreta que montes.`;
 }

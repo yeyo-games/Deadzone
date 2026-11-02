@@ -1,7 +1,8 @@
-// Mejoras de la torreta pesada (HEAVY_UP en config): cada torreta guarda sus niveles en `up`, un número
-// con 4 bits por mejora en el orden de HEAVY_UP_ORDER (así viaja en la foto y en la partida guardada).
+// Mejoras de las torretas pesada (HEAVY_UP en config) y militar (MILITARY_UP): cada torreta guarda sus
+// niveles en `up`, un número con 4 bits por mejora en el orden de HEAVY_UP_ORDER o MILITARY_UP_ORDER
+// según su `kind` (así viaja en la foto y en la partida guardada).
 // También el disparo del cañón doble, que comparten quien la maneja (Player.actMounted) y el piloto automático.
-import { HEAVY, HEAVY_UP, HEAVY_UP_ORDER, WEAPONS } from '../core/config.ts';
+import { HEAVY, HEAVY_UP, HEAVY_UP_ORDER, MILITARY_UP, MILITARY_UP_ORDER, WEAPONS } from '../core/config.ts';
 import { angleTo, rand } from '../core/util.ts';
 import type { GameHost, Zombie } from '../core/types.d.ts';
 import type { Player } from './player.ts';
@@ -30,9 +31,18 @@ const GUN = (WEAPONS as Record<string, { damage: number; speed: number; range: n
 
 const BITS = 4;
 
+/** Lo que hace falta para leer las mejoras: los niveles y de qué torreta son (sin kind, la pesada). */
+type Up = Pick<HeavyGun, 'up'> & { kind?: string };
+const isMil = (b: Up) => b.kind === 'military';
+/** La tabla de mejoras de esa torreta y su orden. */
+export const upDefs = (b: Up) => (isMil(b) ? MILITARY_UP : HEAVY_UP);
+export const upOrder = (b: Up) => (isMil(b) ? MILITARY_UP_ORDER : HEAVY_UP_ORDER);
+// La mejora id de esa torreta (sólo las de su tabla: el nombre llega del cliente en línea).
+const upDef = (b: Up, id: string) => (Object.hasOwn(upDefs(b), id) ? upDefs(b)[id] : null);
+
 /** Nivel de la mejora id en la torreta (0 = de fábrica). */
-export function heavyLevel(b: Pick<HeavyGun, 'up'>, id: string) {
-  const i = HEAVY_UP_ORDER.indexOf(id);
+export function heavyLevel(b: Up, id: string) {
+  const i = upOrder(b).indexOf(id);
   return i < 0 ? 0 : ((b.up || 0) >> (i * BITS)) & ((1 << BITS) - 1);
 }
 
@@ -44,18 +54,18 @@ export function widenHeavyUp(old: number) {
 }
 
 /** Niveles de todas las mejoras ({ cal: 1, rate: 0, ... }). */
-export function heavyLevels(b: Pick<HeavyGun, 'up'>) {
+export function heavyLevels(b: Up) {
   const out: Record<string, number> = {};
-  for (const id of HEAVY_UP_ORDER) out[id] = heavyLevel(b, id);
+  for (const id of upOrder(b)) out[id] = heavyLevel(b, id);
   return out;
 }
 
-/** Cuántos niveles tiene la mejora id. */
-export const heavyMax = (id: string) => HEAVY_UP[id]?.price.length ?? 0;
+/** Cuántos niveles tiene la mejora id de esa torreta. */
+export const heavyMax = (b: Up, id: string) => upDef(b, id)?.price.length ?? 0;
 
 /** Precio del siguiente nivel de id en esa torreta, o 0 si ya está al máximo (o no existe). */
-export function heavyPrice(b: Pick<HeavyGun, 'up'>, id: string) {
-  const d = HEAVY_UP[id];
+export function heavyPrice(b: Up, id: string) {
+  const d = upDef(b, id);
   return d ? (d.price[heavyLevel(b, id)] ?? 0) : 0;
 }
 
@@ -63,12 +73,22 @@ export function heavyPrice(b: Pick<HeavyGun, 'up'>, id: string) {
 export const heavyDmg = (b: Pick<HeavyGun, 'up'>) => HEAVY_UP.cal.dmg![heavyLevel(b, 'cal')];
 export const heavyRate = (b: Pick<HeavyGun, 'up'>) => HEAVY_UP.rate.rate![heavyLevel(b, 'rate')];
 export const heavyBlastR = (b: Pick<HeavyGun, 'up'>) => HEAVY_UP.blast.r![heavyLevel(b, 'blast')];
-export const heavyMaxHp = (b: Pick<HeavyGun, 'up'>) => HEAVY_UP.armor.hp![heavyLevel(b, 'armor')];
+export const heavyMaxHp = (b: Up) => upDefs(b).armor.hp![heavyLevel(b, 'armor')];
 export const heavyAuto = (b: Pick<HeavyGun, 'up'>) => heavyLevel(b, 'auto') > 0;
 
+// Y los de la torreta militar.
+const milUp = (id: string, k: 'dmg' | 'r' | 'cd' | 'reach' | 'turn' | 'n') => (b: Pick<HeavyGun, 'up'>) =>
+  MILITARY_UP[id][k]![heavyLevel({ up: b.up, kind: 'military' }, id)];
+export const milDmg = milUp('warhead', 'dmg');
+export const milBlastR = milUp('warhead', 'r');
+export const milReload = milUp('reload', 'cd');
+export const milRange = milUp('radar', 'reach');
+export const milTurn = milUp('radar', 'turn');
+export const milSalvo = milUp('salvo', 'n');
+
 /** Sube un nivel la mejora id (el dinero lo cobra quien llama). El blindaje suma vida al instante. */
-export function upgradeHeavy(b: HeavyGun, id: string) {
-  const i = HEAVY_UP_ORDER.indexOf(id);
+export function upgradeHeavy(b: HeavyGun & { kind?: string }, id: string) {
+  const i = upOrder(b).indexOf(id);
   if (i < 0 || !heavyPrice(b, id)) return false;
   const before = heavyMaxHp(b);
   b.up = (b.up || 0) + (1 << (i * BITS));
@@ -79,11 +99,11 @@ export function upgradeHeavy(b: HeavyGun, id: string) {
   return true;
 }
 
-/** Al acabar la oleada, las torretas blindadas se reparan una parte de su vida. */
+/** Al acabar la oleada, las torretas (pesadas y militares) blindadas se reparan una parte de su vida. */
 export function repairHeavies(blocks: (HeavyGun & { kind: string })[]) {
   for (const b of blocks) {
-    if (b.kind !== 'heavy') continue;
-    const k = HEAVY_UP.armor.repair![heavyLevel(b, 'armor')];
+    if (b.kind !== 'heavy' && b.kind !== 'military') continue;
+    const k = upDefs(b).armor.repair![heavyLevel(b, 'armor')];
     if (k > 0) b.hp = Math.min(b.max, b.hp + b.max * k);
   }
 }

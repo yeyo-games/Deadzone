@@ -712,7 +712,9 @@ export const HEAVY = { pack: 100, price: 200, turn: 4.5, shield: 0.5, reach: 60,
 // y estalla con el radio y el daño del misil del Bomber (ABILITY.bomber) en el primer zombi o pared que
 // toca, o donde estaba su blanco. No necesita munición. min: no dispara a los que tiene encima.
 // También se monta con E: subido en la escotilla (seat px detrás del centro) la torre gira más rápido
-// (handTurn) hacia tu mira y lanzas tú un misil cada manual s, hasta donde apuntas.
+// (handTurn) hacia tu mira y lanzas tú un misil cada manual s, hasta donde apuntas. range, turn y
+// reload son los de fábrica: las mejoras del taller (MILITARY_UP) los cambian, y en la misma proporción
+// handTurn y manual.
 export const MILITARY = {
   range: 720,
   min: 90,
@@ -741,6 +743,10 @@ export interface HeavyUpDef {
   hp?: number[];
   repair?: number[];
   range?: number;
+  cd?: number[];
+  reach?: number[];
+  turn?: number[];
+  n?: number[];
 }
 export const HEAVY_UP: Record<string, HeavyUpDef> = {
   cal: {
@@ -777,6 +783,47 @@ export const HEAVY_UP: Record<string, HeavyUpDef> = {
   },
 };
 export const HEAVY_UP_ORDER = ['cal', 'rate', 'blast', 'armor', 'auto'];
+
+// Mejoras de cada torreta militar (MILITARY): el mismo taller (tecla M), guardadas igual en `up`.
+//   warhead: multiplica el daño (dmg) y el radio (r) del estallido · reload: segundos entre misiles
+//   (cd; subido, el manual baja igual) · radar: alcance (reach px) y giro (turn rad/s; subido, igual)
+//   armor: vida y la parte que repara al acabar la oleada · salvo: misiles por disparo (n), en abanico
+export const MILITARY_UP: Record<string, HeavyUpDef> = {
+  warhead: {
+    name: 'Ojiva',
+    desc: 'Carga hueca más potente: cada misil pega más fuerte y estalla más grande.',
+    price: [3000, 6000, 10000, 15000, 21000, 28000, 36000, 45000],
+    dmg: [1, 1.2, 1.4, 1.6, 1.85, 2.1, 2.4, 2.7, 3],
+    r: [1, 1.05, 1.1, 1.15, 1.2, 1.25, 1.3, 1.35, 1.4],
+  },
+  reload: {
+    name: 'Cargador automático',
+    desc: 'El siguiente misil entra solo: dispara más seguido.',
+    price: [3000, 6000, 10000, 15000, 21000, 28000, 36000, 45000],
+    cd: [2.4, 2.1, 1.85, 1.65, 1.5, 1.35, 1.2, 1.1, 1],
+  },
+  radar: {
+    name: 'Radar',
+    desc: 'Ve más lejos y la torre gira más rápido hacia su blanco.',
+    price: [2500, 5000, 9000, 14000, 20000],
+    reach: [720, 800, 880, 960, 1040, 1120],
+    turn: [1.8, 2.2, 2.6, 3, 3.4, 3.8],
+  },
+  armor: {
+    name: 'Blindaje',
+    desc: 'Placas de tanque: más vida, y se repara sola al acabar cada oleada.',
+    price: [2000, 4500, 8000, 12000, 17000, 23000, 30000, 38000],
+    hp: [9000, 12000, 15000, 18000, 22000, 26000, 30000, 35000, 40000],
+    repair: [0, 0.15, 0.25, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6],
+  },
+  salvo: {
+    name: 'Salva',
+    desc: 'Más tubos: lanza varios misiles a la vez, en abanico.',
+    price: [25000, 60000],
+    n: [1, 2, 3],
+  },
+};
+export const MILITARY_UP_ORDER = ['warhead', 'reload', 'radar', 'armor', 'salvo'];
 
 // Clasificación mundial y estadísticas de uso (Supabase, sin librerías: API REST; ver supabase/esquema.sql).
 // url: la del proyecto ('https://xxxx.supabase.co'); key: la clave publicable (sb_publishable_…), que es

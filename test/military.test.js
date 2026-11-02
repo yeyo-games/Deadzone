@@ -1,8 +1,20 @@
-// Torreta militar (SHOP.military, MILITARY): a quién apunta, el misil antitanque y su explosión.
+// Torreta militar (SHOP.military, MILITARY): a quién apunta, el misil antitanque, su explosión y las
+// mejoras de su taller (MILITARY_UP).
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { ABILITY, MILITARY, SHOP } from '../js/core/config.ts';
+import { ABILITY, HEAVY_UP_ORDER, MILITARY, MILITARY_UP, MILITARY_UP_ORDER, SHOP } from '../js/core/config.ts';
 import { militaryMissile, Structures } from '../js/sim/build.ts';
+import {
+  heavyLevel,
+  heavyLevels,
+  heavyMaxHp,
+  heavyPrice,
+  milRange,
+  milReload,
+  milSalvo,
+  repairHeavies,
+  upgradeHeavy,
+} from '../js/sim/heavy.ts';
 import { Bullets } from '../js/sim/bullets.ts';
 import { World } from '../js/sim/world.ts';
 import { Horde } from '../js/sim/zombies.ts';
@@ -134,4 +146,62 @@ test('el misil estalla con el radio y el daño del misil del Bomber; el de adorn
   t.bullets.spawn(militaryMissile(x, y, Math.PI, 120, 'ana'));
   for (let i = 0; i < 60 && t.bullets.list.length; i++) t.bullets.update(1 / 60, t.game);
   assert.equal(blasts.length, 2);
+});
+
+test('taller: sus mejoras son las suyas (no las de la pesada) y suben hasta su máximo', () => {
+  const t = partida();
+  const b = torreta(t);
+  assert.deepEqual(Object.keys(heavyLevels(b)), MILITARY_UP_ORDER);
+  assert.equal(heavyPrice(b, 'cal'), 0, 'el calibre es de la pesada');
+  assert.equal(upgradeHeavy(b, HEAVY_UP_ORDER[0]), false);
+  assert.equal(heavyMaxHp(b), SHOP.military.hp, 'de fábrica, la vida de la tienda');
+  assert.equal(milRange(b), MILITARY.range);
+  assert.equal(milReload(b), MILITARY.reload);
+  assert.equal(milSalvo(b), 1);
+  for (const id of MILITARY_UP_ORDER) {
+    const d = MILITARY_UP[id];
+    for (let lv = 0; lv < d.price.length; lv++) {
+      assert.equal(heavyPrice(b, id), d.price[lv]);
+      assert.ok(upgradeHeavy(b, id));
+    }
+    assert.equal(heavyLevel(b, id), d.price.length);
+    assert.equal(heavyPrice(b, id), 0);
+  }
+  assert.ok(
+    MILITARY_UP_ORDER.every((id) => MILITARY_UP[id].price.length <= 15),
+    'caben en 4 bits',
+  );
+  assert.equal(b.max, MILITARY_UP.armor.hp.at(-1), 'el blindaje sube la vida máxima');
+  assert.equal(b.hp, b.max, 'y suma la vida que agrega');
+  b.hp = 1000;
+  repairHeavies([b]);
+  assert.equal(b.hp, 1000 + b.max * MILITARY_UP.armor.repair.at(-1), 'se repara al acabar la oleada');
+});
+
+test('mejorada: recarga antes, ve más lejos, lanza la salva y la ojiva pega más fuerte', () => {
+  const t = partida();
+  const b = torreta(t);
+  for (const id of ['reload', 'radar', 'salvo', 'warhead']) while (upgradeHeavy(b, id));
+  const cx = b.x + 30;
+  const cy = b.y + 30;
+  // más allá del alcance de fábrica, pero dentro del del radar
+  zombi(t, 'rock', cx + MILITARY.range + 200, cy);
+  assert.ok(hastaDisparar(t, b), 'el radar lo alcanza');
+  const ms = t.bullets.list.filter((q) => q.atgm);
+  assert.equal(ms.length, 3, 'tres misiles por disparo');
+  assert.equal(b.cd, MILITARY_UP.reload.cd.at(-1));
+  const angs = ms.map((m) => Math.atan2(m.dy, m.dx)).sort((a, z) => a - z);
+  assert.ok(angs[2] - angs[0] > 0.1, 'en abanico');
+  for (const m of ms) {
+    assert.equal(m.blastK, MILITARY_UP.warhead.dmg.at(-1));
+    assert.equal(m.blastRK, MILITARY_UP.warhead.r.at(-1));
+  }
+  // la ojiva agranda el estallido y su daño
+  const blasts = [];
+  t.structures.explode = (game, g, R, power) => blasts.push({ R, power });
+  t.structures.missileBlast(t.game, cx, cy, 'ana', ms[0].blastK, ms[0].blastRK);
+  assert.deepEqual(blasts[0], {
+    R: ABILITY.bomber.radius * MILITARY_UP.warhead.r.at(-1),
+    power: ABILITY.bomber.power * MILITARY_UP.warhead.dmg.at(-1),
+  });
 });

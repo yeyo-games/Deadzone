@@ -12,6 +12,7 @@ import {
   EVENTS,
   HEAVY,
   HEAVY_UP,
+  MILITARY_UP,
   PLAYER_BASE,
   ROCK,
   START,
@@ -662,6 +663,16 @@ test('torreta militar: se compra, se monta (encima de la torre) y lanzas tú los
   const dx = Math.abs(a.p.x - (t.x + 30));
   const dy = Math.abs(a.p.y - (t.y + 30));
   assert.ok(Math.max(dx, dy) > 30, 'fuera de la torre');
+  // su taller: junto a ella se compran sus mejoras (las de la pesada no) y viajan en la foto
+  a.money = 100000;
+  assert.equal(sim.shop('a', 'tup', 'cal', 0), false, 'el calibre es de la pesada');
+  assert.ok(sim.shop('a', 'tup', 'salvo', 0));
+  assert.equal(a.money, 100000 - MILITARY_UP.salvo.price[0]);
+  assert.equal(heavyLevel(t, 'salvo'), 1);
+  assert.ok(sim.shop('a', 'tup', 'armor', 0));
+  assert.equal(t.max, MILITARY_UP.armor.hp![1]);
+  const blk = sim.snapshot('a', 0)!.blk;
+  assert.ok(Array.isArray(blk) && blk[0][7] === t.up, 'los niveles van en la foto');
 });
 
 test('torreta pesada: mejoras junto a ella (también a mitad de oleada) y piloto automático con las balas del dueño', () => {
