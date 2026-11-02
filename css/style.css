@@ -662,6 +662,29 @@ svg.can { width: 14px; height: 16px; vertical-align: -3px; }
 .tup-item.done .pips i.on { background: var(--xp); box-shadow: 0 0 6px rgba(134, 168, 146, 0.6); }
 .tup-max { font-family: var(--display); font-size: 20px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--xp); padding: 0 6px; }
 #btn-tup { color: var(--st); border-color: rgba(201, 165, 74, 0.7); }
+/* permiso de subirse a tu torreta (en línea): candado cerrado, o abierto y verde si lo diste */
+#btn-share .ic-open, .tup-share .ic-open, #btn-share.on .ic-lock, .tup-share.on .ic-lock { display: none; }
+#btn-share.on .ic-open, .tup-share.on .ic-open { display: block; }
+#btn-share.on { color: var(--xp); border-color: rgba(134, 168, 146, 0.8); }
+.tup-share {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 8px 12px;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  background: rgba(230, 224, 210, 0.05);
+  border: 1px solid var(--line);
+}
+.tup-share[hidden] { display: none; }
+.tup-share:hover { border-color: rgba(199, 162, 74, 0.6); }
+.tup-share.on .tup-ic { color: var(--xp); background: rgba(134, 168, 146, 0.1); border-color: rgba(134, 168, 146, 0.35); }
+.tup-share .tup-ic svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 @media (max-width: 640px) {
   .tup-top { grid-template-columns: 130px minmax(0, 1fr); gap: 10px; }
   .tup-view { width: 130px; height: 130px; }

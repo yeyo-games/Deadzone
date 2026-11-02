@@ -10,7 +10,7 @@ import { Bullets } from '../../../js/sim/bullets.ts';
 import { Director } from '../../../js/sim/director.ts';
 import { Pickups } from '../../../js/sim/pickups.ts';
 import { Player } from '../../../js/sim/player.ts';
-import { Structures } from '../../../js/sim/build.ts';
+import { LOCKED, MOUNTS, Structures } from '../../../js/sim/build.ts';
 import { Robot } from '../../../js/sim/robot.ts';
 import { applyMove, TICK } from '../../../js/net/netcode.ts';
 import { ServerMode } from '../../../js/net/mode.ts';
@@ -535,6 +535,7 @@ export class ServerSim {
         else if (a.kind === 'improv') this.structures.launchImprov(g, a.tx, a.ty, s.id);
         else this.structures.throwGrenade(g, a.tx, a.ty, s.id);
       } else if (a.k === 'robot') this.toggleRobot(s);
+      else if (a.k === 'share') this.toggleShare(s, a.tx, a.ty);
       else if (a.k === 'ab') {
         // la megarráfaga y el impulso ya los vio en su pantalla; el misil, no
         if (p.cls !== 'bomber') this.actor = s.id;
@@ -562,9 +563,16 @@ export class ServerSim {
     if (h) {
       st.mountHeavy(p, h);
       this.game.sfx.build();
-      if (p.heavyAmmo <= 0) s.toasts.push('Torreta sin balas: cómpralas en la tienda');
+      if (p.heavyAmmo <= 0 && h.kind === 'heavy') s.toasts.push('Torreta sin balas: cómpralas en la tienda');
+      // la primera vez que su dueño la monta con más gente: cómo prestarla
+      else if (h.owner === s.id && !h.shared && !(h as any).hinted && this.slots.size > 1) {
+        (h as any).hinted = true;
+        s.toasts.push('Tecla L o el candado: deja que los demás se suban');
+      }
       return;
     }
+    // junto a la torreta de otro que no dio permiso (y sin su robot al lado)
+    if (!p.inRobot && st.nearHeavy(p, true) && !(rb.owned && !rb.broken && rb.near(p))) return s.toasts.push(LOCKED);
     if (!rb.owned) return s.toasts.push('Compra el robot de combate en la tienda');
     if (rb.piloted) {
       rb.leave(p, this.world);
@@ -576,6 +584,16 @@ export class ServerSim {
     rb.board(p);
     this.game.sfx.punch();
     this.game.camera.shake(0.2);
+  }
+
+  // El dueño de la torreta en (x, y) deja o no que los demás se suban; al quitarlo, quien la
+  // maneje se baja.
+  toggleShare(s: Slot, x: number, y: number) {
+    const b = this.structures.blocks.find((q: any) => MOUNTS.includes(q.kind) && q.x === x && q.y === y);
+    if (!b || b.owner !== s.id) return;
+    const off = this.structures.toggleShare(b);
+    s.toasts.push(b.shared ? 'Los demás ya pueden subirse a tu torreta' : 'Sólo tú puedes subirte a tu torreta');
+    if (off) this.slotOf(off)?.toasts.push('Su dueño te bajó de la torreta');
   }
 
   slotOf(p: any) {
@@ -923,7 +941,7 @@ export class ServerSim {
     const st = this.structures;
     const sc = st.scorches[st.scorches.length - 1];
     const geo =
-      st.blocks.map((b: any) => `${b.kind}${b.x},${b.y},${b.w},${b.h}`).join() +
+      st.blocks.map((b: any) => `${b.kind}${b.x},${b.y},${b.w},${b.h}${b.shared ? 's' : ''}`).join() +
       '|' +
       st.wires.map((w: any) => `${w.kind}${w.x},${w.y},${w.w},${w.h}`).join() +
       '|' +

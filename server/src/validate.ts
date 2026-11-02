@@ -39,8 +39,8 @@ export function cleanAct(raw: any): Act | null {
   if (!raw || typeof raw !== 'object') return null;
   const { s, k } = raw;
   if (!Number.isSafeInteger(s) || s < 0) return null;
-  if (k !== 'build' && k !== 'throw' && k !== 'robot' && k !== 'ab') return null;
-  const bare = k === 'robot' || k === 'ab';
+  if (k !== 'build' && k !== 'throw' && k !== 'robot' && k !== 'ab' && k !== 'share') return null;
+  const bare = k === 'robot' || k === 'ab' || k === 'share';
   const kind = bare ? '' : raw.kind;
   if (typeof kind !== 'string' || (!bare && !KIND_RE.test(kind))) return null;
   let tx = 0;
@@ -52,7 +52,7 @@ export function cleanAct(raw: any): Act | null {
     Number.isFinite(y) &&
     Math.abs(x) <= 1e5 &&
     Math.abs(y) <= 1e5;
-  if (k === 'throw' || k === 'ab') {
+  if (k === 'throw' || k === 'ab' || k === 'share') {
     if (!point(raw.tx, raw.ty)) return null;
     tx = raw.tx;
     ty = raw.ty;

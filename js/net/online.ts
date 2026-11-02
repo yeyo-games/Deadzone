@@ -607,6 +607,7 @@ export class Online {
         if (inp.consume('molotov')) g.tryGrenade('molotov');
         if (inp.consume('improv')) g.tryGrenade('improv');
         if (inp.consume('robot')) g.toggleRobot();
+        if (inp.consume('share')) g.shareTurret();
         if (inp.consume('turret')) return g.openTurret();
         if (inp.consume('ability')) g.useAbility();
         // a mitad de oleada la mejora se abre cuando él quiere (U o el botón)
@@ -885,6 +886,8 @@ export class Online {
     const g = this.game;
     const p = g.player;
     const st = Array.isArray(s.st) ? s.st : [];
+    // el dueño de las piezas es el id de la sesión (ver mayMount)
+    if (this.room) p.sid = this.room.sessionId;
     p.heavyAmmo = Math.max(0, st[10] | 0);
     const heavy: HeavyBlock[] = g.structures.blocks.filter(
       (b: HeavyBlock) => b.kind === 'heavy' || b.kind === 'military',

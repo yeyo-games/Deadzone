@@ -99,3 +99,25 @@ test('modo construir: la pieza va donde apuntas, hasta BUILD.reach, atravesada y
   assert.equal(t.owner, 'ana');
   assert.ok(Math.abs(t.ang - Math.PI / 2) < 1e-9);
 });
+
+test('torretas con dueño: sólo él se sube y las presta; sin dueño (solitario), cualquiera', () => {
+  const st = new Structures();
+  const t = { ...pieza('heavy'), w: 40, h: 40, owner: 'a', manned: null };
+  const libre = { ...pieza('military'), x: 2000, w: 60, h: 60, owner: null, manned: null };
+  st.blocks.push(t, libre);
+  const ana = { x: 20, y: 70, r: 14, sid: 'a', manned: null };
+  const beto = { x: 20, y: 70, r: 14, sid: 'b', manned: null };
+  assert.equal(st.nearHeavy(ana), t);
+  assert.equal(st.nearHeavy(beto), null, 'la de otro, sin permiso, no');
+  assert.equal(st.nearHeavy(beto, true), t, 'pero se sabe que está ahí');
+  assert.equal(st.ownTurret(ana), t);
+  assert.equal(st.ownTurret(beto), null);
+  st.toggleShare(t);
+  assert.equal(st.nearHeavy(beto), t, 'con permiso, sí');
+  st.mountHeavy(beto, t);
+  assert.equal(st.toggleShare(t), beto, 'al quitar el permiso baja a quien la maneja');
+  assert.equal(t.manned, null);
+  assert.equal(beto.manned, null);
+  Object.assign(beto, { x: 2030, y: 100 });
+  assert.equal(st.nearHeavy(beto), libre, 'sin dueño se sube cualquiera');
+});

@@ -53,7 +53,7 @@ export type RemoteZombie = Pick<
   fireFx: number;
   spawnT: number;
 };
-type Row = [string, number, number, number, number, number, number, number?];
+type Row = [string, number, number, number, number, number, number, number?, string?, number?];
 /** Parte de una foto que usa applyStructures: las listas de barricadas y trampas llevan el tipo delante. */
 type StructSnap = Partial<Omit<WorldSnap, 'blk' | 'wir' | 'sc' | 'wd'>> & {
   blk?: Row[];
@@ -528,6 +528,8 @@ export class Remote {
           max: q[0] === 'heavy' ? heavyMaxHp({ up: q[7] || 0 }) : (shopDef(q[0])?.hp ?? 0),
           ang: q[6] / 100,
           up: q[7] || 0,
+          owner: q[8] || null,
+          shared: !!q[9],
           low: true,
           block: true,
           hitT: 0,
@@ -540,6 +542,7 @@ export class Remote {
           const b = st.blocks[i];
           if (q[5] < b.hp) b.hitT = 0.12;
           b.hp = q[5];
+          b.shared = !!q[9];
           // mejoras de la torreta pesada (el blindaje sube su vida máxima)
           if ((q[7] || 0) !== (b.up || 0)) {
             b.up = q[7] || 0;

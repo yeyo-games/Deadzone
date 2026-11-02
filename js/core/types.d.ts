@@ -100,12 +100,13 @@ export interface Weapon {
 // (server/src/rooms/DeadZoneRoom.ts, bindInputs: la entrada del canal de Colyseus ya saneada): un solo tipo para los dos lados.
 export type Cmd = { s: number; mx: number; my: number; f: number; a: number; w: number };
 
-// Acción de un jugador ligada a su última entrada (s): construir, lanzar, subir al robot o usar la
-// habilidad de su clase (ab, hacia tx/ty). La valida server/src/validate.ts (cleanAct).
+// Acción de un jugador ligada a su última entrada (s): construir, lanzar, subir al robot, usar la
+// habilidad de su clase (ab, hacia tx/ty) o dar permiso de subirse a su torreta (share, la de tx/ty).
+// La valida server/src/validate.ts (cleanAct).
 // at: la construcción lleva dónde colocar la pieza (tx, ty); sin él va delante del jugador
 export type Act = {
   s: number;
-  k: 'build' | 'throw' | 'robot' | 'ab';
+  k: 'build' | 'throw' | 'robot' | 'ab' | 'share';
   kind: string;
   tx: number;
   ty: number;

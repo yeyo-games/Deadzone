@@ -119,6 +119,11 @@
           <button class="tbtn small gone" id="btn-tup" aria-label="Mejorar la torreta pesada">
             <svg viewBox="0 0 24 24"><path d="M14.5 5.5a4 4 0 0 0-5 5L4 16l4 4 5.5-5.5a4 4 0 0 0 5-5l-2.5 2.5-2.5-.5-.5-2.5z"/></svg>
           </button>
+          <!-- en línea, junto a tu torreta: dejar que los demás se suban -->
+          <button class="tbtn small gone" id="btn-share" aria-label="Dejar que otros se suban a tu torreta">
+            <svg class="ic-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="1.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+            <svg class="ic-open" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="1.5"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></svg>
+          </button>
         </div>
         <button class="tbtn big" id="btn-fire" aria-label="Disparar">
           <svg class="ic-fire" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><path d="M12 2v5M12 17v5M2 12h5M17 12h5"/></svg>
@@ -401,6 +406,10 @@
           <canvas class="tup-view" id="tup-view" width="300" height="300" aria-label="Vista de la torreta"></canvas>
           <dl class="tup-stats" id="tup-stats"></dl>
         </div>
+        <button class="tup-share" id="btn-tup-share" type="button" hidden>
+          <span class="tup-ic"><svg class="ic-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="1.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><svg class="ic-open" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="1.5"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></svg></span>
+          <span class="shop-txt"><b id="tup-share-t">Sólo tú puedes subirte</b><span id="tup-share-d">Toca para dejar que los demás se suban</span></span>
+        </button>
         <div class="tup-list" id="tup-list"></div>
         <p class="shop-note" id="tup-note"></p>
         <button class="btn primary" id="btn-tup-done">Volver</button>

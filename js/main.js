@@ -180,6 +180,7 @@ class Game {
   pickBuild = (k) => Act.pickBuild(this, k);
   buildTarget = () => Act.buildTarget(this);
   toggleRobot = () => Act.toggleRobot(this);
+  shareTurret = () => Act.shareTurret(this);
   tryGrenade = (kind) => Act.tryGrenade(this, kind);
   startNextRound = () => Act.startNextRound(this);
   setState = (name) => setState(this, name);

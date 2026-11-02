@@ -150,13 +150,20 @@ Calibre, cadencia, carga explosiva y blindaje tienen **10 niveles** cada uno (ca
 La **torreta militar** ($50 000) es la parte de arriba de un tanque: ocupa 3×3 casillas, aguanta 9000 y
 dispara sola, sin munición. Gira despacio hacia el zombi a su alcance (hasta 720 px, y no a los que tiene
 encima), **primero a los grandes** (rocosos, super blindados, gigantes, toros y gordos), y cada 2,4 s
-lanza un **misil antitanque** que sale con una nube de humo negro, deja un recorrido luminoso y estalla
+lanza un **misil antitanque** que sale con una nube de humo negro, deja un trazo encendido que alumbra la
+noche y se apaga poco a poco, y estalla
 en el primer zombi o pared que toca (o donde estaba su blanco) con el radio y el daño del misil del Bomber.
 
 También **te puedes subir** (`E` junto a ella, o el botón **Torreta** en el celular): vas encima de la
 torre, que gira más rápido hacia tu mira, y lanzas tú un misil cada 1,6 s hasta donde apuntas (en el
 celular, al zombi más cercano). Encima recibes la mitad del daño, como en la torreta pesada, y nadie te
 puede agarrar. Te bajas con `E` por detrás de la torre.
+
+### Torretas en multijugador
+
+En línea, a tu torreta pesada o militar **sólo te subes tú**. Para prestarla, junto a ella (o montado)
+pulsa `L` o el botón del **candado** (en la torreta pesada también está en su taller): el candado se
+abre y los demás ya pueden subirse. Si vuelves a cerrarlo, quien la esté manejando se baja.
 
 ### Armas y munición
 
@@ -221,6 +228,7 @@ tienes.
 | `F`: modo construir (clic coloca, rueda o `1`–`9` cambia de pieza) | Botón **Construir**, toca el mapa o ✓ |
 | `G`: lanzar granada · `T`: molotov · `Z`: misil improvisado · `E`: robot o torreta pesada | Botones pequeños de **granada**, **molotov** y **misil** (apuntan solos) |
 | `M`: taller de la torreta pesada (junto a ella) | Botón de la **llave** |
+| `L`: en línea, dejar o no que otros se suban a tu torreta | Botón del **candado** |
 | `Enter`: iniciar siguiente ronda (en línea: estoy listo) | Botón del panel **Ronda completada** |
 | `Esc` / `P`: pausa | Botón de pausa |
 

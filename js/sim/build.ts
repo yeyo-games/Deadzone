@@ -43,6 +43,8 @@ export interface Block {
   aim?: Zombie | null;
   // torreta militar: cuánto falta para buscar otro blanco
   scanT?: number;
+  // torreta pesada o militar en línea: su dueño dejó que los demás se suban
+  shared?: boolean;
 }
 // Alambre, púas y minas (en el suelo).
 export interface Wire {
@@ -203,7 +205,10 @@ export function militaryMissile(
 
 const isBig = (z: Zombie) => MILITARY.big.includes(z.type);
 // Torretas a las que te subes con E.
-const MOUNTS = ['heavy', 'military'];
+export const MOUNTS = ['heavy', 'military'];
+// Las de otro jugador, sólo si su dueño dio permiso (sin dueño, en solitario, todas).
+export const mayMount = (p: Player, b: Block) => !b.owner || !!b.shared || b.owner === p.sid;
+export const LOCKED = 'Esa torreta no es tuya: su dueño tiene que darte permiso';
 
 // Distancia al jugador más cercano (en línea, el servidor tiene varios en game.targets).
 export class Structures {
@@ -830,11 +835,12 @@ export class Structures {
   /* ---------- dibujo ---------- */
 
   // La torreta libre que se puede montar (pesada o militar) más cercana al alcance de p (o null).
-  nearHeavy(p: Player) {
+  // any: también las de otro jugador que no dio permiso.
+  nearHeavy(p: Player, any = false) {
     let best = null;
     let bd = Number.POSITIVE_INFINITY;
     for (const b of this.blocks) {
-      if (!MOUNTS.includes(b.kind) || b.manned) continue;
+      if (!MOUNTS.includes(b.kind) || b.manned || (!any && !mayMount(p, b))) continue;
       // la militar es más grande: se alcanza desde más lejos de su centro
       const d = Math.hypot(b.x + b.w / 2 - p.x, b.y + b.h / 2 - p.y) - (b.w - 40) / 2;
       if (d < bd && d < HEAVY.reach + p.r) {
@@ -872,6 +878,32 @@ export class Structures {
       }
     }
     return best;
+  }
+
+  // La torreta (pesada o militar) de p, con dueño (o sea en línea), que maneja o tiene al alcance (o null).
+  ownTurret(p: Player) {
+    if (p.manned) return p.manned.owner && p.manned.owner === p.sid ? p.manned : null;
+    let best = null;
+    let bd = Number.POSITIVE_INFINITY;
+    for (const b of this.blocks) {
+      if (!MOUNTS.includes(b.kind) || !b.owner || b.owner !== p.sid) continue;
+      const d = Math.hypot(b.x + b.w / 2 - p.x, b.y + b.h / 2 - p.y) - (b.w - 40) / 2;
+      if (d < bd && d < HEAVY.reach + p.r) {
+        bd = d;
+        best = b;
+      }
+    }
+    return best;
+  }
+
+  // En línea, el dueño de una torreta deja (o deja de dejar) que los demás se suban; al quitar el
+  // permiso, quien la maneje se baja. Devuelve a quien bajó (o null).
+  toggleShare(b: Block) {
+    b.shared = !b.shared;
+    const q = b.manned;
+    if (b.shared || !q || mayMount(q, b)) return null;
+    this.leaveHeavy(q);
+    return q;
   }
 
   leaveHeavy(p: Player) {

@@ -15,6 +15,7 @@ import {
   upgradeHeavy,
 } from '../sim/heavy.ts';
 import { drawHeavyPreview } from '../render/build.js';
+import { shareTurret } from '../actions.js';
 import { closest, on } from './dom.js';
 
 const P = 'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
@@ -118,16 +119,26 @@ export function renderTurret(game) {
       ${btn}
     </div>`;
   }).join('');
+  // en línea, en tu torreta: el permiso para que los demás se suban
+  const mine = game.mode.viaServer() && !!b.owner && b.owner === p.sid;
+  const sh = game.$('btn-tup-share');
+  sh.hidden = !mine;
+  sh.classList.toggle('on', !!b.shared);
+  game.$('tup-share-t').textContent = b.shared ? 'Los demás pueden subirse' : 'Sólo tú puedes subirte';
+  game.$('tup-share-d').textContent = b.shared
+    ? 'Toca para quitar el permiso (quien la maneje se baja) · tecla L'
+    : 'Toca para dejar que los demás se suban · tecla L';
   game.tupSig = sig(game, b);
 }
 
-const sig = (game, b) => `${game.money}|${b.up || 0}|${Math.round(b.hp)}|${game.player.heavyAmmo}`;
+const sig = (game, b) => `${game.money}|${b.up || 0}|${Math.round(b.hp)}|${game.player.heavyAmmo}|${b.shared ? 1 : 0}`;
 
 // Cada fotograma con el taller abierto: teclas, la torreta girando en la vista previa y, en línea,
 // lo que cambie con la foto (dinero, mejoras compradas, golpes).
 export function updateTurret(game, dt) {
   const inp = game.input;
   if (inp.consume('pause') || inp.consume('turret')) return closeTurret(game);
+  if (inp.consume('share')) shareTurret(game, current(game));
   const s = inp.consume('slot');
   if (s && HEAVY_UP_ORDER[s - 1]) buyTurretUp(game, HEAVY_UP_ORDER[s - 1]);
   const b = current(game);
@@ -152,6 +163,7 @@ export function updateTurret(game, dt) {
 // Botones del taller y el botón táctil que lo abre.
 export function bindTurret(game) {
   on(game, 'btn-tup-done', () => closeTurret(game));
+  on(game, 'btn-tup-share', () => shareTurret(game, current(game)));
   game.$('tup-list').addEventListener('click', (e) => {
     const t = closest(e.target, '[data-tup]');
     if (t) buyTurretUp(game, t.dataset.tup);

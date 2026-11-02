@@ -78,11 +78,30 @@ export class Lighting {
       g.globalAlpha = Math.min(1, (f.life - f.t) / 1.2, f.t * 4) * (0.8 + 0.2 * Math.sin(game.time * 13 + f.x));
       g.drawImage(this.soft, f.x - 260, f.y - 260, 520, 520);
     }
-    // las llamaradas del lanzallamas alumbran mientras vuelan
+    // las llamaradas del lanzallamas alumbran mientras vuelan; el misil antitanque, también, y su
+    // estela encendida deja una franja clara que se apaga con ella
     for (const b of game.bullets.list) {
+      if (b.atgm) {
+        g.globalAlpha = 0.9;
+        g.drawImage(this.soft, b.x - 150, b.y - 150, 300, 300);
+        continue;
+      }
       if (!b.flame) continue;
       g.globalAlpha = 0.3 * (b.life / (b.life0 || 1));
       g.drawImage(this.soft, b.x - 110, b.y - 110, 220, 220);
+    }
+    const sk = game.particles.streaks;
+    if (sk.length) {
+      g.lineCap = 'round';
+      g.lineWidth = 46;
+      g.strokeStyle = '#fff';
+      for (const s of sk) {
+        g.globalAlpha = 0.5 * (s.t / s.max);
+        g.beginPath();
+        g.moveTo(s.x0, s.y0);
+        g.lineTo(s.x1, s.y1);
+        g.stroke();
+      }
     }
     if (game.muzzle > 0) {
       g.globalAlpha = game.muzzle;
@@ -164,6 +183,11 @@ export class Lighting {
       ctx.drawImage(this.warm, f.x - 170, f.y - 170, 340, 340);
     }
     for (const b of game.bullets.list) {
+      if (b.atgm) {
+        ctx.globalAlpha = 0.55;
+        ctx.drawImage(this.warm, b.x - b.dx * 14 - 70, b.y - b.dy * 14 - 70, 140, 140);
+        continue;
+      }
       if (!b.flame) continue;
       ctx.globalAlpha = 0.18 * (b.life / (b.life0 || 1));
       ctx.drawImage(this.warm, b.x - 60, b.y - 60, 120, 120);

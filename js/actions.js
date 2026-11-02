@@ -2,6 +2,7 @@
 // En línea varias se piden al servidor (game.online.act) en vez de aplicarse aquí.
 import { BUILD_ORDER, SHOP } from './core/config.ts';
 import { Abilities, abilityTarget } from './sim/abilities.ts';
+import { LOCKED } from './sim/build.ts';
 
 // X o el botón: misil donde apuntas, megarráfaga o impulso.
 export function useAbility(game) {
@@ -27,6 +28,9 @@ export function toggleRobot(game) {
     if (h) return mountHeavy(game, h);
   }
   const rb = game.robot;
+  // junto a la torreta de otro jugador que no dio permiso (y sin el robot al lado)
+  if (!p.inRobot && game.structures.nearHeavy(p, true) && !(rb.owned && !rb.broken && rb.near(p)))
+    return game.toast(LOCKED);
   if (!rb.owned) {
     if (game.structures.blocks.some((b) => b.kind === 'heavy' || b.kind === 'military'))
       return game.toast('Acércate a la torreta para montarla');
@@ -56,6 +60,17 @@ export function mountHeavy(game, b) {
   game.sfx.build();
   game.camera.shake(0.12);
   if (b.kind === 'heavy' && p.heavyAmmo <= 0) game.toast('Torreta sin balas: cómpralas en la tienda');
+}
+
+// En línea (L o el candado): dejar o no que los demás se suban a tu torreta (b, o la que tienes al
+// lado); lo hace el servidor, que baja a quien la maneje si quitas el permiso.
+export function shareTurret(game, b = null) {
+  const p = game.player;
+  if (!game.mode.viaServer() || !p.alive || p.inRobot) return;
+  const t = b || game.structures.ownTurret(p);
+  if (!t) return game.toast('Acércate a tu torreta para prestarla');
+  game.online.act('share', { tx: t.x, ty: t.y });
+  game.sfx.build();
 }
 
 export function leaveHeavy(game) {

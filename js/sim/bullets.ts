@@ -68,7 +68,7 @@ export class Bullets {
         b.dy = Math.sin(a);
         game.particles.rocketTrail(b.x, b.y, b.dx, b.dy);
       }
-      if (b.atgm) game.particles.atgmTrail(b.x, b.y, b.dx, b.dy);
+      if (b.atgm) game.particles.atgmTrail(b.x, b.y, b.dx, b.dy, Math.min(b.speed * dt, b.life));
       let step = b.speed * dt;
       if (step > b.life) step = b.life;
       const x = b.x;

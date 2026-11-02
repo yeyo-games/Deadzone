@@ -125,6 +125,19 @@ export function updateHud(game, force) {
     game.cache.tup = tup;
     $('btn-tup').classList.toggle('gone', !tup);
   }
+  // en línea, junto a tu torreta (o montado en ella): el candado deja o no que los demás se suban
+  const own = game.mode.viaServer() && p.alive && !p.inRobot ? game.structures.ownTurret(p) : null;
+  const share = own ? (own.shared ? 2 : 1) : 0;
+  if (game.cache.share !== share) {
+    game.cache.share = share;
+    const b = $('btn-share');
+    b.classList.toggle('gone', !share);
+    b.classList.toggle('on', share === 2);
+    b.setAttribute(
+      'aria-label',
+      share === 2 ? 'Quitar el permiso de subirse a tu torreta' : 'Dejar que otros se suban a tu torreta',
+    );
+  }
   // habilidad de clase: icono, segundos que faltan y arco de espera en el botón táctil
   const cls = p.cls;
   if (game.cache.cls !== cls) {

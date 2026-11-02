@@ -12,6 +12,15 @@ const EMBER = 4;
 const RING = 5;
 const FIREBALL = 6;
 const CHUNK = 7;
+// estela del misil antitanque: segundos que tarda en apagarse, y sus pasadas (ancho, color, opacidad,
+// curva: el núcleo se apaga antes que el halo)
+const STREAK = 1.6;
+/** @type {[number, string, number, number][]} */
+const STREAK_PASSES = [
+  [9, '255,120,40', 0.16, 1],
+  [4, '255,180,90', 0.4, 1.5],
+  [1.6, '255,240,200', 0.9, 2.5],
+];
 
 // Bola de fuego (se dibuja aditiva y crece mientras se apaga).
 let FIRE = null;
@@ -58,11 +67,14 @@ export class Particles {
     this.idx = 0;
     /** Destellos cortos que alumbran la noche (los dibuja lighting.js). @type {{ x: number, y: number, r: number, t: number, max: number }[]} */
     this.lights = [];
+    /** Tramos brillantes que deja el misil antitanque y se apagan despacio (también alumbran). @type {{ x0: number, y0: number, x1: number, y1: number, t: number, max: number }[]} */
+    this.streaks = [];
   }
 
   clear() {
     for (const q of this.p) q.life = 0;
     this.lights.length = 0;
+    this.streaks.length = 0;
   }
 
   flash(x, y, r, t) {
@@ -508,19 +520,29 @@ export class Particles {
     );
   }
 
-  // estela del misil antitanque: humo gris oscuro y brasas encendidas que quedan marcando su recorrido
-  atgmTrail(x, y, dx, dy) {
+  // estela del misil antitanque: un trazo encendido que se queda marcando su recorrido y se apaga
+  // despacio, humo gris y brasas. len: lo que avanzó en este paso.
+  atgmTrail(x, y, dx, dy, len = 10) {
+    if (this.streaks.length >= 160) this.streaks.shift();
+    this.streaks.push({
+      x0: x - dx * (12 + len),
+      y0: y - dy * (12 + len),
+      x1: x - dx * 12,
+      y1: y - dy * 12,
+      t: STREAK,
+      max: STREAK,
+    });
     this.add(
       SMOKE,
       x - dx * 14 + rand(-3, 3),
       y - dy * 14 + rand(-3, 3),
       -dx * 20 + rand(-12, 12),
       -dy * 20 + rand(-12, 12),
-      rand(0.9, 1.5),
-      rand(4, 6),
-      pick(['60,56,52', '40,37,34', '88,84,78']),
+      rand(1.1, 1.8),
+      rand(5, 7),
+      pick(['110,106,98', '86,82,76', '132,126,116']),
       1.6,
-      14,
+      16,
     );
     for (let i = 0; i < 2; i++)
       this.add(
@@ -534,6 +556,24 @@ export class Particles {
         pick(['#fff2c0', '#ffd070', '#ffa040']),
         5,
       );
+  }
+
+  drawStreaks(ctx) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.lineCap = 'round';
+    for (const [w, c, a, pw] of STREAK_PASSES) {
+      ctx.lineWidth = w;
+      for (const s of this.streaks) {
+        const k = Math.max(0, s.t / s.max);
+        ctx.strokeStyle = `rgba(${c},${(a * k ** pw).toFixed(3)})`;
+        ctx.beginPath();
+        ctx.moveTo(s.x0, s.y0);
+        ctx.lineTo(s.x1, s.y1);
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
   }
 
   // disparo de la torreta militar: fogonazo y una nube de humo negro que sale de la boca y del rebufo
@@ -664,6 +704,8 @@ export class Particles {
 
   update(dt) {
     for (let i = this.lights.length - 1; i >= 0; i--) if ((this.lights[i].t -= dt) <= 0) this.lights.splice(i, 1);
+    for (const s of this.streaks) s.t -= dt;
+    while (this.streaks.length && this.streaks[0].t <= 0) this.streaks.shift();
     for (const q of this.p) {
       if (q.life <= 0) continue;
       if (q.delay > 0) {
@@ -682,6 +724,7 @@ export class Particles {
   }
 
   draw(ctx, view) {
+    if (this.streaks.length) this.drawStreaks(ctx);
     for (const q of this.p) {
       if (q.life <= 0) continue;
       if (q.delay > 0 || q.x < view.x0 - 40 || q.x > view.x1 + 40 || q.y < view.y0 - 40 || q.y > view.y1 + 40) continue;

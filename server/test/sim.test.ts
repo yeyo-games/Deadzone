@@ -571,6 +571,55 @@ test('torreta pesada: se compra con sus balas, se monta y dispara en línea', ()
   assert.equal(t.manned, null, 'libre al caer');
 });
 
+test('torretas en línea: sólo su dueño se sube, hasta que da permiso (y al quitarlo baja al otro)', () => {
+  const sim = new ServerSim(5, [
+    { id: 'a', idx: 1, name: 'Ana' },
+    { id: 'b', idx: 2, name: 'Beto' },
+  ]);
+  const a = sim.slots.get('a')!;
+  const b = sim.slots.get('b')!;
+  const seq = { n: 0 };
+  const seqB = { n: 0 };
+  idle(sim, 'a', seq, 2);
+  idle(sim, 'b', seqB, 2);
+  a.inv.heavy = 1;
+  for (let k = 0; k < 8 && !sim.structures.blocks.length; k++) {
+    idle(sim, 'a', seq, 1, (k * Math.PI) / 4);
+    sim.act('a', { s: seq.n + 1, k: 'build', kind: 'heavy', tx: 0, ty: 0 });
+    idle(sim, 'a', seq, 1, (k * Math.PI) / 4);
+  }
+  const t = sim.structures.blocks[0];
+  assert.equal(t?.owner, 'a');
+  // Beto, junto a la torreta de Ana: no se sube
+  const near = () => {
+    b.p.x = t.x + t.w / 2;
+    b.p.y = t.y + t.h + b.p.r + 4;
+  };
+  near();
+  sim.act('b', { s: seqB.n + 1, k: 'robot', kind: '', tx: 0, ty: 0 });
+  idle(sim, 'b', seqB, 1);
+  assert.equal(b.p.manned, null, 'sin permiso no se sube');
+  // sólo el dueño da permiso, y viaja en la foto
+  sim.act('b', { s: seqB.n + 1, k: 'share', kind: '', tx: t.x, ty: t.y });
+  idle(sim, 'b', seqB, 1);
+  assert.ok(!t.shared, 'Beto no puede prestar la de Ana');
+  sim.act('a', { s: seq.n + 1, k: 'share', kind: '', tx: t.x, ty: t.y });
+  idle(sim, 'a', seq, 1);
+  assert.equal(t.shared, true);
+  assert.deepEqual(sim.snapshot('b', 0)!.blk[0].slice(8, 10), ['a', 1], 'dueño y permiso en la foto');
+  near();
+  sim.act('b', { s: seqB.n + 1, k: 'robot', kind: '', tx: 0, ty: 0 });
+  idle(sim, 'b', seqB, 1);
+  assert.equal(b.p.manned, t, 'con permiso se sube');
+  // Ana quita el permiso: Beto se baja y la torreta queda libre para ella
+  sim.act('a', { s: seq.n + 1, k: 'share', kind: '', tx: t.x, ty: t.y });
+  idle(sim, 'a', seq, 1);
+  assert.equal(t.shared, false);
+  assert.equal(b.p.manned, null, 'lo bajó');
+  assert.equal(t.manned, null);
+  assert.deepEqual(cleanAct({ s: 1, k: 'share', tx: 'x', ty: 0 }), null, 'share necesita el lugar');
+});
+
 test('torreta militar: se compra, se monta (encima de la torre) y lanzas tú los misiles', () => {
   const sim = new ServerSim(5, [
     { id: 'a', idx: 1, name: 'Ana' },

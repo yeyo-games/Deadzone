@@ -239,8 +239,20 @@ export function encodeWorld(
 export function encodeStatic(st: StaticStructures, smashed: number[] = []) {
   return {
     wd: smashed,
-    // el último: niveles de las mejoras de la torreta pesada (ver heavy.ts; 0 en el resto)
-    blk: st.blocks.map((b) => [b.kind, b.x, b.y, b.w, b.h, Math.round(b.hp), r100(b.ang || 0), b.up || 0]),
+    // al final: niveles de las mejoras de la torreta pesada (ver heavy.ts; 0 en el resto), el dueño
+    // y si dejó que otros se suban (torretas pesada y militar)
+    blk: st.blocks.map((b) => [
+      b.kind,
+      b.x,
+      b.y,
+      b.w,
+      b.h,
+      Math.round(b.hp),
+      r100(b.ang || 0),
+      b.up || 0,
+      b.owner || '',
+      b.shared ? 1 : 0,
+    ]),
     wir: st.wires.map((w) => [w.kind, w.x, w.y, w.w, w.h, Math.round(w.hp)]),
     sc: st.scorches.map((c) => [Math.round(c.x), Math.round(c.y), r100(c.a), Math.round(c.t), c.life]),
   };
