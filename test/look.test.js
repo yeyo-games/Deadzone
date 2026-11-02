@@ -5,10 +5,7 @@ import { cansForWave, LOOK_SLOT_ORDER, LOOK_SLOTS } from '../js/core/config.ts';
 import { cleanLook, DEFAULT_LOOK, LOOK_PARTS, lookCode, lookFromCode } from '../js/render/sprites.js';
 
 test('latas: 1 por oleada al principio y más mientras más lejos llegas', () => {
-  assert.deepEqual(
-    [1, 2, 4, 5, 9, 10, 15, 20].map(cansForWave),
-    [1, 1, 1, 2, 2, 3, 4, 5],
-  );
+  assert.deepEqual([1, 2, 4, 5, 9, 10, 15, 20].map(cansForWave), [1, 1, 1, 2, 2, 3, 4, 5]);
 });
 
 test('el aspecto completo va y vuelve por el código corto (y cabe en lo que acepta el servidor)', () => {
@@ -43,7 +40,10 @@ test('cleanLook descarta piezas que no existen; cada ranura tiene gratis la de f
   assert.equal(look.aura, 'none');
   for (const k of LOOK_SLOT_ORDER) {
     assert.ok(!LOOK_SLOTS[k][0].price, `${k}: la primera es gratis`);
-    assert.ok(LOOK_SLOTS[k].some((i) => i.price > 0), `${k}: hay algo que comprar con latas`);
+    assert.ok(
+      LOOK_SLOTS[k].some((i) => i.price > 0),
+      `${k}: hay algo que comprar con latas`,
+    );
     assert.ok(LOOK_SLOTS[k].length <= 36, 'cabe en un carácter base 36');
   }
 });

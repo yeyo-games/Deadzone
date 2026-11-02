@@ -197,9 +197,7 @@ export function bindLook(game) {
     const w = wallet(game);
     setLook(game, {
       ...Object.fromEntries(LOOK_PARTS.map((q) => [q.id, pick(q.colors)])),
-      ...Object.fromEntries(
-        LOOK_SLOT_ORDER.map((k) => [k, pick(LOOK_SLOTS[k].filter((i) => owns(w, k, i.id))).id]),
-      ),
+      ...Object.fromEntries(LOOK_SLOT_ORDER.map((k) => [k, pick(LOOK_SLOTS[k].filter((i) => owns(w, k, i.id))).id])),
     });
   });
   on(game, 'btn-look-reset', () => setLook(game, DEFAULT_LOOK));

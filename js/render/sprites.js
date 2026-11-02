@@ -1304,17 +1304,51 @@ export const LOOK_PARTS = [
   {
     id: 'hair',
     name: 'Pelo',
-    colors: ['#2d2219', '#0f0d0c', '#6b4424', '#b0793d', '#d9c27a', '#9a9a96', '#b8392e', '#3e6bb0', '#d85aa8', '#4fbf6a'],
+    colors: [
+      '#2d2219',
+      '#0f0d0c',
+      '#6b4424',
+      '#b0793d',
+      '#d9c27a',
+      '#9a9a96',
+      '#b8392e',
+      '#3e6bb0',
+      '#d85aa8',
+      '#4fbf6a',
+    ],
   },
   {
     id: 'scarf',
     name: 'Pañuelo',
-    colors: ['#8c3b2e', '#2f3a32', '#3f566b', '#c99a2e', '#d8d2c4', '#1c1c1c', '#7a3f8c', '#d06a2a', '#2fa8a0', '#e04060'],
+    colors: [
+      '#8c3b2e',
+      '#2f3a32',
+      '#3f566b',
+      '#c99a2e',
+      '#d8d2c4',
+      '#1c1c1c',
+      '#7a3f8c',
+      '#d06a2a',
+      '#2fa8a0',
+      '#e04060',
+    ],
   },
   {
     id: 'jacket',
     name: 'Chaqueta',
-    colors: ['#6b4f3a', '#4c5236', '#3f566b', '#2c2c2e', '#7d2f2a', '#8a7a5a', '#5b6b7a', '#c75f43', '#d8d2c4', '#3a6b4c', '#6a3a7a'],
+    colors: [
+      '#6b4f3a',
+      '#4c5236',
+      '#3f566b',
+      '#2c2c2e',
+      '#7d2f2a',
+      '#8a7a5a',
+      '#5b6b7a',
+      '#c75f43',
+      '#d8d2c4',
+      '#3a6b4c',
+      '#6a3a7a',
+    ],
   },
   {
     id: 'pants',
@@ -1503,7 +1537,8 @@ function drawHat(g, id, r, color = '#6b4f3a', time = 0) {
     g.moveTo(x - r * 0.45, 0);
     g.lineTo(x + r * 0.45, 0);
     g.stroke();
-    for (const a of [0.6, 2.2, 3.8, 5.4]) circ(g, x + Math.cos(a) * r * 0.36, Math.sin(a) * r * 0.36, r * 0.05, '#c9c4b4', null);
+    for (const a of [0.6, 2.2, 3.8, 5.4])
+      circ(g, x + Math.cos(a) * r * 0.36, Math.sin(a) * r * 0.36, r * 0.05, '#c9c4b4', null);
   } else if (id === 'samurai') {
     // kabuto laqueado: placas del cuello, casco rojo oscuro y media luna dorada al frente
     ell(g, x - r * 0.18, 0, r * 0.5, r * 0.66, 0, '#2a1a1a');
@@ -1545,7 +1580,14 @@ function drawHat(g, id, r, color = '#6b4f3a', time = 0) {
     circ(g, x, 0, r * 0.32, '#c99a2e', null);
     for (let i = 0; i < 5; i++) {
       const a = (i / 5) * TAU + TAU / 10;
-      circ(g, x + Math.cos(a) * r * 0.5, Math.sin(a) * r * 0.5, r * 0.07, ['#c8443a', '#3e8ad6', '#4fbf6a'][i % 3], null);
+      circ(
+        g,
+        x + Math.cos(a) * r * 0.5,
+        Math.sin(a) * r * 0.5,
+        r * 0.07,
+        ['#c8443a', '#3e8ad6', '#4fbf6a'][i % 3],
+        null,
+      );
     }
     const sh = (time * 1.5) % TAU;
     g.fillStyle = 'rgba(255,255,230,0.75)';
@@ -1712,7 +1754,16 @@ function drawBack(g, id, r, color, p, time) {
       const f = (moving ? 1 : 0.45) * (0.8 + Math.random() * 0.4);
       g.save();
       g.globalCompositeOperation = 'lighter';
-      ell(g, -r * 1.25 - f * r * 0.3, sgn * r * 0.3, r * 0.38 * f + r * 0.08, r * 0.12, 0, 'rgba(255,150,50,0.75)', null);
+      ell(
+        g,
+        -r * 1.25 - f * r * 0.3,
+        sgn * r * 0.3,
+        r * 0.38 * f + r * 0.08,
+        r * 0.12,
+        0,
+        'rgba(255,150,50,0.75)',
+        null,
+      );
       ell(g, -r * 1.12, sgn * r * 0.3, r * 0.14, r * 0.08, 0, 'rgba(255,240,190,0.9)', null);
       g.restore();
       roundRect(g, -r * 1.1, sgn * r * 0.3 - r * 0.2, r * 0.8, r * 0.4, 4);
@@ -1736,7 +1787,15 @@ function drawBack(g, id, r, color, p, time) {
         g.strokeStyle = 'rgba(0,0,0,0.35)';
         g.lineWidth = 1;
         g.beginPath();
-        g.ellipse(-r * (0.5 + i * 0.12), sgn * r * (0.75 + i * 0.12), r * 0.75 * k, r * 0.22, sgn * (0.5 + i * 0.25), 0, TAU);
+        g.ellipse(
+          -r * (0.5 + i * 0.12),
+          sgn * r * (0.75 + i * 0.12),
+          r * 0.75 * k,
+          r * 0.22,
+          sgn * (0.5 + i * 0.25),
+          0,
+          TAU,
+        );
         g.fill();
         g.stroke();
       }
@@ -1834,7 +1893,14 @@ function drawAura(g, id, r, p, time) {
     if (moving) {
       for (let i = 1; i <= 5; i++) {
         g.globalAlpha = 0.3 / i;
-        circ(g, Math.cos(ba) * r * 0.7 * i, Math.sin(ba) * r * 0.7 * i, r * (0.95 - i * 0.1), i % 2 ? '#ff4fd8' : '#4fe8ff', null);
+        circ(
+          g,
+          Math.cos(ba) * r * 0.7 * i,
+          Math.sin(ba) * r * 0.7 * i,
+          r * (0.95 - i * 0.1),
+          i % 2 ? '#ff4fd8' : '#4fe8ff',
+          null,
+        );
       }
     }
     g.globalAlpha = 0.35 + 0.15 * Math.sin(time * 4);
