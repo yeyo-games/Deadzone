@@ -266,7 +266,10 @@ test('entre oleadas la siguiente ronda empieza sólo cuando todos están listos'
   sim.setAway('c', true);
   sim.step();
   assert.notEqual(sim.director.state, 'waiting');
-  assert.ok([...sim.slots.values()].every((s) => !s.ready), 'para la siguiente vuelven a no estar listos');
+  assert.ok(
+    [...sim.slots.values()].every((s) => !s.ready),
+    'para la siguiente vuelven a no estar listos',
+  );
   assert.equal(sim.snapshot('a', 0)!.rd, undefined);
   assert.equal(sim.ready('a'), false, 'en plena oleada no se marca');
 });
