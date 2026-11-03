@@ -106,7 +106,13 @@ test('modo construir: cada pieza se pega a la de al lado (filas rectas, sin huec
   const world = new World(777);
   const st = new Structures();
   const { x, y } = world.spawn;
-  const game = fakeGame({ world, horde: new Horde(), structures: st, particles: silent, player: { x, y, r: 14, angle: 0 } });
+  const game = fakeGame({
+    world,
+    horde: new Horde(),
+    structures: st,
+    particles: silent,
+    player: { x, y, r: 14, angle: 0 },
+  });
   const put = (kind, dx, dy) => {
     assert.ok(st.place(game, kind, null, x + dx, y + dy), `${kind} en ${dx},${dy}`);
     const b = st.blocks.at(-1);

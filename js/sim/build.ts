@@ -239,7 +239,15 @@ function align(v: number, m: number, v0: number, n: number) {
 // si apuntas sobre ella (para apilar), y si no, a su lado, tocándola y alineada con ella. Si la
 // vecina es una pieza alargada y la nueva sigue su fila, se gira igual que ella. null si no hay
 // vecina cerca. Las torretas sólo se arriman (nunca se apilan) y las minas no se pegan.
-function snapPiece(def: ShopDef, kind: string, list: { kind: string; x: number; y: number; w: number; h: number; tempT?: number }[], cx: number, cy: number, w: number, h: number) {
+function snapPiece(
+  def: ShopDef,
+  kind: string,
+  list: { kind: string; x: number; y: number; w: number; h: number; tempT?: number }[],
+  cx: number,
+  cy: number,
+  w: number,
+  h: number,
+) {
   if (kind === 'mine') return null;
   let best = null;
   let bd = Number.POSITIVE_INFINITY;
