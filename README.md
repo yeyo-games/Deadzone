@@ -123,9 +123,11 @@ de elegir tu mejora de nivel) se abre la tienda:
 Para construir pulsa `F` (o el botón de construir en el celular, o toca una pieza del inventario): abajo
 aparece la barra con las piezas que tienes y la elegida se ve donde caería, en verde si cabe y en rojo si
 no, dentro de un círculo que marca hasta dónde llegas. En computadora sigue al ratón y se pone con clic
-(rueda o `1`–`9` para cambiar de pieza, clic derecho, `F` o `Esc` para salir); en el celular tocas el
-mapa donde la quieres, o el botón ✓ para ponerla delante (hacia donde caminas). Las piezas alargadas se
-ponen atravesadas, de cara a ti. Junto a otra pieza, la nueva se pega a ella: tocándola, alineada (al
+(rueda o `1`–`9` para cambiar de pieza, clic derecho, `F` o `Esc` para salir). En el celular la pieza
+aparece delante de ti (hacia donde caminas); tocar o arrastrar el dedo en el mapa sólo la mueve (también
+a la izquierda, sobre el joystick, con un toque corto) y el botón ✓ la pone. Después la siguiente se
+propone justo al lado, siguiendo la fila, así que con ✓ ✓ ✓ levantas un muro. Las piezas alargadas se
+ponen atravesadas, de cara a ti; `R` o el botón ⟳ de la barra las giran. Junto a otra pieza, la nueva se pega a ella: tocándola, alineada (al
 centro o a ras de una orilla) y, si sigue la fila de un muro alargado, girada igual que él, así las
 filas quedan rectas y sin huecos. Si apuntas encima de una pieza, la nueva se apila justo sobre ella;
 las torretas no se apilan, se arriman. Mientras construyes no disparas.
@@ -267,7 +269,7 @@ tienes.
 | Ratón: apuntar · clic: disparar | Botón de disparo con **apuntado automático** |
 | `R`: recargar | Botón de recarga |
 | `1`–`9`, `Q` o `Tab`: cambiar arma | Botón de cambio de arma |
-| `F`: modo construir (clic coloca, rueda o `1`–`9` cambia de pieza) | Botón **Construir**, toca el mapa o ✓ |
+| `F`: modo construir (clic coloca, `R` gira, rueda o `1`–`9` cambia de pieza) | Botón **Construir**: toca o arrastra en el mapa para mover la pieza, ✓ la pone, ⟳ la gira |
 | `G`: lanzar granada · `T`: molotov · `Z`: misil improvisado · `E`: robot o torreta pesada | Botones pequeños de **granada**, **molotov** y **misil** (apuntan solos) |
 | `M`: taller de la torreta pesada o militar (junto a ella) | Botón de la **llave** |
 | `L`: en línea, dejar o no que otros se suban a tu torreta | Botón del **candado** |

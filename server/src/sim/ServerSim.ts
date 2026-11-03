@@ -528,7 +528,7 @@ export class ServerSim {
     try {
       if (a.k === 'build') {
         if (!BUILD_ORDER.includes(a.kind) || s.inv[a.kind] <= 0) return;
-        if (a.at ? this.structures.place(g, a.kind, s.id, a.tx, a.ty) : this.structures.place(g, a.kind, s.id)) {
+        if (a.at ? this.structures.place(g, a.kind, s.id, a.tx, a.ty, !!a.rot) : this.structures.place(g, a.kind, s.id)) {
           s.inv[a.kind]--;
           g.sfx.build();
         } else s.toasts.push('No cabe ahí');

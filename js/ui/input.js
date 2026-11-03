@@ -13,7 +13,9 @@ export class Input {
     this.keys = new Set();
     this.mouse = { x: 0, y: 0, down: false };
     this.mode = matchMedia('(pointer: coarse)').matches ? 'touch' : 'mouse';
-    this.joy = { id: null, bx: 0, by: 0, x: 0, y: 0 };
+    this.joy = { id: null, bx: 0, by: 0, x: 0, y: 0, t: 0, far: 0 };
+    // dedo que arrastra la pieza por el mapa (modo construir en el celular)
+    this.dragId = null;
     this.touchFire = false;
     this.runToggle = false;
     this.blockFire = false;
@@ -42,7 +44,10 @@ export class Input {
       if (e.repeat && this.keys.has(e.code)) return;
       this.keys.add(e.code);
       if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.code)) e.preventDefault();
-      if (e.code === 'KeyR') this.pressed.reload = true;
+      if (e.code === 'KeyR') {
+        this.pressed.reload = true;
+        this.pressed.rotate = true;
+      }
       if (e.code === 'KeyQ' || e.code === 'Tab') this.pressed.swap = true;
       if (e.code === 'KeyF') this.pressed.build = true;
       if (e.code === 'KeyV') this.pressed.cycleBuild = true;
@@ -76,6 +81,7 @@ export class Input {
         if (e.button === 2) this.pressed.cancel = true;
       } else {
         this.setMode('touch');
+        this.dragId = e.pointerId;
       }
       if (e.button === 0) this.pressed.point = { x: e.clientX, y: e.clientY };
     });
@@ -91,11 +97,14 @@ export class Input {
       if (e.pointerType === 'mouse') {
         this.mouse.x = e.clientX;
         this.mouse.y = e.clientY;
-      }
+      } else if (e.pointerId === this.dragId) this.pressed.point = { x: e.clientX, y: e.clientY };
     });
-    this.on(window, 'pointerup', (e) => {
+    const lift = (e) => {
       if (e.pointerType === 'mouse' && e.button === 0) this.mouse.down = false;
-    });
+      if (e.pointerId === this.dragId) this.dragId = null;
+    };
+    this.on(window, 'pointerup', lift);
+    this.on(window, 'pointercancel', lift);
     this.on(c, 'contextmenu', prevent);
 
     // joystick: zona izquierda de la pantalla, aparece donde tocas
@@ -117,6 +126,8 @@ export class Input {
       this.joy.by = e.clientY;
       this.joy.x = 0;
       this.joy.y = 0;
+      this.joy.t = performance.now();
+      this.joy.far = 0;
       base.classList.add('active');
       this.placeJoy();
     });
@@ -126,6 +137,7 @@ export class Input {
       let dx = e.clientX - this.joy.bx;
       let dy = e.clientY - this.joy.by;
       const d = Math.hypot(dx, dy);
+      this.joy.far = Math.max(this.joy.far, d);
       if (d > JOY_RADIUS * 1.6) {
         // la base sigue al dedo si se aleja mucho
         this.joy.bx += (dx / d) * (d - JOY_RADIUS * 1.6);
@@ -141,6 +153,10 @@ export class Input {
     });
     const endJoy = (e) => {
       if (e.pointerId !== this.joy.id) return;
+      // un toque corto sin arrastrar en la zona del joystick es un toque en el mapa (el modo
+      // construir lo usa para mover la pieza a la izquierda de la pantalla)
+      if (e.type === 'pointerup' && this.joy.far < 14 && performance.now() - this.joy.t < 300)
+        this.pressed.point = { x: this.joy.bx, y: this.joy.by };
       this.joy.id = null;
       this.joy.x = 0;
       this.joy.y = 0;

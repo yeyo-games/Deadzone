@@ -799,6 +799,8 @@ svg.can { width: 14px; height: 16px; vertical-align: -3px; }
   cursor: pointer;
   touch-action: none;
 }
+#bb-close { margin-left: 0; }
+.bb-x.on { color: var(--xp); border-color: var(--xp); background: rgba(134, 168, 146, 0.22); }
 .bb-it svg { width: 28px; height: 28px; }
 .bb-it b { position: absolute; right: 3px; bottom: 1px; font-size: 12px; color: var(--ink); }
 .bb-it kbd { position: absolute; left: 3px; top: 1px; font-size: 9px; color: var(--dim); }
@@ -812,13 +814,15 @@ svg.can { width: 14px; height: 16px; vertical-align: -3px; }
   width: min(300px, calc(100vw - 32px));
 }
 .touch #build-bar { padding: 6px 8px 8px; }
-.touch .bb-head { flex-wrap: wrap; row-gap: 0; margin-bottom: 5px; }
-.touch .bb-head b { font-size: 15px; }
-.touch .bb-head small { order: 3; width: 100%; font-size: 11px; }
-.touch .bb-x { width: 28px; height: 28px; }
-.touch .bb-items { gap: 5px; }
-.touch .bb-it { width: 42px; height: 42px; }
-.touch .bb-it svg { width: 24px; height: 24px; }
+.touch .bb-head { flex-wrap: wrap; row-gap: 0; gap: 6px; margin-bottom: 4px; }
+.touch .bb-head b { font-size: 14px; }
+.touch .bb-head small { order: 3; width: 100%; font-size: 10px; line-height: 1.2; }
+.touch .bb-x { width: 32px; height: 32px; font-size: 16px; }
+/* compacta: todas las piezas en dos filas a lo más, para no tapar dónde construyes */
+.touch .bb-items { gap: 4px; }
+.touch .bb-it { width: 36px; height: 36px; }
+.touch .bb-it svg { width: 20px; height: 20px; }
+.touch .bb-it b { font-size: 10px; right: 2px; bottom: 0; }
 .building .titems { display: none; }
 #btn-fire .ic-place { display: none; }
 .building #btn-fire .ic-place { display: block; }

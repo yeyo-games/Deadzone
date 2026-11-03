@@ -337,7 +337,8 @@ export class Structures {
   // Dónde caería el bloque, alineado a una rejilla de 20 px: en (tx, ty) si se da (el punto que
   // apunta o toca el jugador, como mucho a BUILD.reach de él), si no delante de él. Si cae junto a
   // otra pieza se pega a ella (ver snapPiece): así las filas de muros quedan rectas y sin huecos.
-  placement(game: GameHost, kind: string, tx?: number, ty?: number) {
+  // turn: el jugador la giró a mano (las alargadas quedan al revés de lo que tocaría y no se giran solas).
+  placement(game: GameHost, kind: string, tx?: number, ty?: number, turn = false) {
     const def = shopDef(kind);
     const p = game.player;
     if (!p) return { x: 0, y: 0, w: def.w, h: def.h, a: 0, ok: false };
@@ -352,7 +353,7 @@ export class Structures {
     let w = def.w;
     let h = def.h;
     // las piezas alargadas se colocan atravesadas a la dirección en que se ponen
-    if (def.rotates && Math.abs(ca) > Math.abs(sa)) {
+    if (def.rotates && (Math.abs(ca) > Math.abs(sa)) !== turn) {
       w = def.h;
       h = def.w;
     }
@@ -363,7 +364,7 @@ export class Structures {
     const cx = p.x + ca * dist;
     const cy = p.y + sa * dist;
     const a = Math.atan2(sa, ca);
-    const s = snapPiece(def, kind, def.ground ? this.wires : this.blocks, cx, cy, w, h);
+    const s = snapPiece(turn ? { ...def, rotates: false } : def, kind, def.ground ? this.wires : this.blocks, cx, cy, w, h);
     if (s && this.fits(game, def, s.x, s.y, s.w, s.h)) return { ...s, a, ok: true };
     const x = Math.round((cx - w / 2) / SNAP) * SNAP;
     const y = Math.round((cy - h / 2) / SNAP) * SNAP;
@@ -393,8 +394,8 @@ export class Structures {
   }
 
   // owner: de quién son las bajas de sus minas y torretas (en línea); (tx, ty): dónde (ver placement)
-  place(game: GameHost, kind: string, owner: string | null = null, tx?: number, ty?: number) {
-    const pl = this.placement(game, kind, tx, ty);
+  place(game: GameHost, kind: string, owner: string | null = null, tx?: number, ty?: number, turn = false) {
+    const pl = this.placement(game, kind, tx, ty, turn);
     const p = game.player;
     if (!pl.ok || !p) return false;
     const def = shopDef(kind);

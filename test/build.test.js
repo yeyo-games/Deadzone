@@ -146,6 +146,15 @@ test('modo construir: cada pieza se pega a la de al lado (filas rectas, sin huec
   const t = put('turret', a[0] + 40, a[1] + 34);
   assert.equal(t[1], a[1] + 40, 'debajo del muro, tocándolo');
   reset();
+  // girada a mano: al revés de lo que tocaría, y la fila de al lado no la endereza
+  const g0 = st.placement(game, 'fence', x, y - 100);
+  const g1 = st.placement(game, 'fence', x, y - 100, true);
+  assert.deepEqual([g1.w, g1.h], [g0.h, g0.w]);
+  put('fence', -40, -100);
+  assert.ok(st.place(game, 'fence', null, x + 40, y - 100, true));
+  const f = st.blocks.at(-1);
+  assert.ok(f.h > f.w, 'sigue girada junto a la fila');
+  reset();
 });
 
 test('torretas con dueño: sólo él se sube y las presta; sin dueño (solitario), cualquiera', () => {

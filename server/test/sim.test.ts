@@ -289,6 +289,8 @@ test('construir: la pieza va al punto que manda el cliente, sin pasar del alcanc
   assert.ok(act && act.at, 'el punto es opcional y se valida');
   assert.equal(cleanAct({ s: 1, k: 'build', kind: 'wood', tx: 'x', ty: 0 }), null);
   assert.ok(!cleanAct({ s: 1, k: 'build', kind: 'wood' })!.at);
+  assert.equal(cleanAct({ s: 1, k: 'build', kind: 'fence', tx: 0, ty: 0, r: 1 })!.rot, true, 'girada a mano');
+  assert.equal(cleanAct({ s: 1, k: 'build', kind: 'fence', tx: 0, ty: 0, r: 'x' })!.rot, false);
   sim.act('a', act!);
   idle(sim, 'a', seq, 1);
   const b = sim.structures.blocks[0];

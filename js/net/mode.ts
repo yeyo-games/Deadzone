@@ -62,7 +62,7 @@ export class Mode {
     return false;
   }
 
-  sendBuild(_kind: string, _tx: number, _ty: number) {}
+  sendBuild(_kind: string, _tx: number, _ty: number, _rot = false) {}
 
   sendThrow(_kind: string, _tx: number, _ty: number) {
     return false;
@@ -112,8 +112,8 @@ export class OnlineClient extends Mode {
     this.game.online.send('next');
     return true;
   }
-  sendBuild(kind: string, tx: number, ty: number) {
-    this.game.online.act('build', { kind, tx: Math.round(tx), ty: Math.round(ty) });
+  sendBuild(kind: string, tx: number, ty: number, rot = false) {
+    this.game.online.act('build', { kind, tx: Math.round(tx), ty: Math.round(ty), ...(rot ? { r: 1 } : {}) });
   }
   sendThrow(kind: string, tx: number, ty: number) {
     this.game.online.act('throw', { kind, tx: Math.round(tx), ty: Math.round(ty) });

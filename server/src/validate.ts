@@ -60,7 +60,7 @@ export function cleanAct(raw: any): Act | null {
   // construir: el punto es opcional (sin él, delante del jugador)
   if (k === 'build' && raw.tx !== undefined) {
     if (!point(raw.tx, raw.ty)) return null;
-    return { s, k, kind, tx: raw.tx, ty: raw.ty, at: true };
+    return { s, k, kind, tx: raw.tx, ty: raw.ty, at: true, rot: raw.r === 1 };
   }
   return { s, k, kind, tx, ty };
 }

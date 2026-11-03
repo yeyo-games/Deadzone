@@ -53,9 +53,12 @@ class Game {
     this.input = new Input(this.root, this.canvas);
     this.input.onModeChange = (m) => this.root.classList.toggle('touch', m === 'touch');
     this.root.classList.toggle('touch', this.input.mode === 'touch');
-    // modo construir (ver actions.js): abierto y dónde se tocó para poner la pieza
+    // modo construir (ver actions.js): abierto, dónde se tocó para poner la pieza, hacia dónde sigue
+    // la fila en el celular y si se giró a mano
     this.building = false;
     this.buildAt = null;
+    this.buildDir = null;
+    this.buildRot = false;
     this.accounts = new Accounts();
     // estadísticas de uso anónimas (js/analitica.js); apagadas en desarrollo y en las pruebas
     this.analitica = new Analitica(this);

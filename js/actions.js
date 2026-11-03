@@ -1,6 +1,6 @@
 // Acciones del jugador local (teclas y botones): habilidad, robot, torreta pesada, construir y lanzar.
 // En línea varias se piden al servidor (game.online.act) en vez de aplicarse aquí.
-import { BUILD_ORDER, SHOP } from './core/config.ts';
+import { BUILD, BUILD_ORDER, SHOP } from './core/config.ts';
 import { Abilities, abilityTarget } from './sim/abilities.ts';
 import { LOCKED } from './sim/build.ts';
 
@@ -88,7 +88,8 @@ export function startNextRound(game) {
 /* ---------- modo construir ---------- */
 // F, el botón de construir o tocar una pieza del inventario: aparece la barra de piezas y la pieza
 // elegida se ve donde caería (verde si cabe). Con ratón sigue a la mira y se pone con clic; en el
-// celular va donde tocas el mapa (o delante, hacia donde caminas) y se pone al tocar o con ✓.
+// celular va delante (hacia donde caminas) o donde tocas o arrastras el dedo en el mapa, y se pone con
+// ✓; después la siguiente se propone justo al lado, siguiendo la fila. R o ⟳ la giran.
 // Mientras tanto no se dispara. Se sale con F, clic derecho, Esc o la ✕ de la barra.
 
 const owned = (game) => BUILD_ORDER.filter((k) => game.inv[k] > 0);
@@ -101,6 +102,8 @@ export function toggleBuild(game, on = !game.building) {
   if (on && game.inv[game.buildSel] <= 0) game.buildSel = owned(game)[0];
   game.building = on;
   game.buildAt = null;
+  game.buildDir = null;
+  game.buildRot = false;
   game.input.blockFire = on;
   game.root.classList.toggle('building', on);
 }
@@ -130,8 +133,14 @@ export function stepBuild(game) {
     inp.consume('point');
     inp.consume('cancel');
     inp.consume('wheel');
+    inp.consume('rotate');
     if (inp.consume('cycleBuild')) cycleBuild(game);
     return;
+  }
+  // R gira la pieza (mientras construyes no recargas)
+  if (inp.consume('rotate')) {
+    inp.consume('reload');
+    game.buildRot = !game.buildRot;
   }
   if (!game.player.alive || !owned(game).length || inp.consume('cancel')) return toggleBuild(game, false);
   const list = owned(game);
@@ -145,44 +154,76 @@ export function stepBuild(game) {
   if (n && list[n - 1]) game.buildSel = list[n - 1];
   const pt = inp.consume('point');
   if (pt) {
-    // en el celular, si no cabe, la pieza se queda ahí en rojo; si cabe, ✓ vuelve a poner delante
+    // con ratón el clic la pone; en el celular tocar (o arrastrar) sólo la mueve ahí y ✓ la pone
     const at = screenToWorld(game, pt.x, pt.y);
-    const ok = tryBuild(game, at);
-    if (inp.mode !== 'mouse') game.buildAt = ok ? null : at;
+    if (inp.mode === 'mouse') tryBuild(game, at);
+    else {
+      game.buildAt = at;
+      game.buildDir = null;
+    }
   }
-  if (inp.consume('place')) tryBuild(game, buildTarget(game));
+  if (inp.consume('place')) {
+    const pl = tryBuild(game, buildTarget(game));
+    if (pl && inp.mode !== 'mouse') nextSpot(game, pl);
+  }
 }
 
+// En el celular, tras poner una pieza con ✓ la siguiente se propone a su lado, a lo largo de la
+// fila (la de una pieza alargada, su lado largo; la de una cuadrada, atravesada a ti): primero hacia
+// donde ya ibas y, al empezar, hacia el lado más cercano a ti. Si ya no alcanzas, vuelve delante.
+function nextSpot(game, pl) {
+  const p = game.player;
+  const cx = pl.x + pl.w / 2;
+  const cy = pl.y + pl.h / 2;
+  const along = pl.w !== pl.h ? pl.w > pl.h : Math.abs(cx - p.x) <= Math.abs(cy - p.y);
+  const step = along ? pl.w : pl.h;
+  const spot = (s) => ({ x: cx + (along ? s * step : 0), y: cy + (along ? 0 : s * step) });
+  const far = (s) => Math.hypot(spot(s).x - p.x, spot(s).y - p.y);
+  const d = game.buildDir;
+  const sides = d && d.along === along ? [d.s, -d.s] : far(1) <= far(-1) ? [1, -1] : [-1, 1];
+  for (const s of sides) {
+    if (far(s) > BUILD.reach) continue;
+    game.buildAt = spot(s);
+    game.buildDir = { along, s };
+    return;
+  }
+  game.buildAt = null;
+  game.buildDir = null;
+}
+
+// Pone la pieza elegida en at; devuelve dónde quedó (o null si no cabe).
 export function tryBuild(game, at = buildTarget(game)) {
   if (game.inv[game.buildSel] <= 0) {
     const next = BUILD_ORDER.find((k) => game.inv[k] > 0);
     if (!next) {
       game.toast('Compra barricadas en la tienda');
-      return false;
+      return null;
     }
     game.buildSel = next;
   }
   const k = game.buildSel;
+  const rot = !!game.buildRot;
+  const pl = game.structures.placement(game, k, at.x, at.y, rot);
   // en línea lo coloca el servidor (y descuenta la pieza); aquí sólo se avisa si no cabe
   if (!game.mode.canBuild()) {
-    if (game.structures.placement(game, k, at.x, at.y).ok) {
-      game.mode.sendBuild(k, at.x, at.y);
-      return true;
+    if (pl.ok) {
+      game.mode.sendBuild(k, at.x, at.y, rot);
+      return pl;
     }
     game.toast('No cabe ahí');
-    return false;
+    return null;
   }
-  if (game.structures.place(game, k, null, at.x, at.y)) {
+  if (game.structures.place(game, k, null, at.x, at.y, rot)) {
     game.inv[k]--;
     game.sfx.build();
     if (game.inv[k] <= 0) {
       const next = BUILD_ORDER.find((q) => game.inv[q] > 0);
       if (next) game.buildSel = next;
     }
-    return true;
+    return pl;
   }
   game.toast('No cabe ahí');
-  return false;
+  return null;
 }
 
 export function cycleBuild(game) {

@@ -281,7 +281,9 @@ export function updateHud(game, force) {
   }
   // modo construir: la barra con las piezas que tienes (la elegida resaltada) y cómo colocarla
   const touch = game.input.mode === 'touch';
-  const bsig = game.building ? `${BUILD_ORDER.map((k) => inv[k]).join()}|${game.buildSel}|${touch}` : '';
+  const bsig = game.building
+    ? `${BUILD_ORDER.map((k) => inv[k]).join()}|${game.buildSel}|${touch}|${game.buildRot}`
+    : '';
   if (game.cache.build !== bsig) {
     game.cache.build = bsig;
     if (game.building) {
@@ -293,8 +295,9 @@ export function updateHud(game, force) {
         .join('');
       $('bb-name').textContent = SHOP[game.buildSel].name;
       $('bb-hint').textContent = touch
-        ? 'Toca el mapa o ✓ para colocar'
-        : 'Clic: colocar · rueda o 1–9: pieza · clic derecho: salir';
+        ? 'Toca o arrastra en el mapa para moverla · ✓ la pone'
+        : 'Clic: colocar · R: girar · rueda o 1–9: pieza · clic derecho: salir';
+      $('bb-rot').classList.toggle('on', !!game.buildRot);
     }
   }
   const sig = p.manned ? p.manned.kind : p.weapons.map((x) => x.id).join() + '|' + p.wi;
@@ -340,6 +343,11 @@ export function bindHud(game) {
     e.preventDefault();
     e.stopPropagation();
     game.pickBuild(b.dataset.bk);
+  });
+  game.$('bb-rot').addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    game.input.pressed.rotate = true;
   });
   game.$('bb-close').addEventListener('pointerdown', (e) => {
     e.preventDefault();
