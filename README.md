@@ -125,7 +125,10 @@ aparece la barra con las piezas que tienes y la elegida se ve donde caería, en 
 no, dentro de un círculo que marca hasta dónde llegas. En computadora sigue al ratón y se pone con clic
 (rueda o `1`–`9` para cambiar de pieza, clic derecho, `F` o `Esc` para salir); en el celular tocas el
 mapa donde la quieres, o el botón ✓ para ponerla delante (hacia donde caminas). Las piezas alargadas se
-ponen atravesadas, de cara a ti. Mientras construyes no disparas.
+ponen atravesadas, de cara a ti. Junto a otra pieza, la nueva se pega a ella: tocándola, alineada (al
+centro o a ras de una orilla) y, si sigue la fila de un muro alargado, girada igual que él, así las
+filas quedan rectas y sin huecos. Si apuntas encima de una pieza, la nueva se apila justo sobre ella;
+las torretas no se apilan, se arriman. Mientras construyes no disparas.
 
 Las balas pasan por encima de las barricadas (también por encima de los coches).
 Tú puedes atravesar tus propias estructuras; los zombis no. Puedes **encimar estructuras** en el mismo lugar

@@ -218,6 +218,76 @@ export const mayMount = (p: Player, b: Block) => !b.owner || !!b.shared || b.own
 export const LOCKED = 'Esa torreta no es tuya: su dueño tiene que darte permiso';
 
 // Distancia al jugador más cercano (en línea, el servidor tiene varios en game.targets).
+// Cuánto puede quedar entre dos piezas para que la nueva se pegue a la otra.
+const STICK = 28;
+
+// Junto a una pieza que empieza en v0 y mide n: centrada con ella o con un extremo a ras del suyo,
+// lo que quede más cerca de v (si nada queda a menos de STICK, en la rejilla).
+function align(v: number, m: number, v0: number, n: number) {
+  let best = Math.round(v / SNAP) * SNAP;
+  let bd = STICK;
+  for (const c of [v0 + (n - m) / 2, v0, v0 + n - m]) {
+    if (Math.abs(c - v) < bd) {
+      bd = Math.abs(c - v);
+      best = c;
+    }
+  }
+  return best;
+}
+
+// Pega la pieza que se va a poner (centrada en cx, cy) a la pieza vecina más cercana: encima de ella
+// si apuntas sobre ella (para apilar), y si no, a su lado, tocándola y alineada con ella. Si la
+// vecina es una pieza alargada y la nueva sigue su fila, se gira igual que ella. null si no hay
+// vecina cerca. Las torretas sólo se arriman (nunca se apilan) y las minas no se pegan.
+function snapPiece(def: ShopDef, kind: string, list: { kind: string; x: number; y: number; w: number; h: number; tempT?: number }[], cx: number, cy: number, w: number, h: number) {
+  if (kind === 'mine') return null;
+  let best = null;
+  let bd = Number.POSITIVE_INFINITY;
+  for (const b of list) {
+    if (b.tempT !== undefined || b.kind === 'mine') continue;
+    const bdef = shopDef(b.kind);
+    if (bdef.turret) continue;
+    // qué tan fuera de la vecina cae el centro (negativo: dentro)
+    const ox = Math.max(b.x - cx, cx - (b.x + b.w));
+    const oy = Math.max(b.y - cy, cy - (b.y + b.h));
+    // las alargadas pueden girarse para alcanzarla: cuenta su lado largo
+    const rx = (def.rotates ? Math.max(w, h) : w) / 2 + STICK;
+    const ry = (def.rotates ? Math.max(w, h) : h) / 2 + STICK;
+    if (ox > rx || oy > ry) continue;
+    const inside = ox < 0 && oy < 0;
+    // si el centro cae dentro de varias, la de más arriba de la pila
+    const dd = inside ? -1 : Math.hypot(Math.max(ox, 0), Math.max(oy, 0));
+    if (dd <= bd) {
+      bd = dd;
+      best = b;
+    }
+  }
+  if (!best) return null;
+  const b = best;
+  const long = b.w > b.h ? 'x' : b.h > b.w ? 'y' : '';
+  const ox = Math.max(b.x - cx, cx - (b.x + b.w));
+  const oy = Math.max(b.y - cy, cy - (b.y + b.h));
+  const bcx = b.x + b.w / 2;
+  const bcy = b.y + b.h / 2;
+  // encima: con la misma forma y en el mismo sitio (las alargadas se giran como la de abajo)
+  if (ox < 0 && oy < 0 && !def.turret && !def.ground) {
+    if (def.rotates && long && (w > h ? 'x' : 'y') !== long) [w, h] = [h, w];
+    return { x: bcx - w / 2, y: bcy - h / 2, w, h };
+  }
+  const side = ox >= oy ? 'x' : 'y';
+  // sigue la fila de una pieza alargada: se gira como ella
+  if (def.rotates && long === side && (w > h ? 'x' : 'y') !== long) [w, h] = [h, w];
+  if (side === 'x') {
+    // a la izquierda o a la derecha, alineada con ella si casi lo está
+    const y = align(cy - h / 2, h, b.y, b.h);
+    if (y >= b.y + b.h || y + h <= b.y) return null;
+    return { x: cx > bcx ? b.x + b.w : b.x - w, y, w, h };
+  }
+  const x = align(cx - w / 2, w, b.x, b.w);
+  if (x >= b.x + b.w || x + w <= b.x) return null;
+  return { x, y: cy > bcy ? b.y + b.h : b.y - h, w, h };
+}
+
 export class Structures {
   declare blocks: Block[];
   declare wires: Wire[];
@@ -257,7 +327,8 @@ export class Structures {
   /* ---------- construcción ---------- */
 
   // Dónde caería el bloque, alineado a una rejilla de 20 px: en (tx, ty) si se da (el punto que
-  // apunta o toca el jugador, como mucho a BUILD.reach de él), si no delante de él.
+  // apunta o toca el jugador, como mucho a BUILD.reach de él), si no delante de él. Si cae junto a
+  // otra pieza se pega a ella (ver snapPiece): así las filas de muros quedan rectas y sin huecos.
   placement(game: GameHost, kind: string, tx?: number, ty?: number) {
     const def = shopDef(kind);
     const p = game.player;
@@ -283,37 +354,34 @@ export class Structures {
     const dist = at ? clamp(d, clear, BUILD.reach) : front;
     const cx = p.x + ca * dist;
     const cy = p.y + sa * dist;
+    const a = Math.atan2(sa, ca);
+    const s = snapPiece(def, kind, def.ground ? this.wires : this.blocks, cx, cy, w, h);
+    if (s && this.fits(game, def, s.x, s.y, s.w, s.h)) return { ...s, a, ok: true };
     const x = Math.round((cx - w / 2) / SNAP) * SNAP;
     const y = Math.round((cy - h / 2) / SNAP) * SNAP;
-    // las estructuras se pueden encimar unas sobre otras (cada capa aguanta lo suyo);
-    // sólo la torreta necesita su propio sitio
-    let ok = game.world.rectFree(x, y, w, h, true);
-    if (ok && !def.ground) {
-      // no encima del jugador ni de un zombi
-      const px = clamp(p.x, x, x + w);
-      const py = clamp(p.y, y, y + h);
-      if ((px - p.x) ** 2 + (py - p.y) ** 2 < p.r * p.r) ok = false;
-      if (ok) {
-        game.horde.grid.query(x - 50, y - 50, x + w + 50, y + h + 50, near);
-        for (const z of near) {
-          const zx = clamp(z.x, x, x + w);
-          const zy = clamp(z.y, y, y + h);
-          if ((zx - z.x) ** 2 + (zy - z.y) ** 2 < z.r * z.r) {
-            ok = false;
-            break;
-          }
-        }
-      }
+    return { x, y, w, h, a, ok: this.fits(game, def, x, y, w, h) };
+  }
+
+  // Si la pieza cabe ahí: dentro de la calle, sin pisar al jugador ni a un zombi. Las estructuras
+  // se pueden encimar unas sobre otras (cada capa aguanta lo suyo); sólo la torreta necesita su sitio.
+  fits(game: GameHost, def: ShopDef, x: number, y: number, w: number, h: number) {
+    if (!game.world.rectFree(x, y, w, h, true)) return false;
+    if (def.ground) return true;
+    const p = game.player!;
+    const px = clamp(p.x, x, x + w);
+    const py = clamp(p.y, y, y + h);
+    if ((px - p.x) ** 2 + (py - p.y) ** 2 < p.r * p.r) return false;
+    game.horde.grid.query(x - 50, y - 50, x + w + 50, y + h + 50, near);
+    for (const z of near) {
+      const zx = clamp(z.x, x, x + w);
+      const zy = clamp(z.y, y, y + h);
+      if ((zx - z.x) ** 2 + (zy - z.y) ** 2 < z.r * z.r) return false;
     }
-    if (ok && !def.ground) {
-      for (const b of this.blocks) {
-        if (x < b.x + b.w && x + w > b.x && y < b.y + b.h && y + h > b.y && (def.turret || shopDef(b.kind).turret)) {
-          ok = false;
-          break;
-        }
-      }
+    for (const b of this.blocks) {
+      if (x < b.x + b.w && x + w > b.x && y < b.y + b.h && y + h > b.y && (def.turret || shopDef(b.kind).turret))
+        return false;
     }
-    return { x, y, w, h, a: Math.atan2(sa, ca), ok };
+    return true;
   }
 
   // owner: de quién son las bajas de sus minas y torretas (en línea); (tx, ty): dónde (ver placement)

@@ -100,6 +100,48 @@ test('modo construir: la pieza va donde apuntas, hasta BUILD.reach, atravesada y
   assert.ok(Math.abs(t.ang - Math.PI / 2) < 1e-9);
 });
 
+test('modo construir: cada pieza se pega a la de al lado (filas rectas, sin huecos) o se apila encima', async () => {
+  const { Horde } = await import('../js/sim/zombies.ts');
+  const { World } = await import('../js/sim/world.ts');
+  const world = new World(777);
+  const st = new Structures();
+  const { x, y } = world.spawn;
+  const game = fakeGame({ world, horde: new Horde(), structures: st, particles: silent, player: { x, y, r: 14, angle: 0 } });
+  const put = (kind, dx, dy) => {
+    assert.ok(st.place(game, kind, null, x + dx, y + dy), `${kind} en ${dx},${dy}`);
+    const b = st.blocks.at(-1);
+    return [b.x - x, b.y - y, b.w, b.h, b.layer || 0];
+  };
+  const reset = () => {
+    for (const b of st.blocks) world.removeDynamic(b);
+    st.clear();
+  };
+  // madera: clics algo torcidos al norte, quedan en una sola fila y tocándose
+  const fila = [
+    [-60, -90],
+    [-18, -97],
+    [22, -84],
+    [61, -93],
+  ].map(([dx, dy]) => put('wood', dx, dy));
+  for (let i = 1; i < fila.length; i++) {
+    assert.equal(fila[i][1], fila[0][1], 'misma altura');
+    assert.equal(fila[i][0], fila[i - 1][0] + 40, 'pegada a la anterior');
+  }
+  // HESCO: la del extremo (en diagonal) sigue la fila en vez de girarse y dejar un hueco
+  reset();
+  const a = put('hesco', -40, -100);
+  put('hesco', 40, -100);
+  const b = put('hesco', 120, -100);
+  assert.deepEqual(b, [a[0] + 160, a[1], 80, 40, 0]);
+  // apuntar sobre una pieza la apila justo encima, aunque el clic caiga un poco movido
+  const c = put('sandbag', a[0] + 30, a[1] + 26);
+  assert.deepEqual(c, [a[0], a[1] + 8, 80, 24, 1]);
+  // la torreta no se apila: se arrima a la pieza
+  const t = put('turret', a[0] + 40, a[1] + 34);
+  assert.equal(t[1], a[1] + 40, 'debajo del muro, tocándolo');
+  reset();
+});
+
 test('torretas con dueño: sólo él se sube y las presta; sin dueño (solitario), cualquiera', () => {
   const st = new Structures();
   const t = { ...pieza('heavy'), w: 40, h: 40, owner: 'a', manned: null };
