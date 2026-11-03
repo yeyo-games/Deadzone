@@ -353,7 +353,7 @@ export class Structures {
     let w = def.w;
     let h = def.h;
     // las piezas alargadas se colocan atravesadas a la dirección en que se ponen
-    if (def.rotates && (Math.abs(ca) > Math.abs(sa)) !== turn) {
+    if (def.rotates && Math.abs(ca) > Math.abs(sa) !== turn) {
       w = def.h;
       h = def.w;
     }
@@ -364,7 +364,15 @@ export class Structures {
     const cx = p.x + ca * dist;
     const cy = p.y + sa * dist;
     const a = Math.atan2(sa, ca);
-    const s = snapPiece(turn ? { ...def, rotates: false } : def, kind, def.ground ? this.wires : this.blocks, cx, cy, w, h);
+    const s = snapPiece(
+      turn ? { ...def, rotates: false } : def,
+      kind,
+      def.ground ? this.wires : this.blocks,
+      cx,
+      cy,
+      w,
+      h,
+    );
     if (s && this.fits(game, def, s.x, s.y, s.w, s.h)) return { ...s, a, ok: true };
     const x = Math.round((cx - w / 2) / SNAP) * SNAP;
     const y = Math.round((cy - h / 2) / SNAP) * SNAP;
