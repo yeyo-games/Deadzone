@@ -12,7 +12,7 @@ export function hitZombie(game, z, b, hx, hy) {
 }
 
 // Bajas que congelan el mundo un instante por sí solas.
-const HEFTY = new Set(['bull', 'heavy', 'giant', 'golden', 'rock']);
+const HEFTY = new Set(['bull', 'heavy', 'giant', 'golden', 'rock', 'supremo']);
 
 export function killZombie(game, z) {
   // la baja alarga la racha de quien la hizo y su multiplicador sube el dinero y la experiencia
@@ -38,6 +38,12 @@ export function killZombie(game, z) {
       game.moneyPop(`+$${reward}`, 'gold');
       game.sfx.gold();
       game.toast(`¡Zombi dorado! +$${reward}`);
+    },
+    // jefe derrotado: el premio es para cada jugador (en el cooperativo el compañero cobra en su equipo)
+    boss: (_zb, reward) => {
+      game.money += reward;
+      game.moneyEarned += reward;
+      game.moneyPop(`+$${reward}`, 'gold');
     },
     toast: game.toast,
   });
@@ -209,6 +215,7 @@ export function totalKills(game) {
     (k.bull || 0) +
     (k.rock || 0) +
     (k.golden || 0) +
+    (k.supremo || 0) +
     k.giant
   );
 }

@@ -125,6 +125,8 @@ export class Player {
   declare flungT?: number;
   declare flyX?: number;
   declare flyY?: number;
+  /** la última embestida de un jefe que ya lo atropelló (cada embestida golpea una vez) */
+  declare bossHit?: number;
   /** en línea: id de su ranura (para dar las bajas que hace volando) */
   declare sid?: string;
   declare cls: string | null;

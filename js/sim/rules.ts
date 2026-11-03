@@ -2,7 +2,18 @@
 // (js/main.js) y el servidor en línea (server/src/sim/ServerSim.ts). Aquí vive lo que es igual
 // en los dos lados (bajas, botín, zombi dorado, ácido, cohetes, golpes); lo que cambia
 // (de quién es el dinero, cómo se avisa, de quién es la experiencia) lo pone quien llama con ganchos.
-import { BOUNTY, DROPS, GOLDEN, HEAVY, MONEY_LOSS, ROCKET, START, WORLD_SIZE, xpForLevel } from '../core/config.ts';
+import {
+  BOSSES,
+  BOUNTY,
+  DROPS,
+  GOLDEN,
+  HEAVY,
+  MONEY_LOSS,
+  ROCKET,
+  START,
+  WORLD_SIZE,
+  xpForLevel,
+} from '../core/config.ts';
 import { rand, randInt } from '../core/util.ts';
 import { ACID } from './build.ts';
 import { bulletHit } from './combat.ts';
@@ -30,6 +41,8 @@ export type KillHooks = {
   golden: (z: Zombie, reward: number) => void;
   /** aviso para todos (gigante abatido) */
   toast: (msg: string) => void;
+  /** premio de un jefe derrotado (BOSSES[tipo].reward), para cada jugador */
+  boss?: (z: Zombie, reward: number) => void;
 };
 
 /** Recompensa única del zombi dorado. */
@@ -110,7 +123,23 @@ export function killZombie(game: GameHost, z: Zombie, h: KillHooks) {
   if (live) h.bounty(z);
   const hasGuns = game.mode.inGroup() || (game.player && game.player.weapons.length > 1);
   const r = Math.random();
-  if (z.type === 'giant') {
+  const boss = (BOSSES as Record<string, { name: string; reward: number }>)[z.type];
+  if (boss) {
+    // jefe derrotado: premio para todos, botín de sobra y un aviso grande
+    game.camera.shake(1, z.x, z.y);
+    game.particles.ring(z.x, z.y, z.r * 2, '255,200,120');
+    game.particles.debris(z.x, z.y, 40, 'rock');
+    game.pickups.drop('crate', z.x - 30, z.y);
+    game.pickups.drop('crate', z.x + 30, z.y);
+    game.pickups.drop('med', z.x, z.y - 30);
+    game.pickups.drop('med', z.x, z.y + 30);
+    if (hasGuns) game.pickups.drop('ammo', z.x + 30, z.y + 30);
+    game.sfx.kill(true);
+    if (live) {
+      h.boss?.(z, boss.reward);
+      game.banner(`¡${boss.name} derrotado!`, `+$${boss.reward} para cada jugador`);
+    }
+  } else if (z.type === 'giant') {
     game.camera.shake(0.5, z.x, z.y);
     game.particles.ring(z.x, z.y, z.r, '170,160,140');
     game.pickups.drop('crate', z.x, z.y);

@@ -48,6 +48,17 @@ dos seguidas). Se anuncian en el cartel y su nombre sale en el contador de olead
 | Asedio blindado | La mitad de los normales llegan como policías SWAT |
 | Luna de sangre | Noche roja: los zombis van un 20 % más rápido y pagan el doble |
 
+**Jefes:** cada 5 oleadas llega un jefe, con su barra de vida arriba de la pantalla, una flecha roja en la
+orilla cuando no lo ves y música propia. Esa oleada trae la mitad de horda y nunca es especial. Sus ataques
+avisan antes en el suelo (un anillo o una franja roja que se llena: sal de ahí antes de que se complete).
+Cuando le queda el 60 % de vida se **enfurece** y ataca más seguido; con el 30 %, **desespera**. Al
+derrotarlo, cada jugador gana su premio y suelta cajas de armas, botiquines y munición. En línea su vida
+crece un 60 % por cada jugador extra. Por ahora hay uno; los demás llegarán en las oleadas 10, 15, 20…
+
+| Jefe | Oleada | Vida | Ataques | Punto débil | Premio |
+|------|--------|------|---------|-------------|--------|
+| El Rocoso Supremo | 5 | 15 000 | **Embestida rocosa** (franja roja: corre en línea recta, aplasta la madera, golpea fuerte lo demás y te quita 35 y te avienta; contra un edificio queda aturdido 1,6 s) · **Pisotón** (anillo rojo a su alrededor: 18 y te empuja lejos, daña barricadas) · **Lanzamiento de roca** (anillo naranja donde estabas: 30 al caer) · **Piel endurecida** (8 s recibiendo la mitad del daño, con una coraza azul) · **Furia de piedra** (con el 30 % de vida corre y golpea más rápido) | La **espalda** (las grietas de lava): recibe un 40 % más de daño | $1500 |
+
 ### Cuentas y clasificación
 
 Al entrar escribes un **nombre y un PIN de 4 números**: si la cuenta no existe se crea, y si existe entras

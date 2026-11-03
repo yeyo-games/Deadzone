@@ -10,6 +10,7 @@ import { angleTo, rand, TAU } from '../core/util.ts';
 import { MOUNTS, militaryMissile, turretBullet } from '../sim/build.ts';
 import { flameBullet } from '../sim/bullets.ts';
 import { heavyMaxHp } from '../sim/heavy.ts';
+import { FX_N, STATUS_N } from '../sim/bosses.ts';
 import { Player } from '../sim/player.ts';
 import { Robot } from '../sim/robot.ts';
 import { lookFromCode, zombieSprites } from '../render/sprites.js';
@@ -171,6 +172,25 @@ export class Remote {
     this.applyPickups(s.pk || []);
     this.applyBullets(s.b || []);
     this.applyStructures(s, opts.collide !== false);
+    this.applyBosses(s.bo || [], s.bf || []);
+  }
+
+  /* ---------- jefes ---------- */
+
+  // La barra de los jefes y sus avisos, tal como los dibuja render/bosses.js (ver encodeBosses).
+  applyBosses(bo: number[], bf: number[]) {
+    const status = [];
+    for (let i = 0; i + STATUS_N - 1 < bo.length; i += STATUS_N)
+      status.push({ type: TYPES[bo[i]], hp: bo[i + 1] / 1000, phase: bo[i + 2], hard: !!bo[i + 3], fury: !!bo[i + 4] });
+    const fx = [];
+    for (let i = 0; i + FX_N - 1 < bf.length; i += FX_N) {
+      const r = bf.slice(i, i + FX_N);
+      r[4] /= 100;
+      r[5] /= 100;
+      r[6] /= 100;
+      fx.push(r);
+    }
+    this.game.bossNet = { status, fx };
   }
 
   /* ---------- zombis ---------- */

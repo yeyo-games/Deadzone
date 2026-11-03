@@ -15,6 +15,7 @@ import {
   drawBars,
 } from './build.js';
 import { drawPickups } from './pickups.js';
+import { drawBossAir, drawBossGround } from './bosses.js';
 import { drawBullets } from './bullets.js';
 import { drawPeers, drawRemoteBullets } from './remote.js';
 import { drawHorde } from './zombies.js';
@@ -52,6 +53,7 @@ export function render(game) {
   game.decals.draw(ctx, v);
   drawBlocks(ctx, game.structures, v);
   drawPickups(ctx, game.pickups.list, v, game.time);
+  drawBossGround(ctx, game, game.time);
   if (game.building && game.state === 'play' && p.alive && game.inv[game.buildSel] > 0)
     drawGhost(ctx, game.structures, game, game.buildSel, game.time, game.buildTarget());
   drawHorde(ctx, game.horde.list, v, base, 'small');
@@ -72,6 +74,7 @@ export function render(game) {
   drawRemoteBullets(ctx, game);
   drawGrenades(ctx, game.structures);
   drawOverhead(ctx, game.world, v.x0, v.y0, v.x1, v.y1, playing ? p : { x: -1e4, y: -1e4 }, game.time);
+  drawBossAir(ctx, game, game.time);
   game.particles.draw(ctx, v);
 
   game.lighting.render(game, base, v);
@@ -169,7 +172,8 @@ export function drawGiantMarkers(game, ctx, W, H) {
   const m = 34 * game.dpr;
   const few = !game.director.queue.length && game.horde.list.length <= 5;
   for (const zb of game.horde.list) {
-    if (zb.type !== 'giant' && zb.type !== 'golden' && !few) continue;
+    const boss = !!zb.def?.boss;
+    if (zb.type !== 'giant' && zb.type !== 'golden' && !boss && !few) continue;
     const sx = zb.x * b.z + b.tx;
     const sy = zb.y * b.z + b.ty;
     if (sx > 0 && sx < W && sy > 0 && sy < H) continue;
@@ -179,16 +183,18 @@ export function drawGiantMarkers(game, ctx, W, H) {
     const k = Math.min(Math.abs((W / 2 - m) / Math.cos(a)), Math.abs((H / 2 - m) / Math.sin(a)));
     const x = cx + Math.cos(a) * k;
     const y = cy + Math.sin(a) * k;
-    const s = 12 * game.dpr;
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(a);
+    const s = (boss ? 17 : 12) * game.dpr;
     ctx.fillStyle =
       zb.type === 'golden'
         ? 'rgba(240,192,64,0.95)'
-        : zb.type === 'giant'
-          ? 'rgba(217,120,58,0.9)'
-          : 'rgba(230,224,210,0.75)';
+        : boss
+          ? 'rgba(230,60,40,0.95)'
+          : zb.type === 'giant'
+            ? 'rgba(217,120,58,0.9)'
+            : 'rgba(230,224,210,0.75)';
     ctx.beginPath();
     ctx.moveTo(s, 0);
     ctx.lineTo(-s * 0.6, -s * 0.8);

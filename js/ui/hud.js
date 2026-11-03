@@ -3,6 +3,8 @@ import { BUILD_ORDER, COMBO, SHOP, ROBOT, WEAPONS } from '../core/config.ts';
 import { fmtTime } from '../core/util.ts';
 import { CLASSES, cooldownOf } from '../sim/abilities.ts';
 import { comboMult, comboTier, multText } from '../sim/combo.ts';
+import { bossName } from '../sim/bosses.ts';
+import { bossView } from '../render/bosses.js';
 import { ITEM_ICONS, SHORT } from './icons.js';
 import { closest, on } from './dom.js';
 
@@ -88,6 +90,28 @@ function set(game, key, el, prop, value) {
   else el.style[prop] = value;
 }
 
+// Barra del jefe (el primero vivo): nombre, fase o estado y vida.
+const PHASES = ['', 'Enfurecido', 'Desesperado'];
+function updateBossBar(game) {
+  const b = bossView(game).status[0] || null;
+  const $ = game.$;
+  if (game.cache.bossShown !== !!b) {
+    game.cache.bossShown = !!b;
+    $('boss-bar').hidden = !b;
+  }
+  if (!b) return;
+  set(game, 'bossName', $('boss-name'), 'text', bossName(b.type));
+  const tag = b.hard ? 'Piel de piedra' : b.fury ? 'Furia' : PHASES[b.phase];
+  set(game, 'bossTag', $('boss-tag'), 'text', tag);
+  const cls = b.hard ? 'hard' : b.fury ? 'fury' : '';
+  if (game.cache.bossCls !== cls) {
+    game.cache.bossCls = cls;
+    $('boss-tag').className = cls;
+    $('boss-bar').classList.toggle('fury', b.fury);
+  }
+  set(game, 'bossHp', $('boss-fill'), 'transform', `scaleX(${b.hp.toFixed(3)})`);
+}
+
 const ROUND_SUB =
   'Sin límite de tiempo. Muévete, construye y revisa tus armas: los zombis no llegarán hasta que inicies.';
 
@@ -95,6 +119,7 @@ export function updateHud(game, force) {
   if (force) game.cache = {};
   const p = game.player;
   const $ = game.$;
+  updateBossBar(game);
   set(game, 'hpw', $('hp-fill'), 'transform', `scaleX(${(p.hp / p.stats.maxHp).toFixed(3)})`);
   set(game, 'hpv', $('hp-val'), 'text', String(Math.ceil(p.hp)));
   const low = p.hp < p.stats.maxHp * 0.3;

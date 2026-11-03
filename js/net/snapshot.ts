@@ -2,7 +2,7 @@
 // (server/src/sim/ServerSim.ts) le cuenta a un jugador lo que ve. Lo decodifica js/net/remote.js.
 //
 // Una foto = parte del mundo (esta) + parte propia de cada jugador:
-//   mundo        q, ts, o, z, zx, zh, pl, rb, pk, b, gr, fi, so, ms, bl, w, ds, tm
+//   mundo        q, ts, o, z, zx, zh, pl, rb, pk, b, gr, fi, so, ms, bl, w, ds, tm, ev, bo, bf
 //   en línea     lo mismo + ack, me, st, wp, ec, ps, iv, ab, hv, up, fx, tt, dg, kl, ml, lft, blk, wir, sc (cada jugador)
 // Todo son listas planas de números (poco peso); las posiciones de los zombis van relativas a `o`.
 // El contrato de tipos está en js/core/types.d.ts (WorldSnap). No importa nada del navegador.
@@ -17,6 +17,7 @@ import type { Horde } from '../sim/zombies.ts';
 import type { Pickups } from '../sim/pickups.ts';
 import type { Bullets } from '../sim/bullets.ts';
 import type { Director } from '../sim/director.ts';
+import { bossFx, bossStatus } from '../sim/bosses.ts';
 
 /** Números por zombi en `z`: id, tipo, dx, dy, ángulo (64 pasos), banderas. */
 export const ZOMBIE_N = 6;
@@ -44,6 +45,8 @@ export const WORLD_KEYS = [
   'ds',
   'tm',
   'ev',
+  'bo',
+  'bf',
 ];
 
 const r100 = (v: number) => Math.round(v * 100);
@@ -59,7 +62,7 @@ type SceneStructures = Pick<Structures, 'grenades' | 'fires' | 'stuck' | 'missil
 type StaticStructures = Pick<Structures, 'blocks' | 'wires' | 'scorches'>;
 /** Lo que encodeWorld lee de la partida (la simulación del servidor). */
 export type WorldSource = {
-  horde: Pick<Horde, 'list'>;
+  horde: Pick<Horde, 'list' | 'lobs'>;
   pickups: Pick<Pickups, 'list'>;
   bullets: Pick<Bullets, 'list'>;
   structures: SceneStructures;
@@ -74,9 +77,12 @@ export function encodeZombies(list: Zombie[], viewer: Viewer) {
   const ZW = Math.max(NET.zombieView[0], (viewer.vw || 0) + 150);
   const ZH = Math.max(NET.zombieView[1], (viewer.vh || 0) + 150);
   const nearZ = (o: Zombie) =>
-    o.type === 'golden' || o.type === 'giant'
-      ? near(o.x, o.y)
-      : Math.abs(o.x - viewer.x) < ZW && Math.abs(o.y - viewer.y) < ZH;
+    // los jefes van siempre (su flecha en la orilla de la pantalla)
+    o.def?.boss
+      ? true
+      : o.type === 'golden' || o.type === 'giant'
+        ? near(o.x, o.y)
+        : Math.abs(o.x - viewer.x) < ZW && Math.abs(o.y - viewer.y) < ZH;
   const ox = Math.round(viewer.x);
   const oy = Math.round(viewer.y);
   const z: number[] = [];
@@ -229,6 +235,24 @@ export function encodeWorld(
     tm: Math.round(src.time),
     // ronda especial: su lugar en EVENT_ORDER + 1 (0 = ninguna)
     ev: EVENT_ORDER.indexOf(d.event) + 1,
+    ...encodeBosses(src.horde),
+  };
+}
+
+/**
+ * Jefes (sim/bosses.ts), estén donde estén: bo = su barra (STATUS_N por jefe: tipo, vida en milésimas,
+ * fase, piel endurecida, furia) · bf = avisos en el suelo y piedras en el aire (FX_N por fila).
+ */
+export function encodeBosses(h: Pick<Horde, 'list' | 'lobs'>) {
+  return {
+    bo: bossStatus(h.list).flatMap((b) => [
+      TYPES.indexOf(b.type),
+      Math.ceil(b.hp * 1000),
+      b.phase,
+      b.hard ? 1 : 0,
+      b.fury ? 1 : 0,
+    ]),
+    bf: bossFx(h).flatMap((f) => f.map((v, i) => (i === 4 || i === 5 || i === 6 ? r100(v) : Math.round(v)))),
   };
 }
 

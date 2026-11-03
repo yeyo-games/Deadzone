@@ -429,6 +429,54 @@ export const ZOMBIES = {
     turn: 1.4,
     blocksBullets: true,
   },
+  // Jefe de la oleada 5 (BOSSES.supremo): un rocoso enorme y encorvado. boss: lleva su propia
+  // cabeza (sim/bosses.ts) y su barra de vida arriba de la pantalla.
+  supremo: {
+    hp: 15000,
+    speed: 0.7,
+    radius: 50,
+    damage: 26,
+    attackRate: 0.6,
+    xp: 400,
+    mass: 80,
+    reach: 16,
+    frames: 8,
+    turn: 1.5,
+    blocksBullets: true,
+    blockDmg: 260,
+    boss: true,
+  },
+};
+
+// Jefes (sim/bosses.ts): cada BOSS.every oleadas llega uno, en el orden de BOSS_ORDER (el primero en
+// la oleada 5, el segundo en la 10…). Su vida es la de ZOMBIES (en solitario); en grupo se multiplica
+// por 1 + perPlayer por cada jugador extra. La horda que lo acompaña es support de la normal y la oleada
+// del jefe nunca es ronda especial. Fases según la vida que le queda: normal, enfurecido (≤ rage) y
+// desesperado (≤ despair); en cada una espera cd[fase] veces menos entre ataque y ataque.
+export const BOSS = { every: 5, perPlayer: 0.6, support: 0.5, rage: 0.6, despair: 0.3, cd: [1, 0.8, 0.6] };
+export const BOSS_ORDER = ['supremo'];
+
+// Cada jefe: name, tip (lo que se lee al llegar), reward (dinero para cada jugador al derrotarlo) y
+// wait (s entre ataque y ataque, al azar entre los dos). Los ataques tienen un aviso (windup s) en el suelo.
+// Rocoso Supremo:
+//   charge: embestida en línea recta a speed px/s durante time s; aplasta la madera, golpea lo demás
+//     con block de daño, al jugador le quita hit y lo avienta throw; contra un muro queda aturdido stun s
+//   stomp: pisotón con radio r (si tienes a range px) · rock: piedra que vuela fly s hasta donde estabas
+//   skin: piel endurecida (time s, recibe k del daño, cada cd s) · back: daño por la espalda
+//   fury: al quedar con despair de vida corre speed y pega rate veces más rápido
+export const BOSSES = {
+  supremo: {
+    name: 'El Rocoso Supremo',
+    tip: 'Dispárale por la espalda: ahí la piedra es más delgada',
+    reward: 1500,
+    wait: [2.4, 4],
+    back: 1.4,
+    charge: { windup: 1.1, speed: 520, time: 1.4, hit: 35, throw: 1300, block: 1500, stun: 1.6, min: 200, max: 760 },
+    stomp: { windup: 1, r: 200, range: 180, hit: 18, push: 950, block: 300 },
+    rock: { windup: 0.9, fly: 1, r: 85, hit: 30, push: 500, block: 600, min: 170, max: 680 },
+    skin: { windup: 0.7, time: 8, k: 0.5, cd: 20 },
+    fury: { speed: 1.45, rate: 1.7 },
+  },
 };
 
 // Arranque suave para engancharse rápido:
@@ -461,6 +509,7 @@ export const BOUNTY = {
   rock: 10,
   giant: 2.5,
   golden: 0,
+  supremo: 100,
 };
 
 // Tamaño y ritmo de las oleadas: rondas cortas.
@@ -1105,6 +1154,7 @@ export const ZOMBIE_VARIANTS = {
   bull: 3,
   rock: 2,
   giant: 2,
+  supremo: 1,
 };
 
 // Colores de carrocería de los coches abandonados (el mundo elige uno al generarse).

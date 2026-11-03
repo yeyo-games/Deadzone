@@ -17,6 +17,7 @@ import type { GameHost } from '../core/types.d.ts';
 import type { Block } from './build.ts';
 import type { Player } from './player.ts';
 import type { Obstacle, World } from './world.ts';
+import { bossImpact, bossThink, type Lob, updateLobs } from './bosses.ts';
 
 const CELL = 64;
 
@@ -199,8 +200,11 @@ export class Horde {
   declare frame: number;
   declare danger: number;
   declare nearCount: number;
+  /** piedras que lanzan los jefes (sim/bosses.ts) */
+  declare lobs: Lob[];
   constructor() {
     this.list = [];
+    this.lobs = [];
     this.grid = new Grid(WORLD_SIZE, CELL);
     this.frame = 0;
     this.danger = 0;
@@ -318,6 +322,7 @@ export class Horde {
     let nearCount = 0;
     // quien va volando tras el lanzamiento de un rocoso arrolla a los zombis que toca
     for (const pl of (targets || [p0]) as Player[]) if ((pl.flungT || 0) > 0) this.flungStep(pl, dt, game);
+    if (this.lobs.length) updateLobs(this, dt, game);
 
     for (let i = 0; i < list.length; i++) {
       const z = list[i];
@@ -395,6 +400,7 @@ export class Horde {
         (z.wounded ? Math.sin(time * 5 + z.wob) * 0.16 : 0) + (z.burn > 0 ? Math.sin(time * 23 + z.wob) * 0.28 : 0);
       if (z.type === 'bull' && this.bullThink(z, p, dx, dy, d, dt, game, world)) continue;
       if (z.type === 'rock' && this.rockThink(z, p, d, dt, game)) continue;
+      if (def.boss && bossThink(this, z, p, d, dt, game)) continue;
       let mx;
       let my;
       if (z.type === 'golden') {
@@ -532,7 +538,7 @@ export class Horde {
         }
         z.atk -= dt;
         if (z.atk <= 0) {
-          z.atk = 1 / def.attackRate;
+          z.atk = 1 / (def.attackRate * (z.atkK || 1));
           z.lunge = 1;
           p.lastHit = z.type;
           p.hurt(def.damage, game);
@@ -582,6 +588,7 @@ export class Horde {
       if (z.type === 'bull' && !z.dead) this.bullImpact(z, bumped, world.lastBlock as Block | null, game);
       if (z.type === 'rock' && !z.dead)
         this.rockImpact(z, bumped, world.lastBlock as Block | null, world.lastObs, game, dt);
+      if (z.def.boss && !z.dead) bossImpact(z, bumped, world.lastBlock as Block | null, world.lastObs, game);
       // detector de atasco: si en 1,2 s casi no avanzó y no está pegado al jugador
       z.chkT = (z.chkT || 0) + dt;
       if (z.chkT > 1.2) {

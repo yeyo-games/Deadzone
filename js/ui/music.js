@@ -21,6 +21,8 @@ export class Music {
     this.step = 0;
     this.nextTime = 0;
     this.level = 0;
+    /** hay un jefe vivo (lo pone states.js) */
+    this.boss = false;
   }
 
   // Se llama tras el primer gesto del jugador (los navegadores bloquean el audio antes).
@@ -130,13 +132,15 @@ export class Music {
     this.since += dt;
     const L = this.level;
     let want = this.state;
-    if (this.state === 'calm' && L > MUSIC.threatOn) want = 'threat';
+    // con un jefe vivo suena la horda completa, con su campana grave (ver playStep)
+    if (this.boss) want = 'horde';
+    else if (this.state === 'calm' && L > MUSIC.threatOn) want = 'threat';
     if (this.state === 'threat') {
       if (L > MUSIC.hordeOn) want = 'horde';
       else if (L < MUSIC.threatOff) want = 'calm';
     }
     if (this.state === 'horde' && L < MUSIC.hordeOff) want = 'threat';
-    if (want !== this.state && this.since > MUSIC.minHold) {
+    if (want !== this.state && (this.since > MUSIC.minHold || this.boss)) {
       this.state = want;
       this.since = 0;
       this.fade();
@@ -196,6 +200,9 @@ export class Music {
     const ost = [55, 55, 65.4, 55, 73.4, 55, 65.4, 49];
     if (s % 2 === 0) this.bass(ost[((s / 2) % 8) | 0], t, 0.1, 0.2, this.horde);
     if (s % 32 === 0) this.brass(s % 64 === 0 ? 110 : 98, t, this.horde);
+    // jefe: metales graves en cada compás y un golpe de más a contratiempo
+    if (this.boss && s % 16 === 0) this.brass(s % 32 === 0 ? 41.2 : 46.2, t, this.horde);
+    if (this.boss && beat === 14) this.kick(t, 0.9, this.horde);
   }
 
   pluck(f, t, v, out) {

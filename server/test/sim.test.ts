@@ -6,6 +6,8 @@ import { IN_FIRE } from '../../js/net/protocol.ts';
 import { PEER_N, WORLD_KEYS, ZOMBIE_N } from '../../js/net/snapshot.ts';
 import {
   ABILITY,
+  BOSS,
+  BOSSES,
   BOUNTY,
   COMBO,
   EVENT_ORDER,
@@ -17,6 +19,7 @@ import {
   ROCK,
   START,
   WEAPONS,
+  ZOMBIES,
 } from '../../js/core/config.ts';
 import { heavyLevel } from '../../js/sim/heavy.ts';
 import { UPGRADES } from '../../js/sim/upgrades.ts';
@@ -934,4 +937,37 @@ test('rocoso en línea: el árbol que destroza va en la foto y quien vuela tras 
   idle(sim, 'a', seq, 4);
   assert.ok(z.dead, 'lo arrolló');
   assert.equal(a.kills, k0 + 1);
+});
+
+test('jefe en línea: llega en la oleada 5 con más vida por jugador, se ve en la foto y paga a todos', () => {
+  const sim = new ServerSim(5, [
+    { id: 'a', idx: 1, name: 'Ana' },
+    { id: 'b', idx: 2, name: 'Beto' },
+  ]);
+  const a = sim.slots.get('a')!;
+  const b = sim.slots.get('b')!;
+  const seq = { n: 0 };
+  idle(sim, 'a', seq, 2);
+  sim.director.wave = BOSS.every - 1;
+  sim.director.state = 'waiting';
+  assert.ok(sim.nextRound());
+  assert.equal(sim.director.queue[0], 'supremo');
+  let z: any = null;
+  for (let i = 0; i < 600 && !z; i++) {
+    sim.step();
+    z = sim.horde.list.find((q: any) => q.type === 'supremo');
+  }
+  assert.ok(z, 'apareció');
+  assert.equal(z.maxHp, ZOMBIES.supremo.hp * (1 + BOSS.perPlayer));
+  // Beto, lejos de él, también ve su barra (bo) aunque no lo tenga en pantalla
+  b.p.x = z.x + 3000;
+  const snap = sim.snapshot('b', 0)!;
+  assert.equal(snap.bo.length, 5);
+  assert.equal(snap.bo[0], 9, 'tipo supremo en TYPES');
+  const ma = a.money;
+  const mb = b.money;
+  z.lastOwner = 'a';
+  sim.killZombie(z);
+  assert.ok(a.money - ma >= BOSSES.supremo.reward);
+  assert.equal(b.money - mb, BOSSES.supremo.reward, 'Beto cobra el premio aunque no lo mató');
 });

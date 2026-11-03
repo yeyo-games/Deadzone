@@ -1,8 +1,20 @@
 // Director de oleadas: decide cuántos zombis salen, de qué tipo y por dónde.
-import { EVENT_ORDER, EVENTS, MAX_ALIVE, ROCK, START, WORLD_SIZE, WAVES } from '../core/config.ts';
+import {
+  BOSS,
+  BOSSES,
+  EVENT_ORDER,
+  EVENTS,
+  MAX_ALIVE,
+  ROCK,
+  START,
+  WORLD_SIZE,
+  WAVES,
+  ZOMBIES,
+} from '../core/config.ts';
 import type { EventDef } from '../core/config.ts';
 import { rand, randInt } from '../core/util.ts';
 import type { GameHost, Vec } from '../core/types.d.ts';
+import { bossFor, spawnBoss } from './bosses.ts';
 
 /** Lo que ve un jugador: caja centrada en (x, y) de medio ancho hw y medio alto hh. */
 export interface View {
@@ -21,6 +33,8 @@ export interface WaveCounts {
   heavy: number;
   bull: number;
   rock: number;
+  /** el jefe de la oleada (1) o ninguno */
+  boss?: number;
   total: number;
 }
 
@@ -126,7 +140,9 @@ export class Director {
 
   /** Cuántos zombis de cada tipo traería la oleada w con la escala de esta partida (sin ronda especial). */
   composition(w: number): WaveCounts {
-    return waveCounts(w, (this.coop ? this.crowd || 0.5 : 1) * WAVES.count, null);
+    const boss = bossFor(w);
+    const c = waveCounts(w, (this.coop ? this.crowd || 0.5 : 1) * WAVES.count * (boss ? BOSS.support : 1), null);
+    return boss ? { ...c, boss: 1, total: c.total + 1 } : c;
   }
 
   startWave(game: GameHost) {
@@ -135,7 +151,9 @@ export class Director {
     // en grupo: la mitad de zombis que en solitario (eran demasiados)
     // en línea: crowd crece con el número de jugadores (ver NET.crowd)
     const m = (this.coop ? this.crowd || 0.5 : 1) * WAVES.count;
-    this.event = this.rollEvent(w);
+    // cada BOSS.every oleadas llega un jefe: con menos horda y nunca en una ronda especial
+    const boss = bossFor(w);
+    this.event = boss ? '' : this.rollEvent(w);
     const ev = this.eventDef;
     const {
       normal: normals,
@@ -145,7 +163,7 @@ export class Director {
       heavy: heavies,
       bull: bulls,
       rock: rocks,
-    } = waveCounts(w, m, ev);
+    } = waveCounts(w, boss ? m * BOSS.support : m, ev);
     const q: string[] = [];
     for (let i = 0; i < normals; i++) q.push('normal');
     for (let i = 0; i < heavies; i++) q.splice(randInt(0, q.length), 0, 'heavy');
@@ -154,31 +172,36 @@ export class Director {
     for (let i = 0; i < fats; i++) q.splice(randInt(Math.floor(q.length * 0.2), q.length), 0, 'fat');
     for (let i = 0; i < bulls; i++) q.splice(randInt(Math.floor(q.length * 0.15), q.length), 0, 'bull');
     for (let i = 0; i < rocks; i++) q.splice(randInt(Math.floor(q.length * 0.1), q.length), 0, 'rock');
+    // el jefe sale en la primera ráfaga
+    if (boss) q.unshift(boss);
     this.queue = q;
     this.waveSize = q.length;
     this.waveT = 0;
     this.spawnT = 0.3;
     this.state = 'active';
     this.straggleT = 0;
+    const bd = boss ? (BOSSES as Record<string, { name: string; tip: string }>)[boss] : null;
     game.banner(
-      ev ? `Oleada ${w} · ${ev.name}` : `Oleada ${w}`,
-      ev
-        ? ev.desc
-        : w === 3
-          ? 'Llegan los toros: esquiva sus embestidas'
-          : w === ROCK.from
-            ? 'Llegan los rocosos: lo destrozan todo a su paso'
-            : w === 11
-              ? 'Llegan los super blindados'
-              : heavies
-                ? 'Super blindados en la horda'
-                : w === 1
-                  ? 'Calienta motores: llegan pocos'
-                  : w === 2
-                    ? 'Llegan los policías SWAT y los gordos'
-                    : fats
-                      ? 'Cuidado con los gordos'
-                      : 'Sobrevive',
+      bd ? `Oleada ${w} · ¡${bd.name}!` : ev ? `Oleada ${w} · ${ev.name}` : `Oleada ${w}`,
+      bd
+        ? bd.tip
+        : ev
+          ? ev.desc
+          : w === 3
+            ? 'Llegan los toros: esquiva sus embestidas'
+            : w === ROCK.from
+              ? 'Llegan los rocosos: lo destrozan todo a su paso'
+              : w === 11
+                ? 'Llegan los super blindados'
+                : heavies
+                  ? 'Super blindados en la horda'
+                  : w === 1
+                    ? 'Calienta motores: llegan pocos'
+                    : w === 2
+                      ? 'Llegan los policías SWAT y los gordos'
+                      : fats
+                        ? 'Cuidado con los gordos'
+                        : 'Sobrevive',
     );
     game.sfx.wave();
   }
@@ -345,8 +368,10 @@ export class Director {
       const cluster = Math.min(left, randInt(2, 5));
       for (let i = 0; i < cluster && this.queue.length; i++) {
         const type = this.queue[0];
-        const r =
-          type === 'rock'
+        const big = (ZOMBIES as Record<string, { radius: number; boss?: boolean }>)[type];
+        const r = big?.boss
+          ? big.radius + 4
+          : type === 'rock'
             ? 36
             : type === 'fat' || type === 'heavy' || type === 'bull'
               ? 24
@@ -357,7 +382,7 @@ export class Director {
           const x = c.x + rand(-45, 45);
           const y = c.y + rand(-45, 45);
           if (world.pointBlocked(x, y, r + 2) || !this.canReach(game, x, y) || this.seen(views, x, y, r)) continue;
-          game.horde.spawn(type, x, y, this.hpMult, this.speedMult);
+          this.spawnOne(game, type, x, y);
           this.queue.shift();
           left--;
           break;
@@ -372,8 +397,14 @@ export class Director {
       if (world.pointBlocked(c.x, c.y, 26) || this.seen(views, c.x, c.y, 26)) continue;
       const type = this.queue.shift();
       if (!type) break;
-      game.horde.spawn(type, c.x, c.y, this.hpMult, this.speedMult);
+      this.spawnOne(game, type, c.x, c.y);
       left--;
     }
+  }
+
+  // Un zombi de la cola: los de oleada con la vida y velocidad de la ronda; el jefe con la suya.
+  spawnOne(game: GameHost, type: string, x: number, y: number) {
+    if ((ZOMBIES as Record<string, { boss?: boolean }>)[type]?.boss) spawnBoss(game, type, x, y);
+    else game.horde.spawn(type, x, y, this.hpMult, this.speedMult);
   }
 }

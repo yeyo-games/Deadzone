@@ -2,10 +2,12 @@
 // frenado, heridas y empuje en los dos sitios).
 import { rand } from '../core/util.ts';
 import type { Bullet, GameHost, Zombie } from '../core/types.d.ts';
+import { bossDamage } from './bosses.ts';
 
 // Aplica una bala a un zombi. No lo mata: quien llama decide (y cuenta la baja).
 export function bulletHit(game: GameHost, z: Zombie, b: Bullet, hx: number, hy: number) {
-  z.hp -= b.dmg;
+  // al jefe le entra más o menos según su piel y por dónde le pegas (sim/bosses.ts)
+  z.hp -= z.def?.boss ? b.dmg * bossDamage(z, b) : b.dmg;
   z.flash = 0.08;
   // llamarada del lanzallamas: no frena ni empuja, lo deja ardiendo
   if (b.flame) {
@@ -21,15 +23,15 @@ export function bulletHit(game: GameHost, z: Zombie, b: Bullet, hx: number, hy: 
   z.lastDy = b.dy;
   if (Math.random() < 0.12) game.decals.splat(hx + b.dx * 14, hy + b.dy * 14, rand(7, 12));
   // el super blindado no se frena ni retrocede con las balas: sólo las explosiones lo mueven
-  // ni el rocoso: es de piedra
-  const armored = (z.type === 'heavy' || z.type === 'rock') && !b.blast;
+  // ni el rocoso: es de piedra (ni los jefes)
+  const armored = (z.type === 'heavy' || z.type === 'rock' || !!z.def?.boss) && !b.blast;
   // normales y velocistas: la bala no los avienta; se frenan, sangran y se arrastran
   const flesh = (z.type === 'normal' || z.type === 'sprinter') && !b.blast;
   if (flesh) {
     z.slow = 0.45;
     z.wounded = true;
     game.decals.splat(hx + b.dx * 6, hy + b.dy * 6, rand(8, 13));
-  } else if (z.type !== 'giant' && !armored) z.slow = 0.16;
+  } else if (z.type !== 'giant' && !z.def?.boss && !armored) z.slow = 0.16;
   if (!armored && !flesh) {
     const kn = (b.knock * 3) / z.mass;
     z.kx += b.dx * kn;
@@ -41,7 +43,8 @@ export function bulletHit(game: GameHost, z: Zombie, b: Bullet, hx: number, hy: 
     z.type === 'heavy' ||
     z.type === 'bull' ||
     z.type === 'giant' ||
-    z.type === 'rock';
+    z.type === 'rock' ||
+    !!z.def?.boss;
   game.particles.hit(hx, hy, b.dx, b.dy, big);
   game.sfx.hit(big);
 }

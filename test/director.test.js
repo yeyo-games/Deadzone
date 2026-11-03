@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { EVENT_ORDER, EVENTS, START, WAVES } from '../js/core/config.ts';
+import { BOSS, BOSS_ORDER, EVENT_ORDER, EVENTS, START, WAVES } from '../js/core/config.ts';
 import { Director } from '../js/sim/director.ts';
 import { fakeGame } from './helpers.js';
 
@@ -43,14 +43,14 @@ test('la oleada 1 es chica y solo trae normales y velocistas; la 2 suma los SWAT
   assert.equal(c2.swat, Math.round(normalTotal * 0.2));
 });
 
-test('el tamaño de la cola es determinista y crece con la oleada', () => {
+test('el tamaño de la cola es determinista y crece con la oleada (salvo la del jefe)', () => {
   const sizes = [];
   for (let i = 0; i < 2; i++) {
     const d = sinRondas();
     const row = [];
-    for (let w = 0; w < 6; w++) {
+    for (let w = 1; w <= 7; w++) {
       d.startWave(fakeGame());
-      row.push(d.queue.length);
+      if (w % BOSS.every) row.push(d.queue.length);
     }
     sizes.push(row);
   }
@@ -59,6 +59,24 @@ test('el tamaño de la cola es determinista y crece con la oleada', () => {
     sizes[0],
     [...sizes[0]].sort((a, b) => a - b),
   );
+});
+
+test('cada BOSS.every oleadas llega un jefe primero en la cola, con menos horda y sin ronda especial', () => {
+  const d = Object.assign(new Director(), { events: true });
+  const banners = [];
+  const game = fakeGame({ banner: (t, s) => banners.push([t, s]) });
+  for (let w = 1; w <= BOSS.every; w++) azar(0, () => d.startWave(game));
+  assert.equal(d.queue[0], BOSS_ORDER[0]);
+  assert.equal(d.queue.filter((t) => t === BOSS_ORDER[0]).length, 1);
+  assert.equal(d.event, '', 'la del jefe nunca es especial');
+  assert.match(banners.at(-1)[0], /Rocoso Supremo/);
+  const k = d.composition(BOSS.every);
+  assert.equal(k.boss, 1);
+  assert.equal(k.total, d.queue.length);
+  const sin = new Director().composition(BOSS.every - 1);
+  assert.ok(k.total < sin.total, 'menos horda que la oleada anterior');
+  // la siguiente vez que tocaría un jefe que aún no existe, no llega ninguno
+  assert.equal(new Director().composition(BOSS.every * (BOSS_ORDER.length + 1)).boss, undefined);
 });
 
 test('toros desde la oleada 3, gordos desde la 2, blindados tras la 10', () => {
@@ -164,9 +182,9 @@ function forzar(d, id) {
 
 test('estampida: solo velocistas y toros, y menos zombis', () => {
   const normal = sinRondas();
-  for (let w = 1; w <= 5; w++) normal.startWave(fakeGame());
+  for (let w = 1; w <= 6; w++) normal.startWave(fakeGame());
   const d = sinRondas();
-  for (let w = 1; w <= 4; w++) d.startWave(fakeGame());
+  for (let w = 1; w <= 5; w++) d.startWave(fakeGame());
   d.events = true;
   forzar(d, 'stampede');
   const c = count(d.queue);

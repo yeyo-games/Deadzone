@@ -6,6 +6,7 @@
 import { GOLDEN, ROBOT, WEAPON_ORDER, WEAPONS, WORLD_SIZE, ZOMBIES } from '../core/config.ts';
 import { clamp, rand, storage } from '../core/util.ts';
 import * as Rules from '../sim/rules.ts';
+import { spawnBoss } from '../sim/bosses.ts';
 import { closest } from './dom.js';
 
 const KEY = 'dz-dev';
@@ -22,6 +23,7 @@ const NAMES = {
   rock: 'Rocoso',
   giant: 'Gigante',
   golden: 'Dorado',
+  supremo: 'Rocoso Supremo',
 };
 const STATE = { active: 'en curso', waiting: 'superada · esperando', break: 'por empezar' };
 
@@ -151,7 +153,8 @@ function spawnZombies(game, type, n) {
     const c = d.edgePoint(game, rand(40, 140), views, false);
     if (c.x < 80 || c.y < 80 || c.x > WORLD_SIZE - 80 || c.y > WORLD_SIZE - 80) continue;
     if (game.world.pointBlocked(c.x, c.y, r + 2)) continue;
-    game.horde.spawn(type, c.x, c.y, d.hpMult, d.speedMult);
+    if (ZOMBIES[type].boss) spawnBoss(game, type, c.x, c.y);
+    else game.horde.spawn(type, c.x, c.y, d.hpMult, d.speedMult);
     made++;
   }
   game.toast(`${made} × ${NAMES[type]}`);

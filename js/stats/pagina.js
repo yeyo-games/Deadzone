@@ -21,6 +21,10 @@ const ZOMBI = {
   fat: 'Gordo',
   golden: 'Dorado',
   giant: 'Gigante',
+  boss_charge: 'Jefe (embestida)',
+  boss_stomp: 'Jefe (pisotón)',
+  boss_rock: 'Jefe (piedra)',
+  supremo: 'Rocoso Supremo',
   acid: 'Ácido del gordo',
   desconocida: 'Desconocida',
 };

@@ -379,6 +379,10 @@ export class ServerSim {
         by.money += reward;
         by.toasts.push(`¡Zombi dorado! +$${reward}`);
       },
+      // jefe derrotado: el premio es para cada jugador
+      boss: (_zb: any, reward: number) => {
+        for (const s of this.slots.values()) s.money += reward;
+      },
       toast: (m: string) => this.toastAll(m),
     });
   }

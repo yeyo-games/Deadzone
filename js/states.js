@@ -14,6 +14,7 @@ import { openTurret, updateTurret } from './ui/turret.js';
 import { chooseClass } from './ui/class.js';
 import { openLevelUp, chooseUpgrade } from './ui/levelup.js';
 import { drawLookPreview } from './ui/look.js';
+import { bossView } from './render/bosses.js';
 
 /** @typedef {import('./core/types').GameHost} GameHost */
 
@@ -104,6 +105,7 @@ export function updatePlay(game, dt) {
     game.sfx.footstep(Math.min(1, nc / 20));
     game.stepT = Math.max(0.12, 0.7 - nc * 0.03) * rand(0.7, 1.3);
   }
+  game.music.boss = bossView(game).status.length > 0;
   game.music.setDanger(p.alive ? game.horde.danger : 0, dt);
   const look = game.input.mode === 'mouse' ? 50 : 24;
   game.camera.update(dt, p.x + Math.cos(p.angle) * look, p.y + Math.sin(p.angle) * look, false);

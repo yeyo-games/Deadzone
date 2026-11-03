@@ -13,7 +13,8 @@ export function drawHorde(ctx, list, view, base, layer) {
   // base = { z, tx, ty }: transformación cámara → pantalla
   const { z: s, tx, ty } = base;
   for (const z of list) {
-    const isGiant = z.type === 'giant';
+    // los grandes (gigante y jefes) van por encima de los jugadores
+    const isGiant = z.type === 'giant' || !!z.def?.boss;
     if ((layer === 'giant') !== isGiant) continue;
     const spr = zombieSprite(z);
     const half = spr.half;
