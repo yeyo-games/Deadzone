@@ -17,7 +17,7 @@ import type { GameHost } from '../core/types.d.ts';
 import type { Block } from './build.ts';
 import type { Player } from './player.ts';
 import type { Obstacle, World } from './world.ts';
-import { bossImpact, bossThink, type Lob, updateLobs } from './bosses.ts';
+import { bossImpact, bossThink, type Fallen, type Lob, updateBossWorld, type Zone } from './bosses.ts';
 
 const CELL = 64;
 
@@ -202,9 +202,17 @@ export class Horde {
   declare nearCount: number;
   /** piedras que lanzan los jefes (sim/bosses.ts) */
   declare lobs: Lob[];
+  /** zonas que dejan los jefes (veneno, fuego…) y zombis caídos hace poco (resurrección) */
+  declare zones: Zone[];
+  declare fallen: Fallen[];
+  /** el paso de este fotograma (para los jefes) */
+  declare dt: number;
   constructor() {
     this.list = [];
     this.lobs = [];
+    this.zones = [];
+    this.fallen = [];
+    this.dt = 0;
     this.grid = new Grid(WORLD_SIZE, CELL);
     this.frame = 0;
     this.danger = 0;
@@ -322,7 +330,8 @@ export class Horde {
     let nearCount = 0;
     // quien va volando tras el lanzamiento de un rocoso arrolla a los zombis que toca
     for (const pl of (targets || [p0]) as Player[]) if ((pl.flungT || 0) > 0) this.flungStep(pl, dt, game);
-    if (this.lobs.length) updateLobs(this, dt, game);
+    this.dt = dt;
+    if (this.lobs.length || this.zones.length) updateBossWorld(this, dt, game);
 
     for (let i = 0; i < list.length; i++) {
       const z = list[i];
@@ -507,6 +516,11 @@ export class Horde {
         my = mx * sn + my * c;
         mx = nx;
       }
+      // campanada, orden de ataque o dominio de un jefe: más rápidos un rato
+      if (z.buffT > 0) {
+        z.buffT -= dt;
+        sp *= z.buffK || 1;
+      }
       if (inRange) sp *= 0.15;
       else if (views && z.type !== 'golden' && !dir.seen(views, z.x, z.y, z.r)) sp *= WAVES.offscreen;
       // alambre de púas: frena y hiere
@@ -541,7 +555,7 @@ export class Horde {
           z.atk = 1 / (def.attackRate * (z.atkK || 1));
           z.lunge = 1;
           p.lastHit = z.type;
-          p.hurt(def.damage, game);
+          p.hurt(def.damage * (z.dmgK || 1), game);
           game.onZombieHit(z, p);
           const push = def.punch || 40 * Math.sqrt(z.mass);
           p.kx += (dx / d) * push;
@@ -558,9 +572,15 @@ export class Horde {
     // separación entre zombis y contra el jugador
     const grid = this.grid;
     grid.clear();
-    for (const z of list) grid.insert(z);
+    for (const z of list) if (!z.under) grid.insert(z);
     this.separate(dt);
     for (const z of list) {
+      // bajo tierra o en pleno salto no choca con nada
+      if (z.under || z.bs === 'leap') {
+        z.ox = z.x;
+        z.oy = z.y;
+        continue;
+      }
       for (const pl of targets || [p0]) {
         if (!pl.alive) continue;
         const dx = pl.x - z.x;
@@ -627,7 +647,7 @@ export class Horde {
       for (const pl of targets) if (pl.alive && !pl.manned) world.collide(pl, pl.r, true);
     } else if (p0.alive && !(p0 as Player).manned) world.collide(p0, p0.r, true);
     grid.clear();
-    for (const z of list) grid.insert(z);
+    for (const z of list) if (!z.under) grid.insert(z);
   }
 
   // Separa cada par de zombis una sola vez: dentro de cada celda y con sus vecinas de

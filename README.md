@@ -48,16 +48,33 @@ dos seguidas). Se anuncian en el cartel y su nombre sale en el contador de olead
 | Asedio blindado | La mitad de los normales llegan como policías SWAT |
 | Luna de sangre | Noche roja: los zombis van un 20 % más rápido y pagan el doble |
 
-**Jefes:** cada 5 oleadas llega un jefe, con su barra de vida arriba de la pantalla, una flecha roja en la
-orilla cuando no lo ves y música propia. Esa oleada trae la mitad de horda y nunca es especial. Sus ataques
-avisan antes en el suelo (un anillo o una franja roja que se llena: sal de ahí antes de que se complete).
-Cuando le queda el 60 % de vida se **enfurece** y ataca más seguido; con el 30 %, **desespera**. Al
-derrotarlo, cada jugador gana su premio y suelta cajas de armas, botiquines y munición. En línea su vida
-crece un 60 % por cada jugador extra. Por ahora hay uno; los demás llegarán en las oleadas 10, 15, 20…
+**Jefes:** cada 5 oleadas llega un jefe, con su barra de vida arriba de la pantalla (y el nombre del
+ataque que prepara), una flecha roja en la orilla cuando no lo ves y música propia. Esa oleada trae la
+mitad de horda y nunca es especial. **Todos sus ataques avisan antes en el suelo**: un anillo o una franja
+roja que se llena (sal antes de que se complete), un anillo naranja donde caerá lo que lanza o un círculo
+morado cuando llama a la horda o prepara algo. Las zonas que dejan (veneno verde, fuego, electricidad
+azul, torbellino) parpadean un momento antes de hacer daño. Cuando le queda el 60 % de vida se
+**enfurece** y ataca más seguido; al final entra en **furia**. Al derrotarlo, cada jugador gana su premio
+y suelta cajas de armas, botiquines y munición. En línea su vida crece un 60 % por cada jugador extra.
+Después del Rey (oleada 75) la lista vuelve a empezar, con 1,5 veces la vida en cada vuelta.
 
-| Jefe | Oleada | Vida | Ataques | Punto débil | Premio |
-|------|--------|------|---------|-------------|--------|
-| El Rocoso Supremo | 5 | 15 000 | **Embestida rocosa** (franja roja: corre en línea recta, aplasta la madera, golpea fuerte lo demás y te quita 35 y te avienta; contra un edificio queda aturdido 1,6 s) · **Pisotón** (anillo rojo a su alrededor: 18 y te empuja lejos, daña barricadas) · **Lanzamiento de roca** (anillo naranja donde estabas: 30 al caer) · **Piel endurecida** (8 s recibiendo la mitad del daño, con una coraza azul) · **Furia de piedra** (con el 30 % de vida corre y golpea más rápido) | La **espalda** (las grietas de lava): recibe un 40 % más de daño | $1500 |
+| # | Jefe | Oleada | Vida | Ataques | Punto débil | Premio |
+|---|------|--------|------|---------|-------------|--------|
+| 1 | El Rocoso Supremo | 5 | 15 000 | Embestida rocosa · Pisotón · Lanzamiento de roca · Piel endurecida (8 s, la mitad del daño) · Furia de piedra (30 %) | La espalda de lava: +40 % | $1500 |
+| 2 | El Aplastador | 10 | 25 000 | Martillazo (rompe construcciones) · Carga brutal · Agarre demoledor (45 y te lanza) · Golpes consecutivos (3) · Rompefilas (acelera a la horda) | Si su carga choca con un edificio, 3 s aturdido | $2200 |
+| 3 | El Campanero | 15 | 38 000 | Llamada de la horda (20 zombis) · Onda sonora (te frena 4 s) · Campanada de guerra (+35 % de velocidad a la horda) · Golpe de cadena · Última llamada (20 %: corredores) | Rompe la **campana** de su espalda y se acaban la llamada, la onda y la campanada | $3000 |
+| 4 | El Contaminado | 20 | 55 000 | Nube tóxica (8 s) · Proyectil corrosivo (rompe barricadas) · Rastro venenoso · Explosión química · Lluvia corrosiva | Sus depósitos de la espalda: el doble | $3800 |
+| 5 | El Carcelero | 25 | 78 000 | Escudo de frente (sólo le entra el 20 %) · Golpe de prisión · Cadena de captura (te jala y te deja quieto) · Encierro (muros de metal temporales) · Carga blindada | Costados y espalda | $4600 |
+| 6 | La Cazadora | 30 | 105 000 | Salto depredador · Ataque relámpago (3 embestidas) · Acecho (casi invisible) · Grito de persecución (corredores) · Furia final (25 %) | Tras cada salto queda quieta y expuesta; las explosiones la aturden | $5500 |
+| 7 | El Excavador | 35 | 145 000 | Ataque subterráneo (sale debajo de ti) · Derrumbe · Lanzamiento de escombros · Túnel de invasión (zombis junto a ti) · Demolición | Al salir de la tierra, 4 s expuesto | $6500 |
+| 8 | El Generador | 40 | 190 000 | Descarga eléctrica · Pulso electromagnético (apaga tus torretas 6 s) · Suelo electrificado · Sobrecarga (10 s) · Cadena eléctrica | Tras la sobrecarga, 5 s quieto y expuesto | $7600 |
+| 9 | La Reina de la Colmena | 45 | 250 000 | Nacimiento masivo (25 corredores) · Guardia real (4 super blindados) · Orden de ataque · Caparazón protector (6 s, casi inmune) · Enjambre (desde el 40 %, cada 15 s) | Mientras pare no se mueve y recibe más daño | $9000 |
+| 10 | El Devorador | 50 | 330 000 | Absorción (se cura con cada zombi que muere cerca) · Mordida titánica · Succión · Golpe sísmico · Hambre (cada 20 % perdido pega un 10 % más) | Limpia su alrededor y no se cura | $11 000 |
+| 11 | El Incendiario | 55 | 430 000 | Llamarada frontal · Bombardeo incendiario · Camino ardiente · Sobrecalentamiento (12 s) · Tormenta de llamas | Sobrecalentado recibe un 60 % más | $13 000 |
+| 12 | El Arquitecto de Ruinas | 60 | 560 000 | Destructor de muros (va por tu defensa más dura) · Barrera de escombros · Demolición en cadena · Proyectil estructural · Asedio inteligente | Mientras demuele, +50 % | $15 000 |
+| 13 | La Tormenta Viviente | 65 | 720 000 | Ráfaga monstruosa (te avienta) · Torbellino de escombros · Lluvia de proyectiles · Tormenta de polvo (no se ve) · Huracán final (20 %) | Rompe los **hombros** (por la espalda) y se acaba el viento | $17 000 |
+| 14 | El Titán del Apocalipsis | 70 | 900 000 | Pisotón devastador · Lanzamiento de vehículos · Carga colosal · Golpe de destrucción · Despertar del titán (30 %: pierde armadura y combina ataques) | Rompe las **rodillas** (de frente) y camina más lento | $20 000 |
+| 15 | El Rey de los Muertos | 75 | 1 200 000 | Llamado del ejército · Dominio absoluto (15 s: horda más rápida y dura) · Aniquilación · Resurrección del ejército (30) · Furia del rey (20 %: refuerzos) | Su **corona** tiene tres núcleos: cada uno roto lo debilita y calma a la horda | $30 000 |
 
 ### Cuentas y clasificación
 

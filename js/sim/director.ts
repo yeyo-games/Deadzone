@@ -14,7 +14,7 @@ import {
 import type { EventDef } from '../core/config.ts';
 import { rand, randInt } from '../core/util.ts';
 import type { GameHost, Vec } from '../core/types.d.ts';
-import { bossFor, spawnBoss } from './bosses.ts';
+import { bossFor, bossLoop, spawnBoss } from './bosses.ts';
 
 /** Lo que ve un jugador: caja centrada en (x, y) de medio ancho hw y medio alto hh. */
 export interface View {
@@ -182,7 +182,11 @@ export class Director {
     this.straggleT = 0;
     const bd = boss ? (BOSSES as Record<string, { name: string; tip: string }>)[boss] : null;
     game.banner(
-      bd ? `Oleada ${w} · ¡${bd.name}!` : ev ? `Oleada ${w} · ${ev.name}` : `Oleada ${w}`,
+      bd
+        ? `Oleada ${w} · ¡${bd.name}!${bossLoop(w) ? ` ×${BOSS.loop ** bossLoop(w)}` : ''}`
+        : ev
+          ? `Oleada ${w} · ${ev.name}`
+          : `Oleada ${w}`,
       bd
         ? bd.tip
         : ev
@@ -404,7 +408,7 @@ export class Director {
 
   // Un zombi de la cola: los de oleada con la vida y velocidad de la ronda; el jefe con la suya.
   spawnOne(game: GameHost, type: string, x: number, y: number) {
-    if ((ZOMBIES as Record<string, { boss?: boolean }>)[type]?.boss) spawnBoss(game, type, x, y);
+    if ((ZOMBIES as Record<string, { boss?: boolean }>)[type]?.boss) spawnBoss(game, type, x, y, bossLoop(this.wave));
     else game.horde.spawn(type, x, y, this.hpMult, this.speedMult);
   }
 }

@@ -68,7 +68,10 @@ export function saveProgress(game) {
       abCd: p.abCd,
       heavyAmmo: p.heavyAmmo,
     },
-    blocks: s.blocks.map((b) => ({ kind: b.kind, x: b.x, y: b.y, w: b.w, h: b.h, hp: b.hp, up: b.up || 0 })),
+    // los bloques temporales de los jefes no se guardan
+    blocks: s.blocks
+      .filter((b) => b.tempT === undefined)
+      .map((b) => ({ kind: b.kind, x: b.x, y: b.y, w: b.w, h: b.h, hp: b.hp, up: b.up || 0 })),
     wires: s.wires.map((b) => ({ kind: b.kind, x: b.x, y: b.y, w: b.w, h: b.h, hp: b.hp })),
     robot: { ...game.robot.serialize(), piloted: game.robot.piloted },
     // la misma partida sigue en las estadísticas al continuarla

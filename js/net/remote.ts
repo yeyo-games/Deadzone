@@ -53,6 +53,9 @@ export type RemoteZombie = Pick<
   wob: number;
   fireFx: number;
   spawnT: number;
+  /** jefes: bajo tierra o acechando (casi invisible) */
+  under?: boolean;
+  cloak?: boolean;
 };
 type Row = [string, number, number, number, number, number, number, number?, string?, number?];
 /** Parte de una foto que usa applyStructures: las listas de barricadas y trampas llevan el tipo delante. */
@@ -181,7 +184,17 @@ export class Remote {
   applyBosses(bo: number[], bf: number[]) {
     const status = [];
     for (let i = 0; i + STATUS_N - 1 < bo.length; i += STATUS_N)
-      status.push({ type: TYPES[bo[i]], hp: bo[i + 1] / 1000, phase: bo[i + 2], hard: !!bo[i + 3], fury: !!bo[i + 4] });
+      status.push({
+        type: TYPES[bo[i]],
+        hp: bo[i + 1] / 1000,
+        phase: bo[i + 2],
+        hard: !!bo[i + 3],
+        fury: !!bo[i + 4],
+        atk: bo[i + 5] - 1,
+        part: bo[i + 6] < 0 ? -1 : bo[i + 6] / 100,
+        under: !!bo[i + 7],
+        cloak: !!bo[i + 8],
+      });
     const fx = [];
     for (let i = 0; i + FX_N - 1 < bf.length; i += FX_N) {
       const r = bf.slice(i, i + FX_N);
@@ -213,15 +226,16 @@ export class Remote {
       if (!o) {
         const type = (TYPES[z[i + 1]] || 'normal') as keyof typeof ZOMBIES;
         const def = ZOMBIES[type] as unknown as ZombieDef;
-        const sets = this.sprites()[type];
+        // los jefes se dibujan con su propio juego de imágenes (render/zombies.js lo arma al verlo)
+        const sets = def.boss ? null : this.sprites()[type];
         o = {
           id,
           type,
           def,
           r: def.radius,
           mass: def.mass,
-          si: id % sets.length,
-          spr: sets[id % sets.length] || sets[0],
+          si: sets ? id % sets.length : 0,
+          spr: sets ? sets[id % sets.length] || sets[0] : undefined,
           x,
           y,
           angle: ang,
@@ -256,6 +270,8 @@ export class Remote {
       }
       o.life = f & 32 ? 1 : 99;
       o.lunge = f & 64 ? 1 : o.lunge;
+      o.under = !!(f & 128);
+      o.cloak = !!(f & 256);
       o.maxHp = 100;
       o.hp = life.get(id) ?? 100;
       const ex = extra.get(id);

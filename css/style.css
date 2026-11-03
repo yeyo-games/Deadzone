@@ -307,6 +307,7 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 }
 .boss-top span.hard { color: #9cc3e6; }
 .boss-top span.fury { color: #ff6a4a; }
+.boss-top span.warn { color: #ffd36a; }
 .boss-track {
   display: block;
   height: 10px;

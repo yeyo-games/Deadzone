@@ -902,6 +902,9 @@ export class ServerSim {
         me.heavyAmmo,
         me.manned ? me.manned.x : -1,
         me.manned ? me.manned.y : -1,
+        // frenado por un jefe: décimas que le quedan y a qué parte de su velocidad (centésimas)
+        Math.round((me.slowT || 0) * 10),
+        Math.round((me.slowK ?? 1) * 100),
       ],
       wp: me.weapons.map((w: any) => [w.id, w.mag, w.reserve === Infinity ? -1 : w.reserve]),
       ...world,

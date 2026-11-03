@@ -1,6 +1,6 @@
 // Página de estadísticas (/stats, stats.html): pide los agregados a Supabase con la clave de acceso y los pinta.
 // La clave se valida en Postgres (`estadisticas(clave, desde)`); se recuerda en este navegador.
-import { SHOP, WEAPONS } from '../core/config.ts';
+import { BOSSES, SHOP, WEAPONS } from '../core/config.ts';
 import { storage } from '../core/util.ts';
 import { CLASSES } from '../sim/abilities.ts';
 import { UPGRADES } from '../sim/upgrades.ts';
@@ -21,13 +21,30 @@ const ZOMBI = {
   fat: 'Gordo',
   golden: 'Dorado',
   giant: 'Gigante',
-  boss_charge: 'Jefe (embestida)',
-  boss_stomp: 'Jefe (pisotón)',
-  boss_rock: 'Jefe (piedra)',
-  supremo: 'Rocoso Supremo',
   acid: 'Ácido del gordo',
   desconocida: 'Desconocida',
 };
+// Golpes de los jefes (boss_<ataque> o boss_<zona>) y los jefes mismos, por su nombre.
+const ZONAS = {
+  toxic: 'veneno',
+  fire: 'fuego',
+  elec: 'electricidad',
+  wind: 'torbellino',
+  dust: 'polvo',
+  lob: 'proyectil',
+};
+function causaJefe(c) {
+  if (BOSSES[c]) return BOSSES[c].name;
+  if (!c?.startsWith('boss_')) return c;
+  const id = c.slice(5);
+  if (ZONAS[id]) return `Jefe (${ZONAS[id]})`;
+  for (const b of Object.values(BOSSES)) {
+    const a = b.atk.find((q) => q.id === id);
+    if (a) return `Jefe (${a.name.toLowerCase()})`;
+  }
+  return 'Jefe';
+}
+
 const TIPO = {
   arma: 'Arma',
   municion: 'Munición',
@@ -274,7 +291,7 @@ function pintar(d) {
   tabla(
     $('t-muertes'),
     [
-      { k: (f) => ZOMBI[f.causa] || f.causa, t: 'Causa' },
+      { k: (f) => ZOMBI[f.causa] || causaJefe(f.causa), t: 'Causa' },
       { k: (f) => fmt(f.muertes), t: 'Muertes', n: true, w: (f) => pct(f.muertes, muertes), color: 'hp' },
       { k: (f) => fmt(f.oleada_media, 1), t: 'Oleada media', n: true },
     ],

@@ -62,7 +62,7 @@ type SceneStructures = Pick<Structures, 'grenades' | 'fires' | 'stuck' | 'missil
 type StaticStructures = Pick<Structures, 'blocks' | 'wires' | 'scorches'>;
 /** Lo que encodeWorld lee de la partida (la simulación del servidor). */
 export type WorldSource = {
-  horde: Pick<Horde, 'list' | 'lobs'>;
+  horde: Pick<Horde, 'list' | 'lobs' | 'zones'>;
   pickups: Pick<Pickups, 'list'>;
   bullets: Pick<Bullets, 'list'>;
   structures: SceneStructures;
@@ -97,7 +97,9 @@ export function encodeZombies(list: Zombie[], viewer: Viewer) {
       (o.bs === 'windup' ? 8 : 0) |
       (o.hitT > 0 ? 16 : 0) |
       (o.type === 'golden' && o.life < GOLDEN.warnAt ? 32 : 0) |
-      (o.lunge > 0.3 ? 64 : 0);
+      (o.lunge > 0.3 ? 64 : 0) |
+      (o.under ? 128 : 0) |
+      (o.selfA?.cloak ? 256 : 0);
     z.push(
       o.id,
       TYPES.indexOf(o.type),
@@ -243,7 +245,7 @@ export function encodeWorld(
  * Jefes (sim/bosses.ts), estén donde estén: bo = su barra (STATUS_N por jefe: tipo, vida en milésimas,
  * fase, piel endurecida, furia) · bf = avisos en el suelo y piedras en el aire (FX_N por fila).
  */
-export function encodeBosses(h: Pick<Horde, 'list' | 'lobs'>) {
+export function encodeBosses(h: Pick<Horde, 'list' | 'lobs' | 'zones'>) {
   return {
     bo: bossStatus(h.list).flatMap((b) => [
       TYPES.indexOf(b.type),
@@ -251,6 +253,10 @@ export function encodeBosses(h: Pick<Horde, 'list' | 'lobs'>) {
       b.phase,
       b.hard ? 1 : 0,
       b.fury ? 1 : 0,
+      b.atk + 1,
+      b.part < 0 ? -1 : Math.ceil(b.part * 100),
+      b.under ? 1 : 0,
+      b.cloak ? 1 : 0,
     ]),
     bf: bossFx(h).flatMap((f) => f.map((v, i) => (i === 4 || i === 5 || i === 6 ? r100(v) : Math.round(v)))),
   };

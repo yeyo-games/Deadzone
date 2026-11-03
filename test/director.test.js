@@ -75,8 +75,8 @@ test('cada BOSS.every oleadas llega un jefe primero en la cola, con menos horda 
   assert.equal(k.total, d.queue.length);
   const sin = new Director().composition(BOSS.every - 1);
   assert.ok(k.total < sin.total, 'menos horda que la oleada anterior');
-  // la siguiente vez que tocaría un jefe que aún no existe, no llega ninguno
-  assert.equal(new Director().composition(BOSS.every * (BOSS_ORDER.length + 1)).boss, undefined);
+  // después del último, la lista vuelve a empezar
+  assert.equal(new Director().composition(BOSS.every * (BOSS_ORDER.length + 1)).boss, 1);
 });
 
 test('toros desde la oleada 3, gordos desde la 2, blindados tras la 10', () => {

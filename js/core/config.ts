@@ -429,53 +429,1051 @@ export const ZOMBIES = {
     turn: 1.4,
     blocksBullets: true,
   },
-  // Jefe de la oleada 5 (BOSSES.supremo): un rocoso enorme y encorvado. boss: lleva su propia
-  // cabeza (sim/bosses.ts) y su barra de vida arriba de la pantalla.
-  supremo: {
-    hp: 15000,
-    speed: 0.7,
-    radius: 50,
-    damage: 26,
-    attackRate: 0.6,
-    xp: 400,
-    mass: 80,
-    reach: 16,
-    frames: 8,
-    turn: 1.5,
-    blocksBullets: true,
-    blockDmg: 260,
-    boss: true,
-  },
+  // Jefes (BOSSES): bossZ arma su ficha (sim/bosses.ts lleva su cabeza; su barra va arriba de la pantalla).
+  ...bossZombies(),
 };
 
-// Jefes (sim/bosses.ts): cada BOSS.every oleadas llega uno, en el orden de BOSS_ORDER (el primero en
-// la oleada 5, el segundo en la 10…). Su vida es la de ZOMBIES (en solitario); en grupo se multiplica
-// por 1 + perPlayer por cada jugador extra. La horda que lo acompaña es support de la normal y la oleada
-// del jefe nunca es ronda especial. Fases según la vida que le queda: normal, enfurecido (≤ rage) y
-// desesperado (≤ despair); en cada una espera cd[fase] veces menos entre ataque y ataque.
-export const BOSS = { every: 5, perPlayer: 0.6, support: 0.5, rage: 0.6, despair: 0.3, cd: [1, 0.8, 0.6] };
-export const BOSS_ORDER = ['supremo'];
+// Ficha de zombi de cada jefe: vida (en solitario), radio, velocidad, daño y ritmo de su golpe cuerpo a cuerpo.
+function bossZ(hp: number, radius: number, speed: number, damage: number, attackRate: number) {
+  return {
+    hp,
+    speed,
+    radius,
+    damage,
+    attackRate,
+    xp: Math.round(300 + hp / 100),
+    mass: Math.round(radius * 1.6),
+    reach: 16,
+    frames: 6,
+    turn: 1.6,
+    blocksBullets: true,
+    blockDmg: damage * 10,
+    boss: true,
+  };
+}
+function bossZombies() {
+  return {
+    supremo: bossZ(15000, 50, 0.7, 26, 0.6),
+    aplastador: bossZ(25000, 46, 0.85, 34, 0.7),
+    campanero: bossZ(38000, 40, 0.8, 24, 0.8),
+    contaminado: bossZ(55000, 54, 0.65, 30, 0.6),
+    carcelero: bossZ(78000, 52, 0.7, 36, 0.6),
+    cazadora: bossZ(105000, 36, 1.35, 30, 1.1),
+    excavador: bossZ(145000, 56, 0.7, 40, 0.55),
+    generador: bossZ(190000, 56, 0.7, 36, 0.6),
+    reina: bossZ(250000, 66, 0.45, 40, 0.5),
+    devorador: bossZ(330000, 74, 0.5, 50, 0.5),
+    incendiario: bossZ(430000, 58, 0.7, 40, 0.6),
+    arquitecto: bossZ(560000, 64, 0.6, 48, 0.5),
+    tormenta: bossZ(720000, 62, 0.75, 40, 0.6),
+    titan: bossZ(900000, 84, 0.55, 60, 0.45),
+    rey: bossZ(1200000, 78, 0.7, 60, 0.6),
+  };
+}
 
-// Cada jefe: name, tip (lo que se lee al llegar), reward (dinero para cada jugador al derrotarlo) y
-// wait (s entre ataque y ataque, al azar entre los dos). Los ataques tienen un aviso (windup s) en el suelo.
-// Rocoso Supremo:
-//   charge: embestida en línea recta a speed px/s durante time s; aplasta la madera, golpea lo demás
-//     con block de daño, al jugador le quita hit y lo avienta throw; contra un muro queda aturdido stun s
-//   stomp: pisotón con radio r (si tienes a range px) · rock: piedra que vuela fly s hasta donde estabas
-//   skin: piel endurecida (time s, recibe k del daño, cada cd s) · back: daño por la espalda
-//   fury: al quedar con despair de vida corre speed y pega rate veces más rápido
-export const BOSSES = {
+// Jefes (sim/bosses.ts): cada BOSS.every oleadas llega uno, en el orden de BOSS_ORDER (el primero en
+// la oleada 5, el segundo en la 10… el último en la 75; después vuelven a empezar). Su vida es la de
+// ZOMBIES (en solitario); en grupo se multiplica por 1 + perPlayer por cada jugador extra, y cuando la
+// lista vuelve a empezar, por loop cada vuelta. La horda que lo acompaña es support de la normal y la
+// oleada del jefe nunca es ronda especial. Fases según la vida que le queda: normal, enfurecido (≤ rage)
+// y desesperado (≤ despair); en cada una espera cd[fase] veces menos entre ataque y ataque.
+export const BOSS = { every: 5, perPlayer: 0.6, support: 0.5, rage: 0.6, despair: 0.3, cd: [1, 0.8, 0.6], loop: 1.5 };
+export const BOSS_ORDER = [
+  'supremo',
+  'aplastador',
+  'campanero',
+  'contaminado',
+  'carcelero',
+  'cazadora',
+  'excavador',
+  'generador',
+  'reina',
+  'devorador',
+  'incendiario',
+  'arquitecto',
+  'tormenta',
+  'titan',
+  'rey',
+];
+
+/**
+ * Un ataque de jefe. Todos avisan antes (windup s; un anillo o una franja en el suelo) y se eligen al
+ * azar (w: peso) entre los que tocan por distancia al jugador (min–max px), fase (phase) y espera propia
+ * (cd s). Qué hace cada tipo (k), con sus números:
+ *   charge  embestida: speed px/s durante time s; al jugador hit y throw; a las barricadas block (la
+ *           madera la aplasta si crush); contra un edificio queda aturdido stun s (y recibe vuln de daño);
+ *           dashes: varias embestidas cortas seguidas, cada una desviada hasta spread rad
+ *   ring    golpe en un círculo de radio r en at ('self' a su alrededor, 'target' donde estás, 'front'
+ *           delante de él, 'block' la barricada más cercana, 'strong' la más dura): hit, push (negativo
+ *           atrae), block, slow (te frena a slowK durante slowT s), zone (deja una zona); n golpes cada gap s
+ *   lob     n proyectiles que vuelan fly s: at 'target' (repartidos en spread px), 'radial' (alrededor
+ *           de él, a spread px) o 'block'; al caer, ring de radio r (hit, push, block) y zone
+ *   line    golpe en línea recta de len px y ancho wid: hit, push (negativo atrae), block, root s (te
+ *           deja quieto), zone (zonas a lo largo)
+ *   summon  n zombis de types alrededor de él (at 'self') o junto a ti (at 'target'); hp: su vida
+ *   buff    los zombis a r px (r = 0: todos) van speed veces más rápido y reciben res del daño time s
+ *   self    él mismo time s: recibe dmg del daño (dmg > 1: queda expuesto), corre speed, golpea rate;
+ *           still: no se mueve; cloak: casi invisible; aura: zona que deja a su paso; luego after s
+ *           aturdido recibiendo vuln
+ *   zone    n zonas (kind de BOSS_ZONES) de radio r durante life s: at 'self', 'target' o 'around'
+ *           (repartidas a spread px de ti)
+ *   burrow  se hunde, viaja bajo tierra time s y sale debajo de ti: ring r (hit, push, block); luego
+ *           after s aturdido (vuln)
+ *   leap    salta sobre lo que haya hasta junto a ti en time s: ring r al caer; luego after s quieto (vuln)
+ *   pull    te atrae con fuerza force durante time s si estás a r px (él no se mueve)
+ *   emp     apaga time s las torretas a r px
+ *   walls   n bloques de metal temporales (life s) alrededor de ti ('cage') o entre él y tú ('wall')
+ *   revive  levanta hasta n zombis caídos hace poco, con la mitad de su vida
+ * vuln en cualquier ataque: el daño que recibe mientras lo prepara.
+ */
+export interface BossAtk {
+  id: string;
+  name: string;
+  k: string;
+  windup: number;
+  w?: number;
+  cd?: number;
+  min?: number;
+  max?: number;
+  phase?: number;
+  vuln?: number;
+  at?: string;
+  r?: number;
+  hit?: number;
+  push?: number;
+  block?: number;
+  slowK?: number;
+  slowT?: number;
+  zone?: string;
+  n?: number;
+  gap?: number;
+  fly?: number;
+  spread?: number;
+  len?: number;
+  wid?: number;
+  root?: number;
+  speed?: number;
+  time?: number;
+  throw?: number;
+  crush?: boolean;
+  stun?: number;
+  dashes?: number;
+  types?: string[];
+  hp?: number;
+  res?: number;
+  dmg?: number;
+  rate?: number;
+  still?: boolean;
+  cloak?: boolean;
+  aura?: string;
+  after?: number;
+  force?: number;
+  kind?: string;
+  life?: number;
+}
+
+/**
+ * Lo que tiene cada jefe además de sus ataques:
+ *   back / front: daño que recibe por la espalda / de frente (front < 1: escudo)
+ *   fury: al quedar con at de vida corre speed y pega rate veces más rápido, espera wait veces menos entre
+ *     ataques, recibe dmg del daño y, si summon, llama a esos zombis (n de types) una vez
+ *   trail: deja una zona (kind) a su paso cada every s · heal: se cura per por cada zombi que muere a r px
+ *   hunger: por cada step de vida perdida pega dmg más · stagger: las explosiones lo aturden stun s
+ *   swarm: con at de vida o menos, llama n zombis de types cada every s
+ *   part: una parte que se rompe (name; hp: parte de su vida máxima; from 'back', 'front' o 'any'; share:
+ *     parte del daño que le llega). Rota: off (ataques que ya no hace), speed, dmg (daño que recibe);
+ *     segs: se rompe por tramos, cada uno multiplica dmg y calma a la horda
+ */
+export interface BossDef {
+  name: string;
+  tip: string;
+  reward: number;
+  wait: [number, number];
+  back?: number;
+  front?: number;
+  fury?: {
+    at: number;
+    speed: number;
+    rate: number;
+    wait?: number;
+    dmg?: number;
+    summon?: { n: number; types: string[] };
+  };
+  trail?: { kind: string; every: number; r: number; life: number };
+  heal?: { r: number; per: number };
+  hunger?: { step: number; dmg: number };
+  stagger?: number;
+  swarm?: { at: number; every: number; n: number; types: string[] };
+  part?: {
+    name: string;
+    hp: number;
+    from: string;
+    share: number;
+    off?: string[];
+    speed?: number;
+    dmg?: number;
+    segs?: number;
+  };
+  atk: BossAtk[];
+}
+
+// Zonas que dejan los jefes: dps de daño a quien esté dentro, lo frena a slow, color y nombre de la causa.
+export const BOSS_ZONES: Record<string, { dps: number; slow: number; col: string }> = {
+  toxic: { dps: 9, slow: 0.85, col: '120,200,60' },
+  fire: { dps: 14, slow: 1, col: '255,120,40' },
+  elec: { dps: 16, slow: 0.7, col: '120,190,255' },
+  wind: { dps: 5, slow: 0.45, col: '200,200,190' },
+  dust: { dps: 0, slow: 0.8, col: '150,120,80' },
+};
+export const BOSS_ZONE_ORDER = ['toxic', 'fire', 'elec', 'wind', 'dust'];
+
+export const BOSSES: Record<string, BossDef> = {
   supremo: {
     name: 'El Rocoso Supremo',
     tip: 'Dispárale por la espalda: ahí la piedra es más delgada',
     reward: 1500,
     wait: [2.4, 4],
     back: 1.4,
-    charge: { windup: 1.1, speed: 520, time: 1.4, hit: 35, throw: 1300, block: 1500, stun: 1.6, min: 200, max: 760 },
-    stomp: { windup: 1, r: 200, range: 180, hit: 18, push: 950, block: 300 },
-    rock: { windup: 0.9, fly: 1, r: 85, hit: 30, push: 500, block: 600, min: 170, max: 680 },
-    skin: { windup: 0.7, time: 8, k: 0.5, cd: 20 },
-    fury: { speed: 1.45, rate: 1.7 },
+    fury: { at: 0.3, speed: 1.45, rate: 1.7 },
+    atk: [
+      {
+        id: 'charge',
+        name: 'Embestida rocosa',
+        k: 'charge',
+        windup: 1.1,
+        min: 200,
+        max: 760,
+        speed: 520,
+        time: 1.4,
+        hit: 35,
+        throw: 1300,
+        block: 1500,
+        crush: true,
+        stun: 1.6,
+      },
+      {
+        id: 'stomp',
+        name: 'Pisotón',
+        k: 'ring',
+        windup: 1,
+        max: 230,
+        at: 'self',
+        r: 200,
+        hit: 18,
+        push: 950,
+        block: 300,
+      },
+      {
+        id: 'rock',
+        name: 'Lanzamiento de roca',
+        k: 'lob',
+        windup: 0.9,
+        min: 170,
+        max: 680,
+        at: 'target',
+        n: 1,
+        fly: 1,
+        r: 85,
+        hit: 30,
+        push: 500,
+        block: 600,
+      },
+      { id: 'skin', name: 'Piel endurecida', k: 'self', windup: 0.7, cd: 20, time: 8, dmg: 0.5 },
+    ],
+  },
+  aplastador: {
+    name: 'El Aplastador',
+    tip: 'Si falla la carga queda aturdido 3 s: ahí es cuando pega duro',
+    reward: 2200,
+    wait: [2.2, 3.6],
+    fury: { at: 0.3, speed: 1.3, rate: 1.6 },
+    atk: [
+      {
+        id: 'hammer',
+        name: 'Martillazo',
+        k: 'ring',
+        windup: 1.1,
+        max: 320,
+        at: 'front',
+        r: 170,
+        hit: 30,
+        push: 600,
+        block: 1400,
+      },
+      {
+        id: 'charge',
+        name: 'Carga brutal',
+        k: 'charge',
+        windup: 1,
+        min: 220,
+        max: 800,
+        speed: 600,
+        time: 1.3,
+        hit: 30,
+        throw: 1700,
+        block: 1200,
+        crush: true,
+        stun: 3,
+        vuln: 1,
+      },
+      {
+        id: 'grab',
+        name: 'Agarre demoledor',
+        k: 'line',
+        windup: 0.7,
+        max: 150,
+        len: 140,
+        wid: 60,
+        hit: 45,
+        push: 1900,
+      },
+      {
+        id: 'combo',
+        name: 'Golpes consecutivos',
+        k: 'ring',
+        windup: 0.6,
+        max: 260,
+        at: 'front',
+        r: 110,
+        hit: 16,
+        push: 300,
+        block: 700,
+        n: 3,
+        gap: 0.35,
+      },
+      { id: 'rally', name: 'Rompefilas', k: 'buff', windup: 0.8, cd: 14, r: 600, speed: 1.5, res: 1, time: 6 },
+    ],
+  },
+  campanero: {
+    name: 'El Campanero',
+    tip: 'Rompe la campana de su espalda y se acaban sus llamadas',
+    reward: 3000,
+    wait: [2.4, 3.8],
+    fury: { at: 0.2, speed: 1.2, rate: 1.3, summon: { n: 14, types: ['sprinter'] } },
+    part: { name: 'Campana', hp: 0.12, from: 'back', share: 1, off: ['call', 'wave', 'war'] },
+    atk: [
+      {
+        id: 'call',
+        name: 'Llamada de la horda',
+        k: 'summon',
+        windup: 1.6,
+        cd: 16,
+        at: 'self',
+        n: 20,
+        types: ['normal', 'normal', 'sprinter'],
+      },
+      {
+        id: 'wave',
+        name: 'Onda sonora',
+        k: 'ring',
+        windup: 1,
+        max: 420,
+        at: 'self',
+        r: 380,
+        hit: 4,
+        slowK: 0.5,
+        slowT: 4,
+      },
+      { id: 'war', name: 'Campanada de guerra', k: 'buff', windup: 0.9, cd: 12, r: 520, speed: 1.35, res: 1, time: 8 },
+      { id: 'chain', name: 'Golpe de cadena', k: 'line', windup: 0.7, max: 300, len: 300, wid: 34, hit: 24, push: 500 },
+    ],
+  },
+  contaminado: {
+    name: 'El Contaminado',
+    tip: 'Sus depósitos de la espalda reciben el doble: rodéalo',
+    reward: 3800,
+    wait: [2.4, 3.8],
+    back: 2,
+    trail: { kind: 'toxic', every: 0.5, r: 46, life: 5 },
+    fury: { at: 0.3, speed: 1.25, rate: 1.3 },
+    atk: [
+      {
+        id: 'cloud',
+        name: 'Nube tóxica',
+        k: 'zone',
+        windup: 0.9,
+        cd: 10,
+        at: 'self',
+        kind: 'toxic',
+        n: 1,
+        r: 190,
+        life: 8,
+      },
+      {
+        id: 'spit',
+        name: 'Proyectil corrosivo',
+        k: 'lob',
+        windup: 0.7,
+        min: 160,
+        max: 700,
+        at: 'target',
+        n: 1,
+        fly: 0.8,
+        r: 70,
+        hit: 18,
+        block: 900,
+        zone: 'toxic',
+      },
+      {
+        id: 'burst',
+        name: 'Explosión química',
+        k: 'ring',
+        windup: 1.1,
+        max: 260,
+        at: 'self',
+        r: 240,
+        hit: 24,
+        push: 700,
+        block: 300,
+        zone: 'toxic',
+      },
+      {
+        id: 'rain',
+        name: 'Lluvia corrosiva',
+        k: 'lob',
+        windup: 1.2,
+        min: 120,
+        max: 800,
+        at: 'target',
+        n: 6,
+        spread: 240,
+        fly: 1.2,
+        r: 64,
+        hit: 14,
+        block: 300,
+        zone: 'toxic',
+      },
+    ],
+  },
+  carcelero: {
+    name: 'El Carcelero',
+    tip: 'Su puerta para casi todo de frente: atácalo por los costados y la espalda',
+    reward: 4600,
+    wait: [2.4, 3.6],
+    front: 0.2,
+    back: 1.2,
+    fury: { at: 0.3, speed: 1.25, rate: 1.4 },
+    atk: [
+      {
+        id: 'bash',
+        name: 'Golpe de prisión',
+        k: 'line',
+        windup: 0.8,
+        max: 220,
+        len: 170,
+        wid: 80,
+        hit: 30,
+        push: 900,
+        block: 1600,
+      },
+      {
+        id: 'hook',
+        name: 'Cadena de captura',
+        k: 'line',
+        windup: 0.8,
+        min: 140,
+        max: 420,
+        len: 420,
+        wid: 30,
+        hit: 12,
+        push: -900,
+        root: 1.2,
+      },
+      { id: 'cage', name: 'Encierro', k: 'walls', windup: 1, cd: 14, min: 120, max: 700, kind: 'cage', n: 8, life: 6 },
+      {
+        id: 'march',
+        name: 'Carga blindada',
+        k: 'charge',
+        windup: 1,
+        min: 220,
+        max: 700,
+        speed: 330,
+        time: 2,
+        hit: 26,
+        throw: 900,
+        block: 900,
+        crush: true,
+        stun: 0.8,
+      },
+    ],
+  },
+  cazadora: {
+    name: 'La Cazadora',
+    tip: 'Después de cada salto se queda quieta un momento; las explosiones la aturden',
+    reward: 5500,
+    wait: [1.6, 2.8],
+    stagger: 0.7,
+    fury: { at: 0.25, speed: 1.6, rate: 1.4, wait: 0.7 },
+    atk: [
+      {
+        id: 'leap',
+        name: 'Salto depredador',
+        k: 'leap',
+        windup: 0.6,
+        min: 180,
+        max: 700,
+        time: 0.7,
+        r: 110,
+        hit: 26,
+        push: 700,
+        block: 300,
+        after: 1.1,
+        vuln: 1.4,
+      },
+      {
+        id: 'dash',
+        name: 'Ataque relámpago',
+        k: 'charge',
+        windup: 0.5,
+        min: 120,
+        max: 520,
+        speed: 820,
+        time: 0.3,
+        hit: 18,
+        throw: 700,
+        block: 300,
+        dashes: 3,
+        spread: 0.7,
+        stun: 0.8,
+      },
+      { id: 'stalk', name: 'Acecho', k: 'self', windup: 0.5, cd: 14, time: 3.5, speed: 1.8, cloak: true, dmg: 1 },
+      {
+        id: 'scream',
+        name: 'Grito de persecución',
+        k: 'summon',
+        windup: 1,
+        cd: 15,
+        at: 'self',
+        n: 10,
+        types: ['sprinter'],
+      },
+    ],
+  },
+  excavador: {
+    name: 'El Excavador',
+    tip: 'Al salir de la tierra tarda 4 s en reponerse',
+    reward: 6500,
+    wait: [2.4, 3.8],
+    fury: { at: 0.3, speed: 1.2, rate: 1.3, wait: 0.75 },
+    atk: [
+      {
+        id: 'dig',
+        name: 'Ataque subterráneo',
+        k: 'burrow',
+        windup: 1,
+        min: 200,
+        max: 1100,
+        time: 2.4,
+        r: 150,
+        hit: 34,
+        push: 900,
+        block: 800,
+        after: 4,
+        vuln: 1.3,
+      },
+      {
+        id: 'quake',
+        name: 'Derrumbe',
+        k: 'ring',
+        windup: 1.2,
+        max: 700,
+        at: 'target',
+        r: 170,
+        hit: 20,
+        push: 400,
+        block: 1800,
+      },
+      {
+        id: 'debris',
+        name: 'Lanzamiento de escombros',
+        k: 'lob',
+        windup: 0.9,
+        max: 600,
+        at: 'radial',
+        n: 8,
+        spread: 260,
+        fly: 0.9,
+        r: 70,
+        hit: 18,
+        block: 500,
+      },
+      {
+        id: 'tunnel',
+        name: 'Túnel de invasión',
+        k: 'summon',
+        windup: 1.3,
+        cd: 16,
+        at: 'target',
+        n: 12,
+        types: ['normal', 'swat', 'fat'],
+      },
+      {
+        id: 'wreck',
+        name: 'Demolición',
+        k: 'ring',
+        windup: 0.7,
+        max: 600,
+        at: 'block',
+        r: 80,
+        hit: 10,
+        block: 900,
+        n: 4,
+        gap: 0.5,
+      },
+    ],
+  },
+  generador: {
+    name: 'El Generador',
+    tip: 'Tras la sobrecarga queda inmóvil y vulnerable 5 s',
+    reward: 7600,
+    wait: [2.2, 3.4],
+    fury: { at: 0.3, speed: 1.2, rate: 1.4, wait: 0.75 },
+    atk: [
+      {
+        id: 'bolt',
+        name: 'Descarga eléctrica',
+        k: 'line',
+        windup: 0.7,
+        max: 560,
+        len: 560,
+        wid: 26,
+        hit: 30,
+        push: 300,
+        slowK: 0.5,
+        slowT: 1.5,
+      },
+      { id: 'emp', name: 'Pulso electromagnético', k: 'emp', windup: 1.2, cd: 18, r: 700, time: 6 },
+      {
+        id: 'floor',
+        name: 'Suelo electrificado',
+        k: 'zone',
+        windup: 1,
+        cd: 9,
+        at: 'around',
+        kind: 'elec',
+        n: 4,
+        r: 90,
+        spread: 220,
+        life: 5,
+      },
+      {
+        id: 'over',
+        name: 'Sobrecarga',
+        k: 'self',
+        windup: 0.8,
+        cd: 26,
+        time: 10,
+        speed: 1.5,
+        rate: 1.6,
+        dmg: 0.8,
+        aura: 'elec',
+        after: 5,
+        vuln: 1.6,
+      },
+      {
+        id: 'arc',
+        name: 'Cadena eléctrica',
+        k: 'ring',
+        windup: 0.9,
+        max: 700,
+        at: 'target',
+        r: 260,
+        hit: 22,
+        slowK: 0.6,
+        slowT: 1.5,
+        zone: 'elec',
+      },
+    ],
+  },
+  reina: {
+    name: 'La Reina de la Colmena',
+    tip: 'Mientras pare infectados no se mueve y recibe más daño',
+    reward: 9000,
+    wait: [2.6, 4],
+    swarm: { at: 0.4, every: 15, n: 8, types: ['sprinter'] },
+    fury: { at: 0.25, speed: 1.3, rate: 1.3 },
+    atk: [
+      {
+        id: 'brood',
+        name: 'Nacimiento masivo',
+        k: 'summon',
+        windup: 2,
+        cd: 18,
+        at: 'self',
+        n: 25,
+        types: ['sprinter'],
+        vuln: 1.4,
+      },
+      {
+        id: 'guard',
+        name: 'Guardia real',
+        k: 'summon',
+        windup: 1.6,
+        cd: 26,
+        at: 'self',
+        n: 4,
+        types: ['heavy'],
+        vuln: 1.4,
+      },
+      { id: 'order', name: 'Orden de ataque', k: 'buff', windup: 1, cd: 14, r: 0, speed: 1.3, res: 0.85, time: 8 },
+      { id: 'shell', name: 'Caparazón protector', k: 'self', windup: 0.6, cd: 22, time: 6, dmg: 0.1, still: true },
+      { id: 'spike', name: 'Aguijón', k: 'line', windup: 0.8, max: 300, len: 300, wid: 50, hit: 30, push: 700 },
+    ],
+  },
+  devorador: {
+    name: 'El Devorador',
+    tip: 'Se cura cuando mueren zombis cerca: limpia su alrededor',
+    reward: 11000,
+    wait: [2.4, 3.6],
+    heal: { r: 420, per: 900 },
+    hunger: { step: 0.2, dmg: 0.1 },
+    fury: { at: 0.2, speed: 1.3, rate: 1.3 },
+    atk: [
+      {
+        id: 'bite',
+        name: 'Mordida titánica',
+        k: 'line',
+        windup: 0.7,
+        max: 200,
+        len: 180,
+        wid: 90,
+        hit: 60,
+        push: 900,
+        block: 1500,
+      },
+      { id: 'suck', name: 'Succión', k: 'pull', windup: 0.8, cd: 12, max: 520, r: 520, force: 300, time: 3 },
+      {
+        id: 'quake',
+        name: 'Golpe sísmico',
+        k: 'ring',
+        windup: 1.2,
+        max: 400,
+        at: 'self',
+        r: 340,
+        hit: 18,
+        push: 900,
+        block: 900,
+      },
+      {
+        id: 'spew',
+        name: 'Vómito de restos',
+        k: 'lob',
+        windup: 1,
+        min: 200,
+        max: 700,
+        at: 'target',
+        n: 3,
+        spread: 160,
+        fly: 1,
+        r: 80,
+        hit: 22,
+        block: 500,
+      },
+    ],
+  },
+  incendiario: {
+    name: 'El Incendiario',
+    tip: 'Cuando se sobrecalienta, sus depósitos quedan expuestos: recibe un 60 % más',
+    reward: 13000,
+    wait: [2.2, 3.4],
+    trail: { kind: 'fire', every: 0.6, r: 40, life: 4 },
+    fury: { at: 0.3, speed: 1.25, rate: 1.3, wait: 0.75 },
+    atk: [
+      {
+        id: 'flame',
+        name: 'Llamarada frontal',
+        k: 'line',
+        windup: 0.8,
+        max: 320,
+        len: 320,
+        wid: 70,
+        hit: 22,
+        push: 300,
+        zone: 'fire',
+      },
+      {
+        id: 'bomb',
+        name: 'Bombardeo incendiario',
+        k: 'lob',
+        windup: 1,
+        min: 150,
+        max: 750,
+        at: 'target',
+        n: 4,
+        spread: 200,
+        fly: 1,
+        r: 70,
+        hit: 14,
+        block: 300,
+        zone: 'fire',
+      },
+      {
+        id: 'heat',
+        name: 'Sobrecalentamiento',
+        k: 'self',
+        windup: 0.8,
+        cd: 24,
+        time: 12,
+        rate: 1.4,
+        dmg: 1.6,
+        aura: 'fire',
+      },
+      {
+        id: 'storm',
+        name: 'Tormenta de llamas',
+        k: 'zone',
+        windup: 1.4,
+        cd: 16,
+        phase: 1,
+        at: 'around',
+        kind: 'fire',
+        n: 8,
+        r: 80,
+        spread: 520,
+        life: 6,
+      },
+    ],
+  },
+  arquitecto: {
+    name: 'El Arquitecto de Ruinas',
+    tip: 'Mientras demuele, sus brazos quedan expuestos: recibe un 50 % más',
+    reward: 15000,
+    wait: [2.4, 3.6],
+    fury: { at: 0.3, speed: 1.2, rate: 1.3, wait: 0.75 },
+    atk: [
+      {
+        id: 'breaker',
+        name: 'Destructor de muros',
+        k: 'ring',
+        windup: 1.2,
+        max: 900,
+        at: 'strong',
+        r: 120,
+        hit: 20,
+        block: 3000,
+        vuln: 1.5,
+      },
+      {
+        id: 'wall',
+        name: 'Barrera de escombros',
+        k: 'walls',
+        windup: 0.9,
+        cd: 14,
+        min: 200,
+        max: 800,
+        kind: 'wall',
+        n: 5,
+        life: 8,
+      },
+      {
+        id: 'chain',
+        name: 'Demolición en cadena',
+        k: 'ring',
+        windup: 1,
+        max: 700,
+        at: 'block',
+        r: 230,
+        hit: 18,
+        block: 1300,
+        vuln: 1.5,
+      },
+      {
+        id: 'slab',
+        name: 'Proyectil estructural',
+        k: 'lob',
+        windup: 1,
+        min: 180,
+        max: 800,
+        at: 'target',
+        n: 1,
+        fly: 1.1,
+        r: 120,
+        hit: 40,
+        push: 700,
+        block: 1400,
+      },
+      {
+        id: 'siege',
+        name: 'Asedio inteligente',
+        k: 'summon',
+        windup: 1.4,
+        cd: 18,
+        at: 'target',
+        n: 15,
+        types: ['normal', 'swat', 'bull'],
+      },
+    ],
+  },
+  tormenta: {
+    name: 'La Tormenta Viviente',
+    tip: 'Rompe los mecanismos de sus hombros (por la espalda) y se acaba el viento',
+    reward: 17000,
+    wait: [2.2, 3.4],
+    part: { name: 'Hombros', hp: 0.15, from: 'back', share: 1, off: ['gust', 'whirl', 'dust'] },
+    fury: { at: 0.2, speed: 1.2, rate: 1.3, wait: 0.6 },
+    atk: [
+      {
+        id: 'gust',
+        name: 'Ráfaga monstruosa',
+        k: 'line',
+        windup: 0.9,
+        max: 600,
+        len: 600,
+        wid: 120,
+        hit: 10,
+        push: 1700,
+      },
+      {
+        id: 'whirl',
+        name: 'Torbellino de escombros',
+        k: 'zone',
+        windup: 1,
+        cd: 10,
+        at: 'target',
+        kind: 'wind',
+        n: 1,
+        r: 150,
+        life: 7,
+      },
+      {
+        id: 'hail',
+        name: 'Lluvia de proyectiles',
+        k: 'lob',
+        windup: 1,
+        min: 100,
+        max: 800,
+        at: 'target',
+        n: 7,
+        spread: 260,
+        fly: 1.1,
+        r: 60,
+        hit: 16,
+        block: 400,
+      },
+      {
+        id: 'dust',
+        name: 'Tormenta de polvo',
+        k: 'zone',
+        windup: 1.2,
+        cd: 20,
+        at: 'self',
+        kind: 'dust',
+        n: 1,
+        r: 520,
+        life: 8,
+      },
+    ],
+  },
+  titan: {
+    name: 'El Titán del Apocalipsis',
+    tip: 'Rompe las placas de sus rodillas (de frente) y caminará más lento',
+    reward: 20000,
+    wait: [2.4, 3.6],
+    part: { name: 'Rodillas', hp: 0.12, from: 'front', share: 0.5, speed: 0.6 },
+    fury: { at: 0.3, speed: 1.5, rate: 1.5, wait: 0.5, dmg: 1.25 },
+    atk: [
+      {
+        id: 'stomp',
+        name: 'Pisotón devastador',
+        k: 'ring',
+        windup: 1.3,
+        max: 420,
+        at: 'self',
+        r: 380,
+        hit: 30,
+        push: 1200,
+        block: 700,
+      },
+      {
+        id: 'car',
+        name: 'Lanzamiento de vehículos',
+        k: 'lob',
+        windup: 1.1,
+        min: 200,
+        max: 900,
+        at: 'target',
+        n: 1,
+        fly: 1.2,
+        r: 130,
+        hit: 45,
+        push: 900,
+        block: 2200,
+      },
+      {
+        id: 'charge',
+        name: 'Carga colosal',
+        k: 'charge',
+        windup: 1.2,
+        min: 250,
+        max: 900,
+        speed: 480,
+        time: 1.8,
+        hit: 40,
+        throw: 1600,
+        block: 3000,
+        crush: true,
+        stun: 1.5,
+      },
+      {
+        id: 'doom',
+        name: 'Golpe de destrucción',
+        k: 'ring',
+        windup: 2,
+        max: 1000,
+        at: 'strong',
+        r: 200,
+        hit: 50,
+        push: 1000,
+        block: 4500,
+      },
+    ],
+  },
+  rey: {
+    name: 'El Rey de los Muertos',
+    tip: 'Su corona tiene tres núcleos: cada uno que rompas lo debilita y calma a la horda',
+    reward: 30000,
+    wait: [2.2, 3.4],
+    part: { name: 'Corona', hp: 0.15, from: 'any', share: 0.3, dmg: 1.2, segs: 3 },
+    swarm: { at: 0.2, every: 12, n: 8, types: ['normal', 'sprinter', 'swat', 'bull'] },
+    fury: { at: 0.2, speed: 1.4, rate: 1.4, wait: 0.55 },
+    atk: [
+      {
+        id: 'army',
+        name: 'Llamado del ejército',
+        k: 'summon',
+        windup: 1.5,
+        cd: 18,
+        at: 'self',
+        n: 16,
+        types: ['normal', 'sprinter', 'swat', 'fat', 'bull', 'rock'],
+      },
+      { id: 'rule', name: 'Dominio absoluto', k: 'buff', windup: 1.2, cd: 24, r: 0, speed: 1.3, res: 0.7, time: 15 },
+      {
+        id: 'doom',
+        name: 'Aniquilación',
+        k: 'ring',
+        windup: 3,
+        max: 900,
+        at: 'target',
+        r: 280,
+        hit: 65,
+        push: 1300,
+        block: 5000,
+      },
+      { id: 'raise', name: 'Resurrección del ejército', k: 'revive', windup: 1.6, cd: 22, n: 30 },
+      {
+        id: 'sweep',
+        name: 'Golpe real',
+        k: 'line',
+        windup: 0.8,
+        max: 300,
+        len: 300,
+        wid: 90,
+        hit: 40,
+        push: 1000,
+        block: 1500,
+      },
+    ],
   },
 };
 
@@ -510,6 +1508,20 @@ export const BOUNTY = {
   giant: 2.5,
   golden: 0,
   supremo: 100,
+  aplastador: 150,
+  campanero: 200,
+  contaminado: 250,
+  carcelero: 300,
+  cazadora: 350,
+  excavador: 400,
+  generador: 450,
+  reina: 500,
+  devorador: 550,
+  incendiario: 600,
+  arquitecto: 650,
+  tormenta: 700,
+  titan: 800,
+  rey: 1000,
 };
 
 // Tamaño y ritmo de las oleadas: rondas cortas.
@@ -1155,6 +2167,20 @@ export const ZOMBIE_VARIANTS = {
   rock: 2,
   giant: 2,
   supremo: 1,
+  aplastador: 1,
+  campanero: 1,
+  contaminado: 1,
+  carcelero: 1,
+  cazadora: 1,
+  excavador: 1,
+  generador: 1,
+  reina: 1,
+  devorador: 1,
+  incendiario: 1,
+  arquitecto: 1,
+  tormenta: 1,
+  titan: 1,
+  rey: 1,
 };
 
 // Colores de carrocería de los coches abandonados (el mundo elige uno al generarse).

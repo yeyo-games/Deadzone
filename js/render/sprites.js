@@ -6,10 +6,10 @@ import { TAU, makeCanvas, mulberry32, rrange, rpick, roundRect, shade } from '..
 export const OUT = '#141612';
 
 /** @typedef {CanvasRenderingContext2D} Ctx */
-/** @typedef {keyof typeof ZOMBIE_VARIANTS} ZType */
+/** @typedef {'normal' | 'golden' | 'swat' | 'heavy' | 'sprinter' | 'fat' | 'bull' | 'rock' | 'giant'} ZType zombis comunes (los jefes van en bossart.js) */
 /** @typedef {{ skin: string, pants: string, hair: string, seed: number }} PalBase */
 /** @typedef {PalBase & { shirt: string }} PalShirt */
-/** @typedef {{ normal: PalShirt, golden: PalShirt, sprinter: PalShirt, fat: PalShirt, swat: PalShirt & { vest: string, shield: string }, heavy: PalShirt & { plate: string, dark: string, camo: string }, bull: PalBase & { bone: string, vein: string }, rock: { stone: string, light: string, dark: string, moss: string, skin: string, eye: string, seed: number }, giant: PalShirt & { metal: string }, supremo: { stone: string, light: string, dark: string, moss: string, skin: string, eye: string, glow: string, seed: number } }} PalOf paleta de cada tipo de zombi */
+/** @typedef {{ normal: PalShirt, golden: PalShirt, sprinter: PalShirt, fat: PalShirt, swat: PalShirt & { vest: string, shield: string }, heavy: PalShirt & { plate: string, dark: string, camo: string }, bull: PalBase & { bone: string, vein: string }, rock: { stone: string, light: string, dark: string, moss: string, skin: string, eye: string, seed: number }, giant: PalShirt & { metal: string } }} PalOf paleta de cada tipo de zombi */
 /** @typedef {{ [K in ZType]: (g: Ctx, r: number, p: PalOf[K], ph: number) => void }} Drawers */
 /** @typedef {{ frames: HTMLCanvasElement[], flash: HTMLCanvasElement[], dead: HTMLCanvasElement, burnt: HTMLCanvasElement, size: number, half: number }} ZSet */
 /** @typedef {{ id: string, name: string, colors: string[] }} LookPart */
@@ -27,7 +27,7 @@ function ctx2d(c) {
 /* ---------- Primitivas ---------- */
 
 /** @param {Ctx} g @param {number} x @param {number} y @param {number} rx @param {number} ry @param {number} rot @param {string} fill @param {string | null} [stroke] @param {number} [lw] */
-function ell(g, x, y, rx, ry, rot, fill, stroke = OUT, lw = 1.4) {
+export function ell(g, x, y, rx, ry, rot, fill, stroke = OUT, lw = 1.4) {
   g.beginPath();
   g.ellipse(x, y, rx, ry, rot || 0, 0, TAU);
   g.fillStyle = fill;
@@ -39,11 +39,11 @@ function ell(g, x, y, rx, ry, rot, fill, stroke = OUT, lw = 1.4) {
   }
 }
 /** @param {Ctx} g @param {number} x @param {number} y @param {number} r @param {string} fill @param {string | null} [stroke] @param {number} [lw] */
-function circ(g, x, y, r, fill, stroke = OUT, lw = 1.4) {
+export function circ(g, x, y, r, fill, stroke = OUT, lw = 1.4) {
   ell(g, x, y, r, r, 0, fill, stroke, lw);
 }
 /** @param {Ctx} g @param {number} x1 @param {number} y1 @param {number} x2 @param {number} y2 @param {number} w @param {string} fill */
-function limb(g, x1, y1, x2, y2, w, fill) {
+export function limb(g, x1, y1, x2, y2, w, fill) {
   g.lineCap = 'round';
   g.beginPath();
   g.moveTo(x1, y1);
@@ -56,7 +56,7 @@ function limb(g, x1, y1, x2, y2, w, fill) {
   g.stroke();
 }
 /** @param {Ctx} g @param {number} r @param {number} [a] */
-function softShadow(g, r, a = 0.38) {
+export function softShadow(g, r, a = 0.38) {
   const gr = g.createRadialGradient(0, 0, r * 0.2, 0, 0, r);
   gr.addColorStop(0, `rgba(0,0,0,${a})`);
   gr.addColorStop(1, 'rgba(0,0,0,0)');
@@ -250,18 +250,6 @@ const BULL_PALETTES = [
 const ROCK_PALETTES = [
   { stone: '#7d776c', light: '#9b9487', dark: '#565046', moss: '#5d6a3a', skin: '#8a9178', eye: '#f0a848' },
   { stone: '#76695a', light: '#948672', dark: '#4d4338', moss: '#8a7a4a', skin: '#939880', eye: '#e8d070' },
-];
-// Rocoso Supremo (jefe): basalto oscuro, grietas de lava en la espalda (su punto débil) y ojos de brasa.
-const SUPREMO_PALETTES = [
-  {
-    stone: '#57524b',
-    light: '#77706a',
-    dark: '#2f2c28',
-    moss: '#4a5232',
-    skin: '#5e5852',
-    eye: '#ffb04a',
-    glow: '#ff7a2a',
-  },
 ];
 const GIANT_PALETTES = [
   { skin: '#748262', shirt: '#3a3631', pants: '#28282a', hair: '#151311', metal: '#6d6f70' },
@@ -670,7 +658,7 @@ function drawRock(g, r, p, ph) {
  * Peñascos para dibujar rocosos: boulder (el contorno irregular) y stone (con luz y sombra).
  * @param {Ctx} g @param {{ stone: string, light: string, dark: string }} p @param {() => number} rng
  */
-function rockKit(g, p, rng) {
+export function rockKit(g, p, rng) {
   /** Peñasco irregular de n caras alrededor de (x, y). @param {number} x @param {number} y @param {number} rx @param {number} ry @param {number} n @param {number} jit */
   const boulder = (x, y, rx, ry, n, jit) => {
     g.beginPath();
@@ -710,10 +698,10 @@ function rockKit(g, p, rng) {
 
 /**
  * Piernas, cuerpo de piedra con placas, musgo y grietas, y brazos con puños de roca (sin cabeza).
- * @param {Ctx} g @param {number} r @param {PalOf["rock"] | PalOf["supremo"]} p @param {number} ph @param {() => number} rng
+ * @param {Ctx} g @param {number} r @param {PalOf["rock"] & { glow?: string }} p @param {number} ph @param {() => number} rng
  * @param {ReturnType<typeof rockKit>["boulder"]} boulder @param {ReturnType<typeof rockKit>["stone"]} stone
  */
-function rockBody(g, r, p, ph, rng, boulder, stone) {
+export function rockBody(g, r, p, ph, rng, boulder, stone) {
   const s = Math.sin(ph);
   // piernas: dos bloques que se arrastran
   const stride = r * 0.22;
@@ -776,69 +764,6 @@ function rockBody(g, r, p, ph, rng, boulder, stone) {
   stone(r * 0.92 - sw, r * 0.7, r * 0.26, r * 0.24, 6, 1.8);
 }
 
-// Rocoso Supremo (jefe): un rocoso enorme y encorvado. Brazos más largos con puños gigantes, placas
-// gruesas en hombros y lomo, una cresta de piedra por la columna y, atrás, la espalda agrietada con
-// lava encendida: ahí recibe más daño. Mira hacia +x.
-/** @param {Ctx} g @param {number} r @param {PalOf["supremo"]} p @param {number} ph */
-function drawSupremo(g, r, p, ph) {
-  softShadow(g, r * 1.45, 0.55);
-  const s = Math.sin(ph);
-  const rng = mulberry32(p.seed);
-  const { boulder, stone } = rockKit(g, p, rng);
-  rockBody(g, r, p, ph, rng, boulder, stone);
-  // espalda agrietada: carne al rojo entre placas rotas
-  g.save();
-  boulder(-r * 0.52, 0, r * 0.32, r * 0.5, 9, 0.15);
-  g.fillStyle = '#3a1d12';
-  g.fill();
-  g.clip();
-  const lava = g.createRadialGradient(-r * 0.55, 0, 0, -r * 0.55, 0, r * 0.5);
-  lava.addColorStop(0, '#ffd27a');
-  lava.addColorStop(0.45, p.glow);
-  lava.addColorStop(1, 'rgba(120,30,10,0.2)');
-  g.fillStyle = lava;
-  g.fillRect(-r, -r, r, r * 2);
-  g.restore();
-  // placas rotas encima de la lava (dejan ver las grietas)
-  for (const [px, py, rx, ry] of [
-    [-0.66, -0.26, 0.15, 0.13],
-    [-0.62, 0.22, 0.14, 0.15],
-    [-0.42, -0.02, 0.12, 0.12],
-  ])
-    stone(px * r, py * r, rx * r, ry * r, 6, 1.2);
-  g.strokeStyle = '#ffcf70';
-  g.lineWidth = 1.3;
-  g.beginPath();
-  for (let i = 0; i < 6; i++) {
-    const y = rrange(rng, -0.42, 0.42) * r;
-    g.moveTo(-r * 0.78, y);
-    g.lineTo(-r * rrange(rng, 0.42, 0.55), y + rrange(rng, -0.12, 0.12) * r);
-  }
-  g.stroke();
-  // cresta de piedra por la columna
-  for (let i = 0; i < 4; i++) stone(r * (0.08 - i * 0.16), 0, r * 0.09, r * 0.12, 5, 1.3);
-  // hombreras enormes y puños más grandes (brazos de demolición)
-  const sw = s * r * 0.12;
-  stone(r * 0.02, -r * 0.86, r * 0.42, r * 0.34, 8, 2);
-  stone(r * 0.02, r * 0.86, r * 0.42, r * 0.34, 8, 2);
-  stone(r * 1.04 + sw, -r * 0.74, r * 0.34, r * 0.3, 7, 2);
-  stone(r * 1.04 - sw, r * 0.74, r * 0.34, r * 0.3, 7, 2);
-  // cabeza baja, hundida entre las hombreras, con cuernos de roca y ojos de brasa
-  circ(g, r * 0.36, s * r * 0.02, r * 0.2, p.skin, OUT, 1.8);
-  stone(r * 0.3, s * r * 0.02, r * 0.17, r * 0.19, 6, 1.4);
-  stone(r * 0.26, -r * 0.2, r * 0.08, r * 0.06, 5, 1.2);
-  stone(r * 0.26, r * 0.2, r * 0.08, r * 0.06, 5, 1.2);
-  g.fillStyle = p.glow;
-  g.globalAlpha = 0.45;
-  g.beginPath();
-  g.arc(r * 0.5, s * r * 0.02, r * 0.12, 0, TAU);
-  g.fill();
-  g.globalAlpha = 1;
-  g.fillStyle = p.eye;
-  g.fillRect(r * 0.47, -r * 0.08 + s * r * 0.02, r * 0.06, r * 0.05);
-  g.fillRect(r * 0.47, r * 0.03 + s * r * 0.02, r * 0.06, r * 0.05);
-}
-
 /** @type {Drawers} */
 const DRAWERS = {
   normal: drawNormal,
@@ -850,7 +775,6 @@ const DRAWERS = {
   bull: drawBull,
   rock: drawRock,
   giant: drawGiant,
-  supremo: drawSupremo,
 };
 /** @type {{ [K in ZType]: Omit<PalOf[K], 'seed'>[] }} */
 const PALETTES = {
@@ -863,11 +787,14 @@ const PALETTES = {
   bull: BULL_PALETTES,
   rock: ROCK_PALETTES,
   giant: GIANT_PALETTES,
-  supremo: SUPREMO_PALETTES,
 };
 
-/** @template {ZType} T @param {T} type @param {number} r @param {number} frames @param {PalOf[T]} pal @param {number} scale @param {number} pad @returns {ZSet} */
-function buildSet(type, r, frames, pal, scale, pad) {
+/**
+ * Juego de imágenes de un zombi: cada paso de la caminata, su destello, su cadáver y el calcinado.
+ * @template P @param {(g: Ctx, r: number, p: P, ph: number) => void} draw @param {number} r @param {number} frames
+ * @param {P & { seed: number }} pal @param {number} scale @param {number} pad @returns {ZSet}
+ */
+export function buildSet(draw, r, frames, pal, scale, pad) {
   const half = r * pad;
   const size = half * 2;
   const px = size * scale;
@@ -879,7 +806,7 @@ function buildSet(type, r, frames, pal, scale, pad) {
     const c = makeCanvas(px, px);
     const g = ctx2d(c);
     g.setTransform(scale, 0, 0, scale, half * scale, half * scale);
-    DRAWERS[type](g, r, pal, (f / frames) * TAU);
+    draw(g, r, pal, (f / frames) * TAU);
     frameList.push(c);
     const fl = makeCanvas(px, px);
     const fg = ctx2d(fl);
@@ -956,7 +883,6 @@ export function zombieSprites() {
     bull: [],
     rock: [],
     giant: [],
-    supremo: [],
   };
   /** @type {Record<ZType, { r: number, frames: number, scale: number, pad: number }>} */
   const conf = {
@@ -969,13 +895,12 @@ export function zombieSprites() {
     heavy: { r: 22, frames: 6, scale: 2.4, pad: 1.45 },
     bull: { r: 17, frames: 6, scale: 2.5, pad: 1.65 },
     rock: { r: 34, frames: 6, scale: 2.3, pad: 1.5 },
-    supremo: { r: 50, frames: 8, scale: 2, pad: 1.55 },
   };
   for (const type of /** @type {ZType[]} */ (Object.keys(conf))) {
     const k = conf[type];
     PALETTES[type].forEach((pal, i) => {
       const seed = 100 + i * 31 + type.length * 7;
-      sets[type].push(buildSet(type, k.r, k.frames, { ...pal, seed }, k.scale, k.pad));
+      sets[type].push(buildSet(/** @type {any} */ (DRAWERS[type]), k.r, k.frames, { ...pal, seed }, k.scale, k.pad));
     });
     if (sets[type].length !== ZOMBIE_VARIANTS[type])
       throw new Error(`ZOMBIE_VARIANTS.${type} no coincide con las paletas`);

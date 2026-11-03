@@ -1,5 +1,6 @@
 // Eventos de combate del jugador local: bajas, botín, ácido, cohetes, golpes y muerte. Las reglas en sí
 // (iguales en el servidor) viven en sim/rules.js; aquí se decide qué pasa con el dinero y los avisos.
+import { BOSS_ORDER } from './core/config.ts';
 import { clamp, storage } from './core/util.ts';
 import * as Rules from './sim/rules.ts';
 import { comboBreak, comboKill, comboTick } from './sim/combo.ts';
@@ -12,7 +13,7 @@ export function hitZombie(game, z, b, hx, hy) {
 }
 
 // Bajas que congelan el mundo un instante por sí solas.
-const HEFTY = new Set(['bull', 'heavy', 'giant', 'golden', 'rock', 'supremo']);
+const HEFTY = new Set(['bull', 'heavy', 'giant', 'golden', 'rock', ...BOSS_ORDER]);
 
 export function killZombie(game, z) {
   // la baja alarga la racha de quien la hizo y su multiplicador sube el dinero y la experiencia
@@ -215,7 +216,7 @@ export function totalKills(game) {
     (k.bull || 0) +
     (k.rock || 0) +
     (k.golden || 0) +
-    (k.supremo || 0) +
+    BOSS_ORDER.reduce((n, b) => n + (k[b] || 0), 0) +
     k.giant
   );
 }

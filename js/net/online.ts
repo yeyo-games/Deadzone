@@ -701,6 +701,9 @@ export class Online {
     const hp = Number(st[0]) || 0;
     const alive = !!st[2];
     const acid = (Number(st[8]) || 0) / 10;
+    // frenado por un jefe: la predicción tiene que ir igual de lenta que el servidor
+    p.slowT = (Number(st[13]) || 0) / 10;
+    p.slowK = st[14] === undefined ? 1 : Number(st[14]) / 100;
     if (alive && p.alive && hp < p.hp - 0.5) {
       // golpe confirmado por el servidor (o la quemadura del ácido)
       p.hurtT = 0.3;

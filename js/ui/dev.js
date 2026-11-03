@@ -3,7 +3,7 @@
 // ?dev=1 en la dirección (queda guardado en este navegador; ?dev=0 lo quita) o tocando cinco veces el
 // número de versión del menú; la tecla º / ` (la que está a la izquierda del 1) enseña u oculta el
 // panel. Una partida en la que se usó una trampa queda marcada (game.devUsed) y no cuenta para récords.
-import { GOLDEN, ROBOT, WEAPON_ORDER, WEAPONS, WORLD_SIZE, ZOMBIES } from '../core/config.ts';
+import { BOSS_ORDER, BOSSES, GOLDEN, ROBOT, WEAPON_ORDER, WEAPONS, WORLD_SIZE, ZOMBIES } from '../core/config.ts';
 import { clamp, rand, storage } from '../core/util.ts';
 import * as Rules from '../sim/rules.ts';
 import { spawnBoss } from '../sim/bosses.ts';
@@ -23,7 +23,7 @@ const NAMES = {
   rock: 'Rocoso',
   giant: 'Gigante',
   golden: 'Dorado',
-  supremo: 'Rocoso Supremo',
+  ...Object.fromEntries(BOSS_ORDER.map((k) => [k, BOSSES[k].name])),
 };
 const STATE = { active: 'en curso', waiting: 'superada · esperando', break: 'por empezar' };
 

@@ -127,6 +127,11 @@ export class Player {
   declare flyY?: number;
   /** la última embestida de un jefe que ya lo atropelló (cada embestida golpea una vez) */
   declare bossHit?: number;
+  /** frenado por un jefe (onda, cadena, zona): s que le quedan y a qué parte de su velocidad (0: quieto) */
+  declare slowT?: number;
+  declare slowK?: number;
+  /** daño de las zonas de los jefes que se va juntando */
+  declare zoneAcc?: number;
   /** en línea: id de su ranura (para dar las bajas que hace volando) */
   declare sid?: string;
   declare cls: string | null;
@@ -368,6 +373,10 @@ export class Player {
     if (this.boostT > 0) {
       this.boostT = Math.max(0, this.boostT - dt);
       speed *= ABILITY.booster.speed;
+    }
+    if (this.slowT && this.slowT > 0) {
+      this.slowT = Math.max(0, this.slowT - dt);
+      speed *= this.slowK ?? 1;
     }
     if (this.inRobot) {
       speed *= ROBOT.speed;

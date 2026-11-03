@@ -962,7 +962,7 @@ test('jefe en línea: llega en la oleada 5 con más vida por jugador, se ve en l
   // Beto, lejos de él, también ve su barra (bo) aunque no lo tenga en pantalla
   b.p.x = z.x + 3000;
   const snap = sim.snapshot('b', 0)!;
-  assert.equal(snap.bo.length, 5);
+  assert.equal(snap.bo.length, 9);
   assert.equal(snap.bo[0], 9, 'tipo supremo en TYPES');
   const ma = a.money;
   const mb = b.money;

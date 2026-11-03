@@ -17,6 +17,7 @@ import {
 import { rand, randInt } from '../core/util.ts';
 import { ACID } from './build.ts';
 import { bulletHit } from './combat.ts';
+import { onFallen } from './bosses.ts';
 
 import type { Bullet, GameHost, Zombie } from '../core/types.d.ts';
 import type { Player } from './player.ts';
@@ -119,6 +120,8 @@ export function killZombie(game: GameHost, z: Zombie, h: KillHooks) {
   game.particles.death(z.x, z.y, z.r);
   // el gordo revienta en ácido y el super blindado estalla
   if (z.type === 'fat' && live) game.structures.queueDeathBlast(z.type, z.x, z.y);
+  // los jefes recuerdan a los caídos (resurrección) y algunos se curan con ellos
+  if (live) onFallen(game, z);
   h.xp(z);
   if (live) h.bounty(z);
   const hasGuns = game.mode.inGroup() || (game.player && game.player.weapons.length > 1);

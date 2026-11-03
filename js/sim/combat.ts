@@ -7,7 +7,9 @@ import { bossDamage } from './bosses.ts';
 // Aplica una bala a un zombi. No lo mata: quien llama decide (y cuenta la baja).
 export function bulletHit(game: GameHost, z: Zombie, b: Bullet, hx: number, hy: number) {
   // al jefe le entra más o menos según su piel y por dónde le pegas (sim/bosses.ts)
-  z.hp -= z.def?.boss ? b.dmg * bossDamage(z, b) : b.dmg;
+  // los que un jefe protege (dominio absoluto) aguantan más
+  const res = z.buffT > 0 ? (z.buffRes ?? 1) : 1;
+  z.hp -= (z.def?.boss ? b.dmg * bossDamage(z, b) : b.dmg) * res;
   z.flash = 0.08;
   // llamarada del lanzallamas: no frena ni empuja, lo deja ardiendo
   if (b.flame) {

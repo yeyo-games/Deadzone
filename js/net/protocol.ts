@@ -6,7 +6,32 @@
 //   · results · notice · error · shutdown · p; el cliente manda in · act · buy · pick · next · ready · cls · start · loaded.
 
 // índices que viajan en las fotos en lugar de los nombres
-export const TYPES = ['normal', 'swat', 'sprinter', 'fat', 'heavy', 'golden', 'bull', 'giant', 'rock', 'supremo'];
+export const TYPES = [
+  'normal',
+  'swat',
+  'sprinter',
+  'fat',
+  'heavy',
+  'golden',
+  'bull',
+  'giant',
+  'rock',
+  'supremo',
+  'aplastador',
+  'campanero',
+  'contaminado',
+  'carcelero',
+  'cazadora',
+  'excavador',
+  'generador',
+  'reina',
+  'devorador',
+  'incendiario',
+  'arquitecto',
+  'tormenta',
+  'titan',
+  'rey',
+];
 export const PICKS = ['ammo', 'med', 'crate'];
 
 // bits de la entrada

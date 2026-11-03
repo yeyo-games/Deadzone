@@ -45,6 +45,9 @@ export interface Block {
   scanT?: number;
   // torreta pesada o militar en línea: su dueño dejó que los demás se suban
   shared?: boolean;
+  // jefes: s que le quedan a un bloque temporal (encierro, barrera) y a una torreta apagada (pulso)
+  tempT?: number;
+  empT?: number;
 }
 // Alambre, púas y minas (en el suelo).
 export interface Wire {
@@ -731,13 +734,55 @@ export class Structures {
     }
     for (const s of this.scorches) s.t += dt;
     while (this.scorches.length && this.scorches[0].t > this.scorches[0].life) this.scorches.shift();
+    let gone: Block[] | null = null;
     for (const b of this.blocks) {
       b.hitT -= dt;
+      if (b.tempT !== undefined && (b.tempT -= dt) <= 0) (gone ||= []).push(b);
+      // el pulso electromagnético de un jefe la dejó apagada
+      if (b.empT && b.empT > 0) {
+        b.empT -= dt;
+        continue;
+      }
       if (b.kind === 'turret') this.updateTurret(b, dt, game);
       else if (b.kind === 'military' && !b.manned) this.updateMilitary(b, dt, game);
       else if (b.kind === 'heavy' && !b.manned) updateAutoHeavy(b, dt, game, game.ownerOf?.(b.owner) ?? null);
     }
     for (const w of this.wires) w.hitT -= dt;
+    if (gone) for (const b of gone) this.crush(game, b);
+  }
+
+  // Bloques de metal temporales que pone un jefe (encierro, barrera) en esos centros: sólo donde caben
+  // y sin aplastar a nadie; se deshacen a los life s.
+  addTemp(game: GameHost, at: [number, number][], life: number) {
+    const people = (game.targets as Player[]) || (game.player ? [game.player] : []);
+    for (const [cx, cy] of at) {
+      const x = Math.round((cx - 20) / 20) * 20;
+      const y = Math.round((cy - 20) / 20) * 20;
+      if (!game.world.rectFree(x, y, 40, 40)) continue;
+      if (people.some((p) => p.x + p.r > x && p.x - p.r < x + 40 && p.y + p.r > y && p.y - p.r < y + 40)) continue;
+      const hp = shopDef('metal').hp;
+      const o: Block = {
+        k: 0,
+        x,
+        y,
+        w: 40,
+        h: 40,
+        low: true,
+        block: true,
+        kind: 'metal',
+        hp,
+        max: hp,
+        hitT: 0,
+        cd: 0,
+        ang: 0,
+        owner: null,
+        tempT: life,
+      };
+      this.blocks.push(o);
+      game.world.addDynamic(o);
+      game.particles.dust(x + 20, y + 20, 10);
+    }
+    this.relayer();
   }
 
   // Torreta: apunta al zombi más cercano dentro de su alcance y dispara sola.

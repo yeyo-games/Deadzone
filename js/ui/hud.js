@@ -3,7 +3,7 @@ import { BUILD_ORDER, COMBO, SHOP, ROBOT, WEAPONS } from '../core/config.ts';
 import { fmtTime } from '../core/util.ts';
 import { CLASSES, cooldownOf } from '../sim/abilities.ts';
 import { comboMult, comboTier, multText } from '../sim/combo.ts';
-import { bossName } from '../sim/bosses.ts';
+import { bossAtkName, bossName, bossPartName } from '../sim/bosses.ts';
 import { bossView } from '../render/bosses.js';
 import { ITEM_ICONS, SHORT } from './icons.js';
 import { closest, on } from './dom.js';
@@ -90,7 +90,8 @@ function set(game, key, el, prop, value) {
   else el.style[prop] = value;
 }
 
-// Barra del jefe (el primero vivo): nombre, fase o estado y vida.
+// Barra del jefe (el primero vivo): nombre, vida y, a la derecha, el ataque que prepara o su estado
+// (bajo tierra, piel dura, furia, lo que le queda a su parte rompible o la fase).
 const PHASES = ['', 'Enfurecido', 'Desesperado'];
 function updateBossBar(game) {
   const b = bossView(game).status[0] || null;
@@ -101,9 +102,21 @@ function updateBossBar(game) {
   }
   if (!b) return;
   set(game, 'bossName', $('boss-name'), 'text', bossName(b.type));
-  const tag = b.hard ? 'Piel de piedra' : b.fury ? 'Furia' : PHASES[b.phase];
+  const part = b.part >= 0 ? `${bossPartName(b.type)} ${Math.ceil(b.part * 100)} %` : '';
+  const tag =
+    b.atk >= 0
+      ? `¡${bossAtkName(b.type, b.atk)}!`
+      : b.under
+        ? 'Bajo tierra'
+        : b.hard
+          ? 'Coraza'
+          : b.fury
+            ? 'Furia'
+            : b.part === 0
+              ? `${bossPartName(b.type)} rota`
+              : part || PHASES[b.phase];
   set(game, 'bossTag', $('boss-tag'), 'text', tag);
-  const cls = b.hard ? 'hard' : b.fury ? 'fury' : '';
+  const cls = b.atk >= 0 ? 'warn' : b.hard ? 'hard' : b.fury ? 'fury' : '';
   if (game.cache.bossCls !== cls) {
     game.cache.bossCls = cls;
     $('boss-tag').className = cls;

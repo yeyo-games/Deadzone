@@ -2,10 +2,11 @@
 import { AIR, GOLDEN } from '../core/config.ts';
 import { TAU } from '../core/util.ts';
 import { zombieSprites, flameSprite } from './sprites.js';
+import { bossSprite } from './bossart.js';
 
 // Juego de imágenes de un zombi (lo guarda en z.spr la primera vez). En el servidor no se usa.
 export function zombieSprite(z) {
-  if (!z.spr) z.spr = zombieSprites()[z.type][z.si];
+  if (!z.spr) z.spr = z.def?.boss ? bossSprite(z.type) : zombieSprites()[z.type][z.si];
   return z.spr;
 }
 
@@ -16,6 +17,8 @@ export function drawHorde(ctx, list, view, base, layer) {
     // los grandes (gigante y jefes) van por encima de los jugadores
     const isGiant = z.type === 'giant' || !!z.def?.boss;
     if ((layer === 'giant') !== isGiant) continue;
+    // bajo tierra no se ve (sólo el polvo que levanta)
+    if (z.under) continue;
     const spr = zombieSprite(z);
     const half = spr.half;
     if (z.x + half < view.x0 || z.x - half > view.x1 || z.y + half < view.y0 || z.y - half > view.y1) continue;
@@ -59,7 +62,8 @@ export function drawHorde(ctx, list, view, base, layer) {
       ctx.globalAlpha = 1;
     }
     if (z.type !== 'golden') {
-      const al = z.spawnT > 0 ? 1 - z.spawnT : 1;
+      // la Cazadora acechando: apenas una sombra
+      const al = (z.spawnT > 0 ? 1 - z.spawnT : 1) * (z.cloak || z.selfA?.cloak ? 0.18 : 1);
       if (ctx.globalAlpha !== al) ctx.globalAlpha = al;
     }
     ctx.setTransform(k * c, k * sn, -k * sn, k * c, tx + lx * s, ty + ly * s);
