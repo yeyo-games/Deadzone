@@ -59,7 +59,11 @@ export function opPrompt(game, v) {
   }
   if (!bb || (bb.kind === 'decoy' && bb.up)) return null;
   const cd = bb.kind === 'repair' ? bb.up >> 2 : 0;
-  return { lb: bb.kind, prog: 0, sub: bb.kind === 'repair' ? (cd ? `recarga ${cd} s` : `${OPS.plans.repair.charges - (bb.up & 3)} cargas`) : '' };
+  return {
+    lb: bb.kind,
+    prog: 0,
+    sub: bb.kind === 'repair' ? (cd ? `recarga ${cd} s` : `${OPS.plans.repair.charges - (bb.up & 3)} cargas`) : '',
+  };
 }
 
 // El siguiente punto al que ir y qué decir de él.
@@ -69,7 +73,8 @@ export function nextPoint(game, v) {
   if (!op || !p || op.s === 'resolve') return null;
   const near = (list) => {
     let best = null;
-    for (const q of list) if (!best || Math.hypot(q[0] - p.x, q[1] - p.y) < Math.hypot(best[0] - p.x, best[1] - p.y)) best = q;
+    for (const q of list)
+      if (!best || Math.hypot(q[0] - p.x, q[1] - p.y) < Math.hypot(best[0] - p.x, best[1] - p.y)) best = q;
     return best;
   };
   if (op.k === 'nest' && op.fu >= 0 && !op.bl) {
@@ -199,7 +204,8 @@ export function updateOpsHud(game, dt) {
     $('op-goal').textContent = goalText(game, v);
     const np = nextPoint(game, v);
     const p = game.player;
-    $('op-dist').textContent = np && p ? `${np.exit ? 'Salida' : 'Objetivo'}: ${fmtM(Math.hypot(np.x - p.x, np.y - p.y))}` : '';
+    $('op-dist').textContent =
+      np && p ? `${np.exit ? 'Salida' : 'Objetivo'}: ${fmtM(Math.hypot(np.x - p.x, np.y - p.y))}` : '';
     // estado del objeto importante
     let bar = -1;
     let lbl = '';
@@ -276,7 +282,24 @@ export function updateOpsHud(game, dt) {
 function sounds(game, v) {
   const op = v && v.op;
   const was = game.opsPrev;
-  game.opsPrev = op ? { id: op.id, k: op.k, s: op.s, res: op.res, hp: op.hp, ph: op.ph, on: op.on ? op.on.join() : '', o: op.op, n: op.n, fu: op.fu, bl: op.bl, car: (op.cr || []).map((c) => c[3]).join(), an: !!op.an, sp: (op.sp || []).length } : null;
+  game.opsPrev = op
+    ? {
+        id: op.id,
+        k: op.k,
+        s: op.s,
+        res: op.res,
+        hp: op.hp,
+        ph: op.ph,
+        on: op.on ? op.on.join() : '',
+        o: op.op,
+        n: op.n,
+        fu: op.fu,
+        bl: op.bl,
+        car: (op.cr || []).map((c) => c[3]).join(),
+        an: !!op.an,
+        sp: (op.sp || []).length,
+      }
+    : null;
   const sfx = game.sfx;
   if (!op || !was || was.id !== op.id) return;
   const now = game.opsPrev;

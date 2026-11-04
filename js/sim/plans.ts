@@ -123,7 +123,11 @@ function useRepair(ops: Ops, game: GameHost, q: Who, b: any) {
   }
   const pick = best as { k: number; x: number; y: number; heal: () => number } | null;
   if (!pick)
-    return ops.toastTo(game, q.id, hot ? `Recibió daño hace poco: espera ${R.quiet} s sin golpes` : 'Nada que reparar a su alcance');
+    return ops.toastTo(
+      game,
+      q.id,
+      hot ? `Recibió daño hace poco: espera ${R.quiet} s sin golpes` : 'Nada que reparar a su alcance',
+    );
   const n = Math.round(pick.heal());
   const used = (b.up & 3) + 1;
   b.cdT = R.cd;

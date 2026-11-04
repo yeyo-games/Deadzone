@@ -106,7 +106,16 @@ export const Supply: OpDef & {
           if (t !== 2 || ++seen > 40) break;
         }
         if (!best) break;
-        crates.push({ id: t + 1, x: Math.round(best.x), y: Math.round(best.y), tier: t, by: null, dl: false, gd: false, robot: false });
+        crates.push({
+          id: t + 1,
+          x: Math.round(best.x),
+          y: Math.round(best.y),
+          tier: t,
+          by: null,
+          dl: false,
+          gd: false,
+          robot: false,
+        });
       }
       if (crates.length < 3) continue;
       const entries = pickEntries(world, df, q.x, q.y, 420, 700, 4);
@@ -172,7 +181,11 @@ export const Supply: OpDef & {
     const g = ctx.game;
     for (const c of d.crates) {
       // sus guardias salen cuando alguien se acerca a él
-      if (!c.gd && !c.dl && ctx.who.some((q) => !q.away && q.p.alive && Math.hypot(q.p.x - c.x, q.p.y - c.y) < OPS.arrive)) {
+      if (
+        !c.gd &&
+        !c.dl &&
+        ctx.who.some((q) => !q.away && q.p.alive && Math.hypot(q.p.x - c.x, q.p.y - c.y) < OPS.arrive)
+      ) {
         c.gd = true;
         Supply.guards(ctx, -1 - c.tier);
       }
@@ -207,7 +220,9 @@ export const Supply: OpDef & {
         const e = (Math.random() * op.entries.length) | 0;
         d.ans = { t: S.answer[0], e };
         const at = op.entries[e];
-        ctx.say(`Suministros: entregados ${d.n}/3. ¡Respuesta en ${S.answer[0]} s por ${dirOf(at.x - d.drop.x, at.y - d.drop.y)}!`);
+        ctx.say(
+          `Suministros: entregados ${d.n}/3. ¡Respuesta en ${S.answer[0]} s por ${dirOf(at.x - d.drop.x, at.y - d.drop.y)}!`,
+        );
       }
     }
     if (d.ans) {
@@ -239,7 +254,8 @@ export const Supply: OpDef & {
       const r = rand(70, 220);
       const x = c.x + Math.cos(a) * r;
       const y = c.y + Math.sin(a) * r;
-      if (ctx.game.world.pointBlocked(x, y, 26) || ctx.who.some((q) => Math.hypot(q.p.x - x, q.p.y - y) < 280)) continue;
+      if (ctx.game.world.pointBlocked(x, y, 26) || ctx.who.some((q) => Math.hypot(q.p.x - x, q.p.y - y) < 280))
+        continue;
       const type = t === 2 ? TOUGH[k % TOUGH.length] : t === 1 && k % 4 === 0 ? 'fat' : 'normal';
       ctx.spawn(type, x, y, null, true);
       left--;

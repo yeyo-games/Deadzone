@@ -124,7 +124,9 @@ function stepText(b, id) {
   if (id === 'armor')
     return `Vida ${arrow(d.hp[lv], d.hp[next])} · repara ${Math.round(d.repair[next < 0 ? lv : next] * 100)}%`;
   if (id === 'fire')
-    return lv ? `Instalada · ahora dispara balas ${heavyFireOn(b) ? 'incendiarias' : 'normales'}` : '20% menos de daño directo, pero queman';
+    return lv
+      ? `Instalada · ahora dispara balas ${heavyFireOn(b) ? 'incendiarias' : 'normales'}`
+      : '20% menos de daño directo, pero queman';
   return lv ? 'Activo: dispara sola cuando la dejas' : `Media cadencia · alcance ${d.range} px`;
 }
 

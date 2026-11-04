@@ -200,7 +200,15 @@ export const Nest: OpDef & { guards(ctx: OpCtx, n: number): void } = {
     const d = op.d as Data;
     if (d.blown) return;
     const s = N.core * 1.1;
-    const obs = { k: 0, x: Math.round(op.x - s / 2), y: Math.round(op.y - s / 2), w: Math.round(s), h: Math.round(s), low: true, opObs: true };
+    const obs = {
+      k: 0,
+      x: Math.round(op.x - s / 2),
+      y: Math.round(op.y - s / 2),
+      w: Math.round(s),
+      h: Math.round(s),
+      low: true,
+      opObs: true,
+    };
     ctx.game.world.addDynamic(obs as any);
     d._obs = obs;
   },

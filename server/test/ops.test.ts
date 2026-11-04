@@ -76,7 +76,10 @@ test('la radio ofrece operaciones tras la oleada 20, 25, 30… y no antes', () =
   assert.notEqual(o.kinds[0], o.kinds[1]);
   // la tarjeta muestra la recompensa exacta (base + 150 por oleada pasada la 20, por su multiplicador)
   const v = sim.snapshot('j0', 0)!.op;
-  assert.deepEqual(v.of.rw, o.kinds.map((k) => opReward(k, 20)));
+  assert.deepEqual(
+    v.of.rw,
+    o.kinds.map((k) => opReward(k, 20)),
+  );
   assert.equal(opReward('convoy', 20), 2000);
   assert.equal(opReward('nest', 25), Math.round((2000 + 750) * 1.25));
   assert.equal(opReward('supply', 30), Math.round((2000 + 1500) * 1.15));
@@ -195,7 +198,11 @@ test('convoy: dos jugadores activan componentes distintos a la vez, se defiende 
   sim.ops.resolve(sim.ops.ctx(sim.game), 'win');
   op.state = 'active';
   sim.ops.resolve(sim.ops.ctx(sim.game), 'win');
-  assert.deepEqual([...sim.slots.values()].map((s) => s.money), before, 'sin doble pago');
+  assert.deepEqual(
+    [...sim.slots.values()].map((s) => s.money),
+    before,
+    'sin doble pago',
+  );
   run(sim, sec(OPS.outT + 0.3));
   assert.equal(sim.ops.op, null);
   assert.equal(sim.horde.list.filter((z: any) => z.op === op.id).length, 0, 'sin zombis de la operación');

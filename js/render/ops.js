@@ -225,7 +225,12 @@ function drawNest(ctx, op, time) {
     const a = (i / 7) * TAU + 0.4;
     ctx.beginPath();
     ctx.moveTo(Math.cos(a) * r * 0.2, Math.sin(a) * r * 0.2);
-    ctx.quadraticCurveTo(Math.cos(a + 0.4) * r * 0.6, Math.sin(a + 0.4) * r * 0.6, Math.cos(a) * r * 0.92, Math.sin(a) * r * 0.92);
+    ctx.quadraticCurveTo(
+      Math.cos(a + 0.4) * r * 0.6,
+      Math.sin(a + 0.4) * r * 0.6,
+      Math.cos(a) * r * 0.92,
+      Math.sin(a) * r * 0.92,
+    );
     ctx.stroke();
   }
   // el ojo de en medio (señal de que necesita explosivos, no balas)
@@ -572,7 +577,8 @@ export function drawOpsArrows(game, ctx, W, H) {
   // también hacia el compañero que lleva un cargamento si yo no llevo
   if (op.k === 'supply' && !carrying(game, v)) {
     const me = myIdx(game);
-    for (const c of op.cr || []) if (c[3] >= 0 && c[3] !== me && !c[4]) arrow(c[1], c[2], 'rgba(156,240,168,0.6)', false);
+    for (const c of op.cr || [])
+      if (c[3] >= 0 && c[3] !== me && !c[4]) arrow(c[1], c[2], 'rgba(156,240,168,0.6)', false);
   }
 }
 

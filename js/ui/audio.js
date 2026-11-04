@@ -603,13 +603,16 @@ export class Sfx {
   opDeliver() {
     if (!this.ok('opDeliver', 0.3, true)) return;
     this.burst({ dur: 0.12, freq: 260, gain: 0.4 });
-    [523, 659, 784].forEach((f, i) => this.tone({ freq: f, dur: 0.3, gain: 0.12, type: 'triangle', delay: 0.05 + i * 0.05 }));
+    [523, 659, 784].forEach((f, i) =>
+      this.tone({ freq: f, dur: 0.3, gain: 0.12, type: 'triangle', delay: 0.05 + i * 0.05 }),
+    );
   }
 
   // Alerta: cambio de fase, respuesta enemiga o fallo.
   opAlert() {
     if (!this.ok('opAlert', 0.6, true)) return;
-    for (let i = 0; i < 3; i++) this.tone({ freq: 880, to: 620, dur: 0.22, gain: 0.13, type: 'sawtooth', delay: i * 0.26 });
+    for (let i = 0; i < 3; i++)
+      this.tone({ freq: 880, to: 620, dur: 0.22, gain: 0.13, type: 'sawtooth', delay: i * 0.26 });
   }
 
   // Recompensa de la operación: fanfarria corta.
@@ -624,7 +627,8 @@ export class Sfx {
   // Señuelo sonoro: sirena que sube y baja.
   decoy() {
     if (!this.ok('decoy', 0.5)) return;
-    for (let i = 0; i < 4; i++) this.tone({ freq: 700, to: 1200, dur: 0.45, gain: 0.1, type: 'sawtooth', delay: i * 0.5 });
+    for (let i = 0; i < 4; i++)
+      this.tone({ freq: 700, to: 1200, dur: 0.45, gain: 0.1, type: 'sawtooth', delay: i * 0.5 });
   }
 
   // Reparador de campo: llave y chispa.

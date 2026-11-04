@@ -249,7 +249,14 @@ export function pickEntries(world: World, field: FlowField, x: number, y: number
     const q = cellAt(world, c);
     if (!clearAt(world, q.x, q.y, 26)) continue;
     const a = Math.atan2(q.y - y, q.x - x);
-    if (out.some((e) => Math.abs(Math.atan2(Math.sin(a - Math.atan2(e.y - y, e.x - x)), Math.cos(a - Math.atan2(e.y - y, e.x - x)))) < 1)) continue;
+    if (
+      out.some(
+        (e) =>
+          Math.abs(Math.atan2(Math.sin(a - Math.atan2(e.y - y, e.x - x)), Math.cos(a - Math.atan2(e.y - y, e.x - x)))) <
+          1,
+      )
+    )
+      continue;
     out.push(q);
     if (out.length >= n) break;
   }
@@ -257,7 +264,8 @@ export function pickEntries(world: World, field: FlowField, x: number, y: number
 }
 
 /** ¿El punto queda lejos de las zonas de las últimas operaciones? */
-export const farFrom = (avoid: Vec[], x: number, y: number) => avoid.every((v) => Math.hypot(v.x - x, v.y - y) >= OPS.gap);
+export const farFrom = (avoid: Vec[], x: number, y: number) =>
+  avoid.every((v) => Math.hypot(v.x - x, v.y - y) >= OPS.gap);
 
 /* ---------- puntos que se usan con H ---------- */
 

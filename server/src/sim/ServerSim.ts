@@ -283,7 +283,14 @@ export class ServerSim {
       onWaveCleared: () => this.onWaveCleared(),
       // lo que piden las operaciones: quién juega, pagar a cada presente, avisar a uno y terminar
       opsWho: () =>
-        [...this.slots.values()].map((s) => ({ id: s.id, idx: s.idx, name: s.name, p: s.p, robot: s.robot, away: s.away })),
+        [...this.slots.values()].map((s) => ({
+          id: s.id,
+          idx: s.idx,
+          name: s.name,
+          p: s.p,
+          robot: s.robot,
+          away: s.away,
+        })),
       opsPay: (n: number) => {
         for (const s of this.slots.values()) {
           if (s.away) continue;

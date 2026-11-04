@@ -155,7 +155,8 @@ export const Convoy: OpDef & { goalFor(op: Op): Goal | null } = {
         ctx.say(`Convoy: últimos 20 s. Un grupo blindado llega por ${dirOf(e.x - op.x, e.y - op.y)}`);
         // el grupo resistente (del presupuesto)
         for (const [t, n] of Object.entries(C.heavy))
-          for (let i = 0; i < n && op.budget > 0; i++) ctx.spawn(t, e.x + (i % 3) * 30 - 30, e.y + Math.floor(i / 3) * 30, null);
+          for (let i = 0; i < n && op.budget > 0; i++)
+            ctx.spawn(t, e.x + (i % 3) * 30 - 30, e.y + Math.floor(i / 3) * 30, null);
       }
     }
     if (d.u >= C.unlockT) {
@@ -208,7 +209,12 @@ export const Convoy: OpDef & { goalFor(op: Op): Goal | null } = {
       // ningún golpe le quita más de maxHit de su vida
       d.hp -= Math.min(dmg, d.max * C.maxHit);
       d.hitT = 0.25;
-      game.particles.impact(r.x + Math.random() * r.w, r.y + Math.random() * r.h, Math.random() - 0.5, Math.random() - 0.5);
+      game.particles.impact(
+        r.x + Math.random() * r.w,
+        r.y + Math.random() * r.h,
+        Math.random() - 0.5,
+        Math.random() - 0.5,
+      );
       if (d.hp <= 0 && d._goal) d._goal.alive = false;
     });
   },

@@ -476,7 +476,13 @@ export class Ops {
       if (p.manned) g.structures.leaveHeavy(p);
       const r = (p.inRobot ? ROBOT.radius : p.r) + 4;
       const a = (i / Math.max(1, live.length)) * TAU;
-      const spot = freeNear(g.world, op.home.x + Math.cos(a) * 40 * Math.min(1, i), op.home.y + Math.sin(a) * 40 * Math.min(1, i), r, 400);
+      const spot = freeNear(
+        g.world,
+        op.home.x + Math.cos(a) * 40 * Math.min(1, i),
+        op.home.y + Math.sin(a) * 40 * Math.min(1, i),
+        r,
+        400,
+      );
       if (!spot) return;
       p.x = spot.x;
       p.y = spot.y;
@@ -509,7 +515,8 @@ export class Ops {
       say: (t: string) => self.say(t),
       win: () => self.resolve(self.ctx(game), 'win'),
       fail: (why: string) => self.resolve(self.ctx(game), 'fail', why),
-      spawn: (type: string, x: number, y: number, goal: Goal | null = null, guard = false) => self.spawn(game, type, x, y, goal, guard),
+      spawn: (type: string, x: number, y: number, goal: Goal | null = null, guard = false) =>
+        self.spawn(game, type, x, y, goal, guard),
       group: (n: number, at: Vec, goal: Goal | null = null, guard = false) => self.spawnGroup(game, n, at, goal, guard),
     };
   }
@@ -570,7 +577,8 @@ export class Ops {
 
   /** Estado para pintar y para la foto (el mismo en solitario y en línea). */
   view() {
-    if (this.cache && this.cache.t === this.radioN * 1e6 + (this.op ? this.op.t + this.op.outT : 0)) return this.cache.v;
+    if (this.cache && this.cache.t === this.radioN * 1e6 + (this.op ? this.op.t + this.op.outT : 0))
+      return this.cache.v;
     const idx = (id: string | null) => (id ? (this.who.find((q) => q.id === id)?.idx ?? -1) : -1);
     const v: any = { pl: (this.plans.decoy ? 1 : 0) | (this.plans.fire ? 2 : 0) | (this.plans.repair ? 4 : 0) };
     if (this.radioMsg) v.rd = this.radioMsg;
@@ -612,7 +620,16 @@ export class Ops {
         ...def.view(op),
       };
       // quién lleva qué (suministros): índice del jugador
-      if (op.kind === 'supply') v.op.cr = op.d.crates.map((c: any) => [c.id, Math.round(c.x), Math.round(c.y), idx(c.by), c.dl ? 1 : 0, c.tier, c.robot ? 1 : 0]);
+      if (op.kind === 'supply')
+        v.op.cr = op.d.crates.map((c: any) => [
+          c.id,
+          Math.round(c.x),
+          Math.round(c.y),
+          idx(c.by),
+          c.dl ? 1 : 0,
+          c.tier,
+          c.robot ? 1 : 0,
+        ]);
     }
     this.cache = { t: this.radioN * 1e6 + (op ? op.t + op.outT : 0), v };
     return v;
