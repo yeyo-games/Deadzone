@@ -295,7 +295,7 @@ export function updateHud(game, force) {
         .join('');
       $('bb-name').textContent = SHOP[game.buildSel].name;
       $('bb-hint').textContent = touch
-        ? 'Toca o arrastra en el mapa para moverla · ✓ la pone'
+        ? 'Arrastra una pieza al mapa · o toca el mapa y ✓'
         : 'Clic: colocar · R: girar · rueda o 1–9: pieza · clic derecho: salir';
       $('bb-rot').classList.toggle('on', !!game.buildRot);
     }
@@ -343,6 +343,7 @@ export function bindHud(game) {
     e.preventDefault();
     e.stopPropagation();
     game.pickBuild(b.dataset.bk);
+    if (e.pointerType !== 'mouse') game.input.startCarry(e);
   });
   game.$('bb-rot').addEventListener('pointerdown', (e) => {
     e.preventDefault();

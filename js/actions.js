@@ -131,6 +131,7 @@ export function stepBuild(game) {
   if (!game.building) {
     inp.consume('place');
     inp.consume('point');
+    inp.consume('drop');
     inp.consume('cancel');
     inp.consume('wheel');
     inp.consume('rotate');
@@ -161,6 +162,15 @@ export function stepBuild(game) {
       game.buildAt = at;
       game.buildDir = null;
     }
+  }
+  // en el celular, soltar una pieza arrastrada desde la barra la pone ahí
+  const drop = inp.consume('drop');
+  if (drop) {
+    const at = screenToWorld(game, drop.x, drop.y);
+    game.buildAt = at;
+    game.buildDir = null;
+    const pl = tryBuild(game, at);
+    if (pl) nextSpot(game, pl);
   }
   if (inp.consume('place')) {
     const pl = tryBuild(game, buildTarget(game));

@@ -170,7 +170,7 @@ export function drawMannedHeavy(ctx, st) {
 // con marco verde si cabe y rojo si no.
 export function drawGhost(ctx, st, game, kind, time, at) {
   const p = game.player;
-  const pl = st.placement(game, kind, at.x, at.y);
+  const pl = st.placement(game, kind, at.x, at.y, !!game.buildRot);
   ctx.strokeStyle = 'rgba(230,224,210,0.18)';
   ctx.lineWidth = 1.5;
   ctx.setLineDash([4, 6]);
@@ -178,8 +178,8 @@ export function drawGhost(ctx, st, game, kind, time, at) {
   ctx.arc(p.x, p.y, BUILD.reach, 0, TAU);
   ctx.stroke();
   ctx.setLineDash([]);
-  const pulse = 0.55 + Math.sin(time * 6) * 0.15;
-  ctx.globalAlpha = 0.6;
+  const pulse = 0.7 + Math.sin(time * 6) * 0.2;
+  ctx.globalAlpha = 0.75;
   const piece = { k: 0, kind, x: pl.x, y: pl.y, w: pl.w, h: pl.h, hp: 1, max: 1, hitT: 0, ang: pl.a, up: 0 };
   if (SHOP[kind].ground) {
     if (kind === 'spikes') drawSpikes(ctx, piece);
@@ -187,13 +187,15 @@ export function drawGhost(ctx, st, game, kind, time, at) {
     else drawWire(ctx, piece);
   } else drawBlock(ctx, piece);
   ctx.globalAlpha = pulse;
-  ctx.fillStyle = pl.ok ? 'rgba(134,168,146,0.22)' : 'rgba(181,70,58,0.4)';
+  ctx.fillStyle = pl.ok ? 'rgba(150,220,160,0.3)' : 'rgba(220,70,58,0.45)';
   ctx.fillRect(pl.x, pl.y, pl.w, pl.h);
-  ctx.strokeStyle = pl.ok ? '#86a892' : '#b5463a';
-  ctx.lineWidth = 2;
-  ctx.setLineDash([6, 4]);
-  ctx.strokeRect(pl.x + 1, pl.y + 1, pl.w - 2, pl.h - 2);
+  ctx.strokeStyle = pl.ok ? '#a8f0b4' : '#ff5a48';
+  ctx.lineWidth = 3;
+  ctx.setLineDash([8, 4]);
+  ctx.lineDashOffset = -time * 20;
+  ctx.strokeRect(pl.x + 1.5, pl.y + 1.5, pl.w - 3, pl.h - 3);
   ctx.setLineDash([]);
+  ctx.lineDashOffset = 0;
   ctx.globalAlpha = 1;
 }
 

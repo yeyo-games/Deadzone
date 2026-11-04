@@ -805,25 +805,27 @@ svg.can { width: 14px; height: 16px; vertical-align: -3px; }
 .bb-it b { position: absolute; right: 3px; bottom: 1px; font-size: 12px; color: var(--ink); }
 .bb-it kbd { position: absolute; left: 3px; top: 1px; font-size: 9px; color: var(--dim); }
 .bb-it.on { border-color: var(--xp); background: rgba(134, 168, 146, 0.22); box-shadow: 0 0 8px rgba(134, 168, 146, 0.5); }
-/* en el celular va a la derecha, sobre los botones, en lugar de la fila de lanzables */
+#bb-rot { width: auto; padding: 0 9px; font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+/* en el celular va abajo al centro, entre el joystick y los botones: deja libre el mapa y las
+   piezas se arrastran hacia arriba hasta donde van */
 .touch #build-bar {
-  left: auto;
-  right: max(16px, var(--sar));
-  bottom: calc(var(--sab) + 18px + 184px);
-  transform: none;
-  width: min(300px, calc(100vw - 32px));
+  bottom: calc(var(--sab) + 6px);
+  width: max(250px, min(460px, calc(100vw - 380px)));
 }
 .touch #build-bar { padding: 6px 8px 8px; }
 .touch .bb-head { flex-wrap: wrap; row-gap: 0; gap: 6px; margin-bottom: 4px; }
 .touch .bb-head b { font-size: 14px; }
 .touch .bb-head small { order: 3; width: 100%; font-size: 10px; line-height: 1.2; }
 .touch .bb-x { width: 32px; height: 32px; font-size: 16px; }
-/* compacta: todas las piezas en dos filas a lo más, para no tapar dónde construyes */
+.touch #bb-rot { width: auto; font-size: 11px; }
+/* compacta y sin deslizarse: cualquier arrastre desde una pieza la lleva al mapa */
 .touch .bb-items { gap: 4px; }
-.touch .bb-it { width: 36px; height: 36px; }
+.touch .bb-it { width: 40px; height: 40px; }
 .touch .bb-it svg { width: 20px; height: 20px; }
 .touch .bb-it b { font-size: 10px; right: 2px; bottom: 0; }
 .building .titems { display: none; }
+/* llevando una pieza con el dedo: la barra se aparta para ver y soltar detrás */
+.carrying #build-bar { opacity: 0.2; pointer-events: none; }
 #btn-fire .ic-place { display: none; }
 .building #btn-fire .ic-place { display: block; }
 .building #btn-fire .ic-fire { display: none; }

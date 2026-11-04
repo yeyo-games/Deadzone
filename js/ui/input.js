@@ -5,6 +5,8 @@ import { clamp } from '../core/util.ts';
 const JOY_RADIUS = 56;
 // desde qué inclinación del joystick (0..1) se corre
 const JOY_RUN = 0.92;
+// al arrastrar una pieza desde la barra, la pieza va así de arriba del dedo para que se vea
+const CARRY_UP = 60;
 
 export class Input {
   constructor(root, canvas) {
@@ -16,6 +18,8 @@ export class Input {
     this.joy = { id: null, bx: 0, by: 0, x: 0, y: 0, t: 0, far: 0 };
     // dedo que arrastra la pieza por el mapa (modo construir en el celular)
     this.dragId = null;
+    // pieza tomada de la barra que se lleva con el dedo hasta el mapa
+    this.carry = null;
     this.touchFire = false;
     this.runToggle = false;
     this.blockFire = false;
@@ -97,11 +101,24 @@ export class Input {
       if (e.pointerType === 'mouse') {
         this.mouse.x = e.clientX;
         this.mouse.y = e.clientY;
+      } else if (this.carry && e.pointerId === this.carry.id) {
+        // un toque sin mover el dedo sólo elige la pieza; al moverlo la pieza lo sigue y la barra
+        // se aparta (casi transparente) para poder soltarla en cualquier parte, también detrás
+        if (!this.carry.out && Math.hypot(e.clientX - this.carry.x, e.clientY - this.carry.y) < 12) return;
+        this.carry.out = true;
+        this.root.classList.add('carrying');
+        this.pressed.point = { x: e.clientX, y: e.clientY - CARRY_UP };
       } else if (e.pointerId === this.dragId) this.pressed.point = { x: e.clientX, y: e.clientY };
     });
     const lift = (e) => {
       if (e.pointerType === 'mouse' && e.button === 0) this.mouse.down = false;
       if (e.pointerId === this.dragId) this.dragId = null;
+      if (this.carry && e.pointerId === this.carry.id) {
+        // soltarla en el mapa la pone ahí (si está en rojo no se pone)
+        if (e.type === 'pointerup' && this.carry.out) this.pressed.drop = { x: e.clientX, y: e.clientY - CARRY_UP };
+        this.carry = null;
+        this.root.classList.remove('carrying');
+      }
     };
     this.on(window, 'pointerup', lift);
     this.on(window, 'pointercancel', lift);
@@ -236,6 +253,11 @@ export class Input {
     this.runToggle = v;
   }
 
+  // la barra de construir avisa que un dedo tomó una pieza (se arrastra hasta el mapa)
+  startCarry(e) {
+    this.carry = { id: e.pointerId, x: e.clientX, y: e.clientY, out: false };
+  }
+
   placeJoy() {
     const { base, knob } = this.joyEls;
     const rect = this.joyEls.zone.getBoundingClientRect();
@@ -295,6 +317,8 @@ export class Input {
     this.keys.clear();
     this.mouse.down = false;
     this.touchFire = false;
+    this.carry = null;
+    this.root.classList.remove('carrying');
     this.pressed = {};
     this.root.querySelectorAll('.tbtn.down').forEach((el) => el.classList.remove('down'));
   }
