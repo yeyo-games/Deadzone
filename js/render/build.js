@@ -1185,7 +1185,13 @@ function drawRusty(ctx, w) {
     ctx.fillStyle = 'rgba(178,96,40,0.55)';
     for (let i = 0; i < 2 + Math.round(wear * 4); i++) {
       ctx.beginPath();
-      ctx.arc(px + 6 + ((i * 17 + k * 11) % (pw - 10)), -W / 2 + 7 + ((i * 13 + k * 5) % (W - 14)), 3 + (i % 2) * 2, 0, TAU);
+      ctx.arc(
+        px + 6 + ((i * 17 + k * 11) % (pw - 10)),
+        -W / 2 + 7 + ((i * 13 + k * 5) % (W - 14)),
+        3 + (i % 2) * 2,
+        0,
+        TAU,
+      );
       ctx.fill();
     }
     if (wear > 0.5) {

@@ -186,7 +186,17 @@ test('la barrera de pinchos oxidada: tres bloques, $100, casi detiene, no se gas
   assert.ok(d.ground, 'no tapa el paso');
   const st = new Structures();
   st.wires.push({ kind: 'rusty', x: 0, y: 0, w: 120, h: 40, hp: d.hp, max: d.hp, hitT: 0, owner: null });
-  st.wires.push({ kind: 'spikes', x: 500, y: 0, w: 40, h: 40, hp: SHOP.spikes.hp, max: SHOP.spikes.hp, hitT: 0, owner: null });
+  st.wires.push({
+    kind: 'spikes',
+    x: 500,
+    y: 0,
+    w: 40,
+    h: 40,
+    hp: SHOP.spikes.hp,
+    max: SHOP.spikes.hp,
+    hitT: 0,
+    owner: null,
+  });
   const z = { x: 60, y: 20, r: 15, mass: 1 };
   const efecto = st.trapAt(z, 1, fakeGame());
   const pinchos = st.trapAt({ ...z, x: 520 }, 0.001, fakeGame());
