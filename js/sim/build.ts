@@ -1,5 +1,5 @@
 // Barricadas compradas en la tienda (madera, metal, vallas, alambre) y granadas.
-import { SHOP, MOLOTOV, ROCKET, ABILITY, HEAVY, AIR, MILITARY, IMPROV, BUILD } from '../core/config.ts';
+import { SHOP, MOLOTOV, ROCKET, ABILITY, HEAVY, AIR, MILITARY, IMPROV, BUILD, STICKY } from '../core/config.ts';
 import { TAU, rand, clamp } from '../core/util.ts';
 import type { Bullet, GameHost, Zombie } from '../core/types.d.ts';
 import type { Player } from './player.ts';
@@ -81,6 +81,30 @@ export interface Grenade {
   rot: number;
   owner: string | null;
   kind?: string;
+}
+// Bomba lapa (STICKY): en el aire (fuse < 0) va de (sx, sy) a (ex, ey) siguiendo a su zombi `z`;
+// pegada (stuck) se mueve con él (ox, oy: su sitio en el cuerpo, en el sistema del zombi).
+export interface Sticky {
+  sx: number;
+  sy: number;
+  ex: number;
+  ey: number;
+  x: number;
+  y: number;
+  h: number;
+  t: number;
+  dur: number;
+  rot: number;
+  /** ángulo del lanzamiento (la estela) */
+  a: number;
+  z: Zombie | null;
+  stuck: boolean;
+  ox: number;
+  oy: number;
+  /** segundos para estallar desde que se pegó o cayó; -1 en el aire */
+  fuse: number;
+  beep: number;
+  owner: string | null;
 }
 export interface Missile {
   x: number;
@@ -313,6 +337,7 @@ export class Structures {
   declare pending: { kind: string; x: number; y: number; t: number }[];
   declare fires: Fire[];
   declare stuck: Stuck[];
+  declare stickies: Sticky[];
   declare missiles: Missile[];
   declare fireId: number;
   declare time: number;
@@ -325,6 +350,7 @@ export class Structures {
     this.pending = [];
     this.fires = [];
     this.stuck = [];
+    this.stickies = [];
     this.missiles = [];
   }
 
@@ -332,6 +358,7 @@ export class Structures {
     this.pending.length = 0;
     this.fires.length = 0;
     this.stuck.length = 0;
+    this.stickies.length = 0;
     this.missiles.length = 0;
     this.blocks.length = 0;
     this.wires.length = 0;
@@ -570,6 +597,210 @@ export class Structures {
   improvBlast(game: GameHost, x: number, y: number, owner: string | null = null) {
     if (!game.mode.authority()) return;
     this.explode(game, { x, y, owner }, IMPROV.radius, IMPROV.power, 1);
+  }
+
+  /* ---------- bomba lapa ---------- */
+
+  // Sale de la mano en arco hacia el zombi más cercano a (tx, ty) o, si no hay, hacia ese punto.
+  throwSticky(game: GameHost, tx: number, ty: number, owner: string | null = null) {
+    const p = game.player;
+    if (!p) return;
+    const z = this.stickyTarget(game, tx, ty);
+    const a = Math.atan2((z ? z.y : ty) - p.y, (z ? z.x : tx) - p.x);
+    const d = Math.min(Math.hypot((z ? z.x : tx) - p.x, (z ? z.y : ty) - p.y) || 1, STICKY.range);
+    const ex = p.x + Math.cos(a) * d;
+    const ey = p.y + Math.sin(a) * d;
+    this.stickies.push({
+      sx: p.x,
+      sy: p.y,
+      ex,
+      ey,
+      x: p.x,
+      y: p.y,
+      h: 0,
+      t: 0,
+      dur: 0.2 + d / 900,
+      rot: a,
+      a,
+      z,
+      stuck: false,
+      ox: 0,
+      oy: 0,
+      fuse: -1,
+      beep: 0,
+      owner,
+    });
+    game.particles.stickyThrow(p.x + Math.cos(a) * 14, p.y + Math.sin(a) * 14, a);
+    game.sfx.stickyThrow();
+  }
+
+  // El zombi vivo más cercano a (x, y) a seek px de su borde (los que están bajo tierra, no).
+  stickyTarget(game: GameHost, x: number, y: number) {
+    const R = STICKY.seek;
+    game.horde.grid.query(x - R - 90, y - R - 90, x + R + 90, y + R + 90, near);
+    let best: Zombie | null = null;
+    let bd = R;
+    for (const z of near) {
+      if (z.dead || z.under || (z.spawnT ?? 0) > 0) continue;
+      const d = Math.hypot(z.x - x, z.y - y) - z.r;
+      if (d < bd) {
+        bd = d;
+        best = z;
+      }
+    }
+    return best;
+  }
+
+  // Se pega en el borde del cuerpo que mira hacia donde venía.
+  stick(game: GameHost, s: Sticky, z: Zombie) {
+    s.z = z;
+    s.stuck = true;
+    s.h = 0;
+    const lx = s.x - z.x;
+    const ly = s.y - z.y;
+    const n = Math.hypot(lx, ly) || 1;
+    const r = Math.min(n, z.r * 0.7);
+    const wx = (lx / n) * r;
+    const wy = (ly / n) * r;
+    const c = Math.cos(-z.angle);
+    const sn = Math.sin(-z.angle);
+    s.ox = wx * c - wy * sn;
+    s.oy = wx * sn + wy * c;
+    s.x = z.x + wx;
+    s.y = z.y + wy;
+    game.particles.stickyStick(s.x, s.y);
+    game.sfx.stickyStick(true);
+  }
+
+  updateStickies(dt: number, game: GameHost) {
+    const S = STICKY;
+    for (let i = this.stickies.length - 1; i >= 0; i--) {
+      const s = this.stickies[i];
+      if (s.fuse < 0) {
+        s.t += dt;
+        // sigue a su zombi mientras vuela (hasta un poco más allá de su alcance)
+        const z = s.z;
+        if (z && !z.dead) {
+          const a = Math.atan2(z.y - s.sy, z.x - s.sx);
+          const d = Math.min(Math.hypot(z.x - s.sx, z.y - s.sy), S.range + 40);
+          s.ex = s.sx + Math.cos(a) * d;
+          s.ey = s.sy + Math.sin(a) * d;
+        }
+        const k = Math.min(1, s.t / s.dur);
+        s.x = s.sx + (s.ex - s.sx) * k;
+        s.y = s.sy + (s.ey - s.sy) * k;
+        s.h = Math.sin(Math.PI * k) * (18 + s.dur * 40);
+        s.rot += dt * 16;
+        if (k < 1) continue;
+        s.fuse = S.fuse;
+        s.h = 0;
+        const hit = z && !z.dead && Math.hypot(z.x - s.x, z.y - s.y) < z.r + 18 ? z : this.touching(game, s.x, s.y);
+        if (hit) this.stick(game, s, hit);
+        else {
+          s.z = null;
+          game.particles.impact(s.x, s.y, Math.cos(s.a), Math.sin(s.a));
+          game.sfx.stickyStick(false);
+        }
+        continue;
+      }
+      const z = s.z;
+      if (s.stuck && z && !z.dead) {
+        const c = Math.cos(z.angle);
+        const sn = Math.sin(z.angle);
+        s.x = z.x + s.ox * c - s.oy * sn;
+        s.y = z.y + s.ox * sn + s.oy * c;
+        s.rot = z.angle + 0.6;
+      } else {
+        // su zombi murió antes: queda en el suelo y se pega al siguiente que la toque
+        s.stuck = false;
+        s.z = null;
+        const t = this.touching(game, s.x, s.y);
+        if (t) this.stick(game, s, t);
+      }
+      s.fuse -= dt;
+      s.beep -= dt;
+      if (s.beep <= 0 && s.fuse > 0) {
+        // pitidos cada vez más seguidos
+        s.beep = 0.07 + 0.36 * (s.fuse / S.fuse);
+        game.particles.stickyBlink(s.x, s.y);
+        game.sfx.stickyBeep();
+      }
+      if (s.fuse > 0) continue;
+      this.stickies.splice(i, 1);
+      this.stickyBlast(game, s);
+    }
+  }
+
+  // Un zombi vivo que toca el punto (x, y).
+  touching(game: GameHost, x: number, y: number) {
+    game.horde.grid.query(x - 90, y - 90, x + 90, y + 90, near);
+    for (const z of near) if (!z.dead && !z.under && Math.hypot(z.x - x, z.y - y) < z.r + 6) return z;
+    return null;
+  }
+
+  // El estallido: al que la lleva, el golpe fuerte; a los de alrededor, el de área; todos salen volando.
+  stickyBlast(game: GameHost, s: Sticky) {
+    const S = STICKY;
+    const { x, y, owner } = s;
+    const R = S.radius;
+    const carrier = s.stuck && s.z && !s.z.dead ? s.z : null;
+    let gore = 0;
+    const blow = (z: Zombie, main: boolean) => {
+      const dx = z.x - x;
+      const dy = z.y - y;
+      const n = Math.hypot(dx, dy) || 1;
+      const f = main ? 1 : clamp(1 - n / R, 0, 1);
+      z.lastOwner = owner;
+      if (z.type === 'fat') {
+        // el gordo revienta de una
+        z.lastDx = (dx / n) * 3;
+        z.lastDy = (dy / n) * 3;
+        if (gore++ < 3) {
+          game.particles.gore(z.x, z.y, ROCKET.fatRadius * 0.8);
+          for (let k = 0; k < 6; k++) game.decals.splat(z.x + rand(-60, 60), z.y + rand(-60, 60), rand(8, 18));
+        }
+        game.killZombie(z);
+        return;
+      }
+      const dmg = z.type === 'rock' ? z.maxHp * (main ? S.rock : S.rockArea) : main ? S.dmg : S.area;
+      game.hitZombie(
+        z,
+        {
+          dmg,
+          // al que la lleva le estalla encima: sin lado (ni espalda ni frente de un jefe)
+          dx: main ? 0 : dx / n,
+          dy: main ? 0 : dy / n,
+          knock: (200 + 300 * f) * (1 + S.fling),
+          shot: null,
+          blast: true,
+          owner,
+        } as Partial<Bullet> as Bullet,
+        z.x,
+        z.y,
+      );
+      if (z.dead) {
+        z.lastDx = (dx / n) * (2 + 3 * f);
+        z.lastDy = (dy / n) * (2 + 3 * f);
+      } else {
+        z.airV = Math.max(z.airV || 0, Math.min(AIR.vmax, ((200 + 340 * f) * S.fling) / Math.sqrt(z.mass)));
+        z.air = z.air || 0.01;
+        z.spinV = rand(-10, 10);
+      }
+    };
+    if (carrier) blow(carrier, true);
+    game.horde.grid.query(x - R - 60, y - R - 60, x + R + 60, y + R + 60, near);
+    for (const z of near) {
+      if (z.dead || z === carrier || Math.hypot(z.x - x, z.y - y) > R + z.r) continue;
+      blow(z, false);
+    }
+    game.particles.stickyBlast(x, y, R);
+    game.sfx.stickyBoom();
+    if (gore) game.sfx.gore();
+    game.camera.shake(1, x, y);
+    this.blasts.push({ x, y, t: 0.5 });
+    for (let k = 0; k < 3; k++)
+      this.scorches.push({ x: x + rand(-40, 40), y: y + rand(-40, 40), t: 0, life: 30, a: rand(0, TAU) });
+    while (this.scorches.length > 20) this.scorches.shift();
   }
 
   /* ---------- misil balístico (habilidad del Bomber) ---------- */
@@ -828,6 +1059,7 @@ export class Structures {
     this.updateFires(dt, game);
     this.updateMissiles(dt, game);
     this.updateStuck(dt, game);
+    this.updateStickies(dt, game);
     for (let i = this.blasts.length - 1; i >= 0; i--) {
       this.blasts[i].t -= dt;
       if (this.blasts[i].t <= 0) this.blasts.splice(i, 1);

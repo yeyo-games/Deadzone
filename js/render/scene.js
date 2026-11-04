@@ -5,6 +5,8 @@ import { drawSurvivor } from './sprites.js';
 import {
   drawMissiles,
   drawStuck,
+  drawStickies,
+  drawStickyZones,
   drawFires,
   drawGround,
   drawBlocks,
@@ -58,6 +60,7 @@ export function render(game) {
   if (playing) drawOpsGround(ctx, game, game.time);
   if (game.building && game.state === 'play' && p.alive && game.inv[game.buildSel] > 0)
     drawGhost(ctx, game.structures, game, game.buildSel, game.time, game.buildTarget());
+  drawStickyZones(ctx, game.structures, game.time);
   drawHorde(ctx, game.horde.list, v, base, 'small');
   drawFires(ctx, game.structures, v, game.time);
   drawStuck(ctx, game.structures, game.time);
@@ -76,6 +79,7 @@ export function render(game) {
   drawBullets(ctx, game.bullets.list);
   drawRemoteBullets(ctx, game);
   drawGrenades(ctx, game.structures);
+  drawStickies(ctx, game.structures, game.time);
   drawOverhead(ctx, game.world, v.x0, v.y0, v.x1, v.y1, playing ? p : { x: -1e4, y: -1e4 }, game.time);
   drawBossAir(ctx, game, game.time);
   game.particles.draw(ctx, v);

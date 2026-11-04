@@ -453,6 +453,37 @@ export class Sfx {
       this.tone({ freq: 1800 + i * 150, dur: 0.05, gain: 0.12, type: 'square', delay: i * (0.11 - i * 0.012) });
   }
 
+  // Bomba lapa: silbido al lanzarla.
+  stickyThrow() {
+    if (!this.ok('stickyThrow', 0.08, true)) return;
+    this.burst({ dur: 0.3, freq: 500, sweep: 2600, gain: 0.3, type: 'bandpass', q: 1.5 });
+    this.tone({ freq: 900, to: 1400, dur: 0.08, gain: 0.1, type: 'square' });
+  }
+
+  // Se pega (carne: golpe húmedo; suelo: golpe seco) y se arma con un clic.
+  stickyStick(flesh) {
+    if (!this.ok('stickyStick', 0.05, true)) return;
+    if (flesh) this.burst({ dur: 0.18, freq: 500, sweep: 140, gain: 0.7, q: 1.5 });
+    else this.burst({ dur: 0.08, freq: 2400, gain: 0.4, type: 'bandpass', q: 5 });
+    this.tone({ freq: 160, to: 60, dur: 0.14, gain: 0.6 });
+    this.tone({ freq: 2600, dur: 0.05, gain: 0.15, type: 'square', delay: 0.1 });
+  }
+
+  // Pitido de la cuenta atrás (cada vez más seguido).
+  stickyBeep() {
+    if (!this.ok('stickyBeep', 0.03, true)) return;
+    this.tone({ freq: 2300, dur: 0.06, gain: 0.16, type: 'square' });
+  }
+
+  // El estallido: chasquido, estampido enorme y un retumbar largo.
+  stickyBoom() {
+    if (!this.ok('stickyBoom', 0.08, true)) return;
+    this.burst({ dur: 0.12, freq: 4000, gain: 0.8, type: 'highpass' });
+    this.burst({ dur: 1.8, freq: 2400, sweep: 40, gain: 1 });
+    this.tone({ freq: 80, to: 18, dur: 1.6, gain: 1 });
+    this.burst({ dur: 2.6, freq: 320, sweep: 40, gain: 0.7, attack: 0.15, delay: 0.08 });
+  }
+
   // Super golpe del blindado: impacto sordo y metálico.
   punch() {
     if (!this.ok('punch', 0.15, true)) return;

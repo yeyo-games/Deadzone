@@ -587,6 +587,7 @@ export class ServerSim {
         s.inv[a.kind]--;
         if (a.kind === 'molotov') this.structures.throwMolotov(g, a.tx, a.ty, s.id);
         else if (a.kind === 'improv') this.structures.launchImprov(g, a.tx, a.ty, s.id);
+        else if (a.kind === 'sticky') this.structures.throwSticky(g, a.tx, a.ty, s.id);
         else this.structures.throwGrenade(g, a.tx, a.ty, s.id);
       } else if (a.k === 'robot') this.toggleRobot(s);
       else if (a.k === 'share') this.toggleShare(s, a.tx, a.ty);

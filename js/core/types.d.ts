@@ -247,6 +247,8 @@ export interface WorldSnap {
   gr: number[];
   fi: number[];
   so: number[];
+  /** Bombas lapa (9): x, y, altura, giro x100, mecha x100 (-100 en el aire), id del zombi (0 = ninguno), ox, oy, ángulo del lanzamiento x100. */
+  sb: number[];
   ms: number[];
   bl: number[];
   /** Oleada, estado del director y reloj de la partida. */

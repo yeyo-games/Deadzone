@@ -607,6 +607,7 @@ export class Online {
         if (inp.consume('grenade')) g.tryGrenade();
         if (inp.consume('molotov')) g.tryGrenade('molotov');
         if (inp.consume('improv')) g.tryGrenade('improv');
+        if (inp.consume('sticky')) g.tryGrenade('sticky');
         if (inp.consume('robot')) g.toggleRobot();
         if (inp.consume('share')) g.shareTurret();
         if (inp.consume('turret')) return g.openTurret();

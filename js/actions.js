@@ -257,7 +257,9 @@ export function tryGrenade(game, kind = 'grenade') {
         ? 'Sin molotovs: cómpralos en la tienda'
         : kind === 'improv'
           ? 'Sin misiles improvisados: cómpralos en la tienda'
-          : 'Sin granadas: cómpralas en la tienda',
+          : kind === 'sticky'
+            ? 'Sin bombas lapa: cómpralas en la tienda'
+            : 'Sin granadas: cómpralas en la tienda',
     );
     return;
   }
@@ -280,6 +282,7 @@ export function tryGrenade(game, kind = 'grenade') {
   if (game.mode.sendThrow(kind, tx, ty)) return;
   if (kind === 'molotov') game.structures.throwMolotov(game, tx, ty);
   else if (kind === 'improv') game.structures.launchImprov(game, tx, ty);
+  else if (kind === 'sticky') game.structures.throwSticky(game, tx, ty);
   else game.structures.throwGrenade(game, tx, ty);
 }
 

@@ -2099,6 +2099,12 @@ export const SHOP = {
     price: 120,
     consumable: true,
   },
+  sticky: {
+    name: 'Bomba lapa',
+    desc: 'Carga adhesiva: se pega al zombi más cercano a donde apuntas (jefes incluidos) y estalla a los 2 s. Revienta a los gordos, le arranca la mitad de la vida a un rocoso, 1000 al que la lleva y 500 a los de alrededor.',
+    price: 250,
+    consumable: true,
+  },
 };
 // Modo construir: hasta qué distancia del jugador (px) se coloca la pieza donde apuntas o tocas.
 export const BUILD = { reach: 190 };
@@ -2120,11 +2126,27 @@ export const BUILD_ORDER = [
   'decoy',
   'repair',
 ];
-export const THROWABLES = ['grenade', 'molotov', 'improv'];
+export const THROWABLES = ['grenade', 'molotov', 'improv', 'sticky'];
 // Misil improvisado (SHOP.improv): vuela recto (cabeceando más que el cohete de la bazuca) hasta
 // range px y estalla en el primer zombi o pared que toca, un poco más fuerte que una granada
 // (radio 140, daño 330) y con la mitad del área del cohete.
 export const IMPROV = { speed: 640, range: 650, radius: 160, power: 420, wobble: 1.8 };
+// Bomba lapa (SHOP.sticky): vuela en arco (hasta range px) hacia el zombi más cercano a donde apuntas
+// (a seek px como mucho, jefes incluidos), lo sigue y se le pega; a los fuse s estalla. Si no hay
+// zombi, cae al suelo y se pega al primero que la toque antes de estallar. Al que la lleva: dmg (al
+// gordo lo revienta; al rocoso le quita rock de su vida máxima); a los demás a radius px: area (al
+// gordo también lo revienta; al rocoso, rockArea de su vida). La onda lanza a volar a los que quedan.
+export const STICKY = {
+  range: 360,
+  seek: 110,
+  fuse: 2,
+  radius: 210,
+  dmg: 1000,
+  area: 500,
+  rock: 0.5,
+  rockArea: 0.25,
+  fling: 1.6,
+};
 export const SHOP_ORDER = [...BUILD_ORDER, ...THROWABLES];
 // Vender un arma devuelve esta fracción de su precio.
 export const SELL_RATE = 0.5;

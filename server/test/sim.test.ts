@@ -244,6 +244,32 @@ test('misil improvisado: se compra, lo lanza el servidor, quien lo lanzó lo ve 
   assert.ok(!sim.bullets.list.some((q: any) => q.improv));
 });
 
+test('bomba lapa: se compra, la lanza el servidor, se pega al zombi, va en la foto y estalla', () => {
+  const sim = new ServerSim(5, [{ id: 'a', idx: 1, name: 'Ana' }]);
+  const a = sim.slots.get('a')!;
+  const seq = { n: 0 };
+  idle(sim, 'a', seq, 2);
+  a.money = 1000;
+  sim.director.state = 'waiting';
+  assert.ok(sim.shop('a', 'item', 'sticky', 0));
+  assert.equal(a.money, 1000 - 250);
+  assert.equal(a.inv.sticky, 1);
+  const p = a.p;
+  const z = sim.horde.spawn('swat', p.x + 150, p.y, 10, 0.001);
+  sim.act('a', { s: seq.n + 1, k: 'throw', kind: 'sticky', tx: z.x, ty: z.y });
+  idle(sim, 'a', seq, 40);
+  assert.equal(a.inv.sticky, 0);
+  const s = sim.structures.stickies[0];
+  assert.ok(s && s.stuck && s.z === z && s.owner === 'a', 'pegada al zombi');
+  const sb = sim.snapshot('a', 0)!.sb;
+  assert.equal(sb.length, 9);
+  assert.equal(sb[5], z.id, 'la foto dice a qué zombi va pegada');
+  const hp = z.hp;
+  idle(sim, 'a', seq, 140);
+  assert.equal(sim.structures.stickies.length, 0, 'estalló');
+  assert.ok(hp - z.hp >= 999 || z.dead);
+});
+
 test('entre oleadas la siguiente ronda empieza sólo cuando todos están listos', () => {
   const sim = new ServerSim(5, [
     { id: 'a', idx: 1, name: 'Ana' },

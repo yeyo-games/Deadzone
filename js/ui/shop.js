@@ -15,7 +15,7 @@ import { Robot } from '../sim/robot.ts';
 import { drawRobot } from '../render/robot.js';
 import { drawRocket } from '../render/bullets.js';
 import { drawGunIcon } from '../render/sprites.js';
-import { drawBottle, drawGrenades, drawBlocks, drawGround } from '../render/build.js';
+import { drawBottle, drawGrenades, drawBlocks, drawGround, drawStickyBomb } from '../render/build.js';
 import { closest, on } from './dom.js';
 import { hasPlan } from './ops.js';
 
@@ -197,6 +197,11 @@ export function drawShopIcon(game, c, k) {
   if (k === 'molotov') {
     g.setTransform(0, -4.2, 4.2, 0, 48, 52);
     drawBottle(g, true);
+    return;
+  }
+  if (k === 'sticky') {
+    g.setTransform(3.6, 0, 0, 3.6, 48, 48);
+    drawStickyBomb(g, -0.4, 1);
     return;
   }
   if (k === 'improv') {

@@ -468,6 +468,105 @@ export class Particles {
     }
   }
 
+  // Bomba lapa: chispazo rojo al soltarla de la mano.
+  stickyThrow(x, y, a) {
+    for (let i = 0; i < 8; i++) {
+      const aa = a + rand(-0.5, 0.5);
+      const s = rand(120, 300);
+      this.add(SPARK, x, y, Math.cos(aa) * s, Math.sin(aa) * s, rand(0.08, 0.2), 1, pick(['#ff5a3a', '#ffb090']), 7);
+    }
+    this.add(SMOKE, x, y, Math.cos(a) * 30, Math.sin(a) * 30, 0.4, 4, '150,145,135', 3, 12);
+  }
+
+  // Se pega: chispas, golpe rojo y un destello.
+  stickyStick(x, y) {
+    for (let i = 0; i < 12; i++) {
+      const a = rand(0, TAU);
+      const s = rand(80, 260);
+      this.add(SPARK, x, y, Math.cos(a) * s, Math.sin(a) * s, rand(0.1, 0.22), 1, pick(['#ff6a40', '#ffd0a0']), 7);
+    }
+    this.ring(x, y, 22, '255,60,40');
+    this.flash(x, y, 70, 0.12);
+  }
+
+  // Cada pitido: un anillo rojo que se abre y un destello que alumbra.
+  stickyBlink(x, y) {
+    this.add(RING, x, y, 0, 0, 0.28, 4, '255,40,30', 0, 70);
+    this.flash(x, y, 55, 0.08);
+  }
+
+  // El estallido de la bomba lapa: destello enorme, bola de fuego con lenguas, dos ondas, lluvia de
+  // chispas, cascotes, brasas y una columna de humo que tarda en irse.
+  stickyBlast(x, y, R) {
+    this.flash(x, y, R * 2.6, 0.55);
+    this.add(FIREBALL, x, y, 0, 0, 0.5, R * 0.62, '', 0);
+    for (let i = 0; i < 10; i++) {
+      const a = (i / 10) * TAU + rand(-0.2, 0.2);
+      const s = rand(160, 340);
+      this.add(
+        FIREBALL,
+        x + Math.cos(a) * R * 0.12,
+        y + Math.sin(a) * R * 0.12,
+        Math.cos(a) * s,
+        Math.sin(a) * s,
+        rand(0.28, 0.5),
+        R * rand(0.2, 0.32),
+        '',
+        3.5,
+      );
+    }
+    this.add(RING, x, y, 0, 0, 0.5, R * 0.3, '255,245,220', 0, R * 3.2);
+    this.add(RING, x, y, 0, 0, 0.7, R * 0.2, '255,110,50', 0, R * 2.2, 0.07);
+    for (let i = 0; i < 50; i++) {
+      const a = rand(0, TAU);
+      const s = rand(250, 900);
+      this.add(
+        SPARK,
+        x,
+        y,
+        Math.cos(a) * s,
+        Math.sin(a) * s,
+        rand(0.15, 0.4),
+        1,
+        pick(['#ffd890', '#ffb060', '#fff2d0', '#ff6a40']),
+        4,
+      );
+    }
+    for (let i = 0; i < 30; i++) {
+      const a = rand(0, TAU);
+      const s = rand(120, 440);
+      this.add(
+        DOT,
+        x,
+        y,
+        Math.cos(a) * s,
+        Math.sin(a) * s,
+        rand(0.5, 1.1),
+        rand(2.5, 5),
+        pick(['#3a352d', '#55503e', '#2a2722']),
+        3.5,
+      );
+    }
+    for (let i = 0; i < 22; i++) this.ember(x + rand(-R, R) * 0.3, y + rand(-R, R) * 0.3, 1.4);
+    for (let i = 0; i < 24; i++) {
+      const a = rand(0, TAU);
+      const s = rand(20, 110);
+      this.add(
+        SMOKE,
+        x + Math.cos(a) * R * 0.25,
+        y + Math.sin(a) * R * 0.25,
+        Math.cos(a) * s,
+        Math.sin(a) * s - 30,
+        rand(1.8, 3.2),
+        rand(14, 26),
+        i < 6 ? '120,70,40' : '52,50,48',
+        1.1,
+        50,
+        rand(0.15, 0.4),
+      );
+    }
+  }
+
   // el gordo revienta: trozos de carne, chorros de sangre por todos lados
   gore(x, y, R) {
     for (let i = 0; i < 26; i++) {

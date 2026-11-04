@@ -60,6 +60,7 @@ export class Input {
       if (e.code === 'KeyG') this.pressed.grenade = true;
       if (e.code === 'KeyT') this.pressed.molotov = true;
       if (e.code === 'KeyZ') this.pressed.improv = true;
+      if (e.code === 'KeyC') this.pressed.sticky = true;
       if (e.code === 'KeyE') this.pressed.robot = true;
       if (e.code === 'KeyU') this.pressed.upgrade = true;
       if (e.code === 'KeyM') this.pressed.turret = true;
@@ -234,6 +235,7 @@ export class Input {
     tap('#btn-grenade', () => (this.pressed.grenade = true));
     tap('#btn-molotov', () => (this.pressed.molotov = true));
     tap('#btn-improv', () => (this.pressed.improv = true));
+    tap('#btn-sticky', () => (this.pressed.sticky = true));
     tap('#btn-robot', () => (this.pressed.robot = true));
     tap('#btn-tup', () => (this.pressed.turret = true));
     tap('#btn-share', () => (this.pressed.share = true));

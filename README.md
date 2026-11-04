@@ -154,6 +154,7 @@ de elegir tu mejora de nivel) se abre la tienda:
 | Granada | $90 | Explosión en área que lanzas tú |
 | Molotov | $60 | Charco de fuego: los zombis que lo pisan arden, se retuercen y el fuego se contagia |
 | Misil improvisado | $120 | Tubo con pólvora y cinta: sale recto hacia donde apuntas (cabeceando) y estalla al primer zombi o pared, algo más fuerte que una granada. De un solo uso |
+| Bomba lapa | $250 | Carga adhesiva: vuela en arco hacia el zombi más cercano a donde apuntas (jefes incluidos), se le pega y estalla a los 2 s con una explosión enorme (radio 210). Al que la lleva le quita 1000 de vida y a los de alrededor 500; revienta a los gordos de una y al rocoso le arranca la mitad de su vida (un cuarto si sólo lo alcanza). Si no hay zombi, cae al suelo y se pega al primero que la toque |
 
 Para construir pulsa `F` (o el botón de construir en el celular, o toca una pieza del inventario): abajo
 aparece la barra con las piezas que tienes y la elegida se ve donde caería, en verde si cabe y en rojo si
@@ -296,7 +297,7 @@ línea los demás ven lo que llevas.
 ### Controles
 
 En el celular sólo hay a mano disparar, cambiar de arma, recargar y la habilidad. Los botones pequeños
-de granada, molotov, misil improvisado, construir, robot y taller aparecen en una fila encima sólo
+de granada, molotov, misil improvisado, bomba lapa, construir, robot y taller aparecen en una fila encima sólo
 cuando los puedes usar (si los compraste o estás junto a la torreta), y el inventario sólo enseña lo que
 tienes.
 
@@ -308,7 +309,7 @@ tienes.
 | `R`: recargar | Botón de recarga |
 | `1`–`9`, `Q` o `Tab`: cambiar arma | Botón de cambio de arma |
 | `F`: modo construir (clic coloca, `R` gira, rueda o `1`–`9` cambia de pieza) | Botón **Construir**: arrastra una pieza de la barra al mapa y suéltala (o toca el mapa y ✓), **Girar** la gira |
-| `G`: lanzar granada · `T`: molotov · `Z`: misil improvisado · `E`: robot o torreta pesada | Botones pequeños de **granada**, **molotov** y **misil** (apuntan solos) |
+| `G`: lanzar granada · `T`: molotov · `Z`: misil improvisado · `C`: bomba lapa · `E`: robot o torreta pesada | Botones pequeños de **granada**, **molotov**, **misil** y **bomba lapa** (apuntan solos) |
 | `M`: taller de la torreta pesada o militar (junto a ella) | Botón de la **llave** |
 | `H` mantenida: usar el objetivo de una operación, soltar un cargamento, activar un señuelo o el reparador | Botón **H** (aparece cuando hay algo que usar) |
 | `L`: en línea, dejar o no que otros se suban a tu torreta | Botón del **candado** |

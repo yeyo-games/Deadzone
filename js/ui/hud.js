@@ -248,6 +248,8 @@ export function updateHud(game, force) {
     '|' +
     inv.improv +
     '|' +
+    inv.sticky +
+    '|' +
     game.buildSel +
     '|' +
     game.money;
@@ -260,6 +262,8 @@ export function updateHud(game, force) {
     ];
     if (inv.improv)
       items.push(`<span class="it gren" title="Misiles improvisados">${ITEM_ICONS.improv}<b>${inv.improv}</b></span>`);
+    if (inv.sticky)
+      items.push(`<span class="it gren" title="Bombas lapa">${ITEM_ICONS.sticky}<b>${inv.sticky}</b></span>`);
     for (const k of BUILD_ORDER) {
       if (!inv[k]) continue;
       const cls = `it${k === game.buildSel ? ' on' : ''}`;
@@ -278,6 +282,8 @@ export function updateHud(game, force) {
     $('btn-molotov').classList.toggle('gone', inv.molotov <= 0);
     $('improv-count').textContent = inv.improv;
     $('btn-improv').classList.toggle('gone', inv.improv <= 0);
+    $('sticky-count').textContent = inv.sticky;
+    $('btn-sticky').classList.toggle('gone', inv.sticky <= 0);
   }
   // modo construir: la barra con las piezas que tienes (la elegida resaltada) y cómo colocarla
   const touch = game.input.mode === 'touch';

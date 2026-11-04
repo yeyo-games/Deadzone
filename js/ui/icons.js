@@ -21,6 +21,8 @@ export const ITEM_ICONS = {
     '<svg viewBox="0 0 12 12"><ellipse cx="5" cy="7.5" rx="3.2" ry="3.4" fill="#7a9660" stroke="#141612" stroke-width=".8"/><rect x="4" y="2" width="2" height="3" fill="#7a9660" stroke="#141612" stroke-width=".6"/><circle cx="5" cy="1.6" r="1.5" fill="#ff9a30"/></svg>',
   improv:
     '<svg viewBox="0 0 12 12"><path d="M2 10l6-6" stroke="#8a5a34" stroke-width="2.6"/><path d="M3.2 7.6l1.2 1.2M5 5.8l1.2 1.2" stroke="#c9c4b4" stroke-width="1.2"/><path d="M7.4 2.6l2.6-.8-.8 2.6z" fill="#b8402c" stroke="#141612" stroke-width=".5"/></svg>',
+  sticky:
+    '<svg viewBox="0 0 12 12"><rect x="1.5" y="3.5" width="9" height="6" rx=".8" fill="#c2ae7c" stroke="#141612" stroke-width=".7"/><path d="M3.6 3.5v6M8.4 3.5v6" stroke="#3c3c36" stroke-width="1.1"/><rect x="4.6" y="4.8" width="2.8" height="2.6" fill="#2a2d2a"/><circle cx="6" cy="6.1" r=".8" fill="#ff3020"/><path d="M7.4 5c1.4-1.6 2.6-1.4 3.2-3" stroke="#d03a2a" stroke-width=".6" fill="none"/></svg>',
   grenade:
     '<svg viewBox="0 0 12 12"><ellipse cx="5.5" cy="7" rx="4" ry="4" fill="#5a6b3c" stroke="#141612"/><rect x="7" y="1.5" width="3" height="3" fill="#d9783a"/></svg>',
   wood: '<svg viewBox="0 0 12 12"><rect x="1" y="1" width="10" height="10" fill="#7a5634" stroke="#141612"/><path d="M2 2l8 8" stroke="#4a3220" stroke-width="1.5"/></svg>',

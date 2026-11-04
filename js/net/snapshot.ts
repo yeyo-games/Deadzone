@@ -2,7 +2,7 @@
 // (server/src/sim/ServerSim.ts) le cuenta a un jugador lo que ve. Lo decodifica js/net/remote.js.
 //
 // Una foto = parte del mundo (esta) + parte propia de cada jugador:
-//   mundo        q, ts, o, z, zx, zh, pl, rb, pk, b, gr, fi, so, ms, bl, w, ds, tm, ev, bo, bf
+//   mundo        q, ts, o, z, zx, zh, pl, rb, pk, b, gr, fi, so, sb, ms, bl, w, ds, tm, ev, bo, bf
 //   en línea     lo mismo + ack, me, st, wp, ec, ps, iv, ab, hv, up, fx, tt, dg, kl, ml, lft, blk, wir, sc (cada jugador)
 // Todo son listas planas de números (poco peso); las posiciones de los zombis van relativas a `o`.
 // El contrato de tipos está en js/core/types.d.ts (WorldSnap). No importa nada del navegador.
@@ -39,6 +39,7 @@ export const WORLD_KEYS = [
   'gr',
   'fi',
   'so',
+  'sb',
   'ms',
   'bl',
   'w',
@@ -58,7 +59,7 @@ export type PeerEntry = { idx: number; p: Player; away?: boolean };
 export type RobotEntry = { idx: number; r: Robot };
 
 /** Lo que encodeScene y encodeStatic leen de `Structures`. */
-type SceneStructures = Pick<Structures, 'grenades' | 'fires' | 'stuck' | 'missiles' | 'blasts'>;
+type SceneStructures = Pick<Structures, 'grenades' | 'fires' | 'stuck' | 'stickies' | 'missiles' | 'blasts'>;
 type StaticStructures = Pick<Structures, 'blocks' | 'wires' | 'scorches'>;
 /** Lo que encodeWorld lee de la partida (la simulación del servidor). */
 export type WorldSource = {
@@ -205,6 +206,22 @@ export function encodeScene(src: WorldSource, viewer: Viewer, skipBullet: (b: Bu
             r100(q.stick),
             r100(q.glow),
             q.kind === 'fat' ? 1 : 0,
+          ]
+        : [],
+    ),
+    // bombas lapa: en el aire o pegadas (al zombi `id`, en su sitio del cuerpo, para seguirlo al dibujar)
+    sb: st.stickies.flatMap((q) =>
+      near(q.x, q.y)
+        ? [
+            Math.round(q.x),
+            Math.round(q.y),
+            Math.round(q.h),
+            r100(q.rot),
+            r100(q.fuse),
+            q.stuck && q.z ? q.z.id : 0,
+            Math.round(q.ox),
+            Math.round(q.oy),
+            r100(q.a),
           ]
         : [],
     ),

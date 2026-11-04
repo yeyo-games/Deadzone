@@ -567,6 +567,31 @@ export class Remote {
         glow: so[i + 5] / 100,
         kind: so[i + 6] ? 'fat' : 'heavy',
       });
+    const sb = Array.isArray(s.sb) ? s.sb : [];
+    st.stickies = [];
+    for (let i = 0; i + 8 < sb.length; i += 9) {
+      const z = sb[i + 5] ? this.zs.get(sb[i + 5]) || null : null;
+      st.stickies.push({
+        x: sb[i],
+        y: sb[i + 1],
+        h: sb[i + 2],
+        rot: sb[i + 3] / 100,
+        fuse: sb[i + 4] / 100,
+        z,
+        stuck: !!z,
+        ox: sb[i + 6],
+        oy: sb[i + 7],
+        a: sb[i + 8] / 100,
+        sx: 0,
+        sy: 0,
+        ex: 0,
+        ey: 0,
+        t: 0,
+        dur: 1,
+        beep: 0,
+        owner: null,
+      });
+    }
     const ms = Array.isArray(s.ms) ? s.ms : [];
     st.missiles = [];
     for (let i = 0; i + 3 < ms.length; i += 4)

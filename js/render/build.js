@@ -1,6 +1,6 @@
 // Dibujo de barricadas, trampas, torreta pesada, granadas, fuegos y cohetes. La lógica vive en sim/build.js.
-import { ABILITY, BUILD, SHOP } from '../core/config.ts';
-import { TAU, roundRect } from '../core/util.ts';
+import { ABILITY, BUILD, SHOP, STICKY } from '../core/config.ts';
+import { TAU, rand, roundRect } from '../core/util.ts';
 import { OUT, flameSprite } from './sprites.js';
 import { drawRocket } from './bullets.js';
 import { drawDecoy, drawRepair } from './ops.js';
@@ -88,6 +88,146 @@ export function drawStuck(ctx, st, time) {
       ctx.globalCompositeOperation = 'source-over';
     }
   }
+}
+
+// Bomba lapa (sim/build.ts, STICKY): dónde se dibuja (pegada sigue al zombi, también el que llega en la foto).
+function stickyAt(s) {
+  const z = s.z;
+  if (!s.stuck || !z || z.dead) return s;
+  const c = Math.cos(z.angle);
+  const sn = Math.sin(z.angle);
+  return { x: z.x + s.ox * c - s.oy * sn, y: z.y + s.ox * sn + s.oy * c };
+}
+
+// Lo que le queda de mecha (0..1, 1 recién pegada) y lo rápido que parpadea.
+const fuseK = (s) => Math.max(0, Math.min(1, s.fuse / STICKY.fuse));
+const blinkOn = (s, time) => Math.sin(time * (8 + (1 - fuseK(s)) * 46)) > 0;
+
+// En el suelo: el radio de la explosión en rojo, que late cada vez más rápido.
+export function drawStickyZones(ctx, st, time) {
+  for (const s of st.stickies || []) {
+    if (s.fuse < 0) continue;
+    const { x, y } = stickyAt(s);
+    const k = 1 - fuseK(s);
+    const R = STICKY.radius;
+    const pulse = 0.5 + 0.5 * Math.abs(Math.sin(time * (4 + k * 22)));
+    const g = ctx.createRadialGradient(x, y, R * 0.2, x, y, R);
+    g.addColorStop(0, `rgba(255,40,20,${0.02 + 0.1 * k * pulse})`);
+    g.addColorStop(0.85, `rgba(255,30,10,${0.05 + 0.16 * k * pulse})`);
+    g.addColorStop(1, 'rgba(255,30,10,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(x, y, R, 0, TAU);
+    ctx.fill();
+    ctx.save();
+    ctx.setLineDash([14, 10]);
+    ctx.lineDashOffset = -time * 60;
+    ctx.strokeStyle = `rgba(255,60,40,${0.25 + 0.5 * pulse * (0.4 + k * 0.6)})`;
+    ctx.lineWidth = 2 + k * 2;
+    ctx.beginPath();
+    ctx.arc(x, y, R, 0, TAU);
+    ctx.stroke();
+    ctx.restore();
+    // la cuenta atrás: un anillo que se cierra hacia la bomba
+    ctx.strokeStyle = `rgba(255,90,60,${0.35 + 0.4 * pulse})`;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(x, y, 18 + (R - 18) * fuseK(s), 0, TAU);
+    ctx.stroke();
+  }
+}
+
+// La bomba: en el aire gira con una estela roja; pegada, el piloto parpadea, brilla y se pone al rojo.
+export function drawStickies(ctx, st, time) {
+  for (const s of st.stickies || []) {
+    const { x, y } = stickyAt(s);
+    if (s.fuse < 0) {
+      ctx.fillStyle = 'rgba(0,0,0,0.35)';
+      ctx.beginPath();
+      ctx.ellipse(x + 2, y + 3, 7, 4, 0, 0, TAU);
+      ctx.fill();
+      const by = y - s.h;
+      const ca = Math.cos(s.a);
+      const sa = Math.sin(s.a);
+      ctx.globalCompositeOperation = 'lighter';
+      const tr = ctx.createLinearGradient(x, by, x - ca * 46, by - sa * 46);
+      tr.addColorStop(0, 'rgba(255,70,40,0.85)');
+      tr.addColorStop(1, 'rgba(255,40,20,0)');
+      ctx.strokeStyle = tr;
+      ctx.lineWidth = 5;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(x, by);
+      ctx.lineTo(x - ca * 46, by - sa * 46 + 6);
+      ctx.stroke();
+      ctx.lineCap = 'butt';
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.save();
+      ctx.translate(x, by);
+      const sc = 1 + s.h / 50;
+      ctx.scale(sc, sc);
+      drawStickyBomb(ctx, s.rot, 1);
+      ctx.restore();
+      continue;
+    }
+    const k = 1 - fuseK(s);
+    const on = blinkOn(s, time);
+    // brillo rojo que crece; en el último momento, al blanco
+    ctx.globalCompositeOperation = 'lighter';
+    const gr = 16 + k * 34 + (on ? 6 : 0);
+    const g = ctx.createRadialGradient(x, y, 1, x, y, gr);
+    const hot = k > 0.85;
+    g.addColorStop(0, hot ? 'rgba(255,250,230,0.95)' : `rgba(255,90,60,${on ? 0.9 : 0.45})`);
+    g.addColorStop(0.45, `rgba(255,40,20,${0.25 + 0.4 * k})`);
+    g.addColorStop(1, 'rgba(255,20,10,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(x, y, gr, 0, TAU);
+    ctx.fill();
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.save();
+    ctx.translate(x, y);
+    // tiembla a punto de estallar
+    if (k > 0.7) ctx.translate(rand(-1, 1) * k * 2, rand(-1, 1) * k * 2);
+    drawStickyBomb(ctx, s.rot, on ? 1 : 0.25);
+    ctx.restore();
+  }
+}
+
+// Carga de explosivo plástico con cinta, detonador, cables y piloto (led: 0..1).
+export function drawStickyBomb(ctx, rot, led) {
+  ctx.save();
+  ctx.rotate(rot);
+  ctx.fillStyle = 'rgba(80,190,70,0.55)';
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 9.5, 6.5, 0, 0, TAU);
+  ctx.fill();
+  ctx.fillStyle = '#c2ae7c';
+  ctx.fillRect(-8, -5, 16, 10);
+  ctx.strokeStyle = OUT;
+  ctx.lineWidth = 1.2;
+  ctx.strokeRect(-8, -5, 16, 10);
+  ctx.fillStyle = '#3c3c36';
+  ctx.fillRect(-5.5, -5, 2.2, 10);
+  ctx.fillRect(3.3, -5, 2.2, 10);
+  ctx.fillStyle = '#2a2d2a';
+  ctx.fillRect(-2.6, -3, 5.2, 5);
+  ctx.strokeStyle = '#d03a2a';
+  ctx.lineWidth = 0.9;
+  ctx.beginPath();
+  ctx.moveTo(2.6, -2);
+  ctx.quadraticCurveTo(7, -8, 10, -5);
+  ctx.stroke();
+  ctx.strokeStyle = '#3a6ad0';
+  ctx.beginPath();
+  ctx.moveTo(2.6, 1);
+  ctx.quadraticCurveTo(8, 6, 10.5, 3);
+  ctx.stroke();
+  ctx.fillStyle = led > 0.5 ? '#ff3a20' : '#7a1810';
+  ctx.beginPath();
+  ctx.arc(0, -0.5, 1.4, 0, TAU);
+  ctx.fill();
+  ctx.restore();
 }
 
 export function drawFires(ctx, st, v, time) {
