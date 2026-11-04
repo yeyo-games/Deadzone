@@ -137,6 +137,8 @@ interface BlastAt {
 const SNAP = 20;
 const TRAP_WIRE = { slow: 0.35, dps: 14 };
 const TRAP_SPIKES = { slow: 0.5, dps: 45 };
+// barrera de pinchos oxidada: casi los detiene (no se gasta al pisarla; dura SHOP.rusty.waves oleadas)
+const TRAP_RUSTY = { slow: 0.12, dps: 30 };
 const TURRET_RANGE = 340;
 const BLAST_R = 140;
 // Al morir, el gordo revienta en ácido verde.
@@ -521,6 +523,10 @@ export class Structures {
         this.wires.splice(i, 1);
         this.explode(game, { x: w.x + w.w / 2, y: w.y + w.h / 2, owner: w.owner }, 115, 280);
         return null;
+      }
+      if (w.kind === 'rusty') {
+        w.hitT = 0.1;
+        return TRAP_RUSTY;
       }
       const spikes = w.kind === 'spikes';
       w.hp -= dt * (spikes ? 1.5 : 2.5) * Math.sqrt(z.mass);
@@ -1020,6 +1026,9 @@ export class Structures {
   // Al acabar la oleada: las torretas pesadas blindadas se reparan una parte.
   waveRepair() {
     repairHeavies(this.blocks);
+    // la barrera de pinchos oxidada pierde una oleada de vida; con la última se deshace
+    for (const w of this.wires) if (w.kind === 'rusty') w.hp--;
+    this.wires = this.wires.filter((w) => w.kind !== 'rusty' || w.hp > 0);
   }
 
   // La torreta (pesada o militar) que p puede mejorar: la que maneja o la más cercana a su alcance

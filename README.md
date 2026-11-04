@@ -149,6 +149,7 @@ de elegir tu mejora de nivel) se abre la tienda:
 | Torreta militar | $50 000 | Torre de tanque que lanza sola misiles antitanque (ver abajo) |
 | Alambre de púas | $20 | No bloquea: frena y hiere |
 | Trampa de pinchos | $60 | Frena y hiere mucho más |
+| Barrera de pinchos oxidada | $100 | Tres bloques de lámina oxidada con pinchos: no tapa el paso, pero los zombis que la cruzan casi se detienen y se hieren. No se gasta al pisarla: dura 3 oleadas |
 | Mina terrestre | $45 | Explota al pisarla |
 | Granada | $90 | Explosión en área que lanzas tú |
 | Molotov | $60 | Charco de fuego: los zombis que lo pisan arden, se retuercen y el fuego se contagia |

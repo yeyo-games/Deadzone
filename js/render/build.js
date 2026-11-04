@@ -141,6 +141,7 @@ export function drawGround(ctx, st, v) {
   for (const w of st.wires) {
     if (w.x > v.x1 || w.x + w.w < v.x0 || w.y > v.y1 || w.y + w.h < v.y0) continue;
     if (w.kind === 'spikes') drawSpikes(ctx, w);
+    else if (w.kind === 'rusty') drawRusty(ctx, w);
     else if (w.kind === 'mine') drawMine(ctx, w, st.time || 0);
     else drawWire(ctx, w);
   }
@@ -184,6 +185,7 @@ export function drawGhost(ctx, st, game, kind, time, at) {
   const piece = { k: 0, kind, x: pl.x, y: pl.y, w: pl.w, h: pl.h, hp: 1, max: 1, hitT: 0, ang: pl.a, up: 0 };
   if (SHOP[kind].ground) {
     if (kind === 'spikes') drawSpikes(ctx, piece);
+    else if (kind === 'rusty') drawRusty(ctx, piece);
     else if (kind === 'mine') drawMine(ctx, piece, time);
     else drawWire(ctx, piece);
   } else drawBlock(ctx, piece);
@@ -1150,6 +1152,78 @@ function drawSpikes(ctx, w) {
     }
   }
   ctx.globalAlpha = 1;
+}
+
+// Barrera de pinchos oxidada: tres planchas de lámina corrugada color óxido, con remaches y filas de
+// pinchos torcidos. Cada oleada que pasa se ve más carcomida (hp = oleadas que le quedan).
+function drawRusty(ctx, w) {
+  const { x, y } = w;
+  const along = w.w >= w.h;
+  const L = along ? w.w : w.h;
+  const W = along ? w.h : w.w;
+  const wear = 1 - Math.max(0, Math.min(1, w.hp / (w.max || 3)));
+  ctx.save();
+  ctx.translate(x + w.w / 2, y + w.h / 2);
+  if (!along) ctx.rotate(Math.PI / 2);
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  ctx.fillRect(-L / 2 + 3, -W / 2 + 4, L, W);
+  // tres planchas con sus pliegues
+  for (let k = 0; k < 3; k++) {
+    const px = -L / 2 + (k * L) / 3;
+    const pw = L / 3 - 2;
+    ctx.fillStyle = k % 2 ? '#7a4424' : '#8a4e28';
+    ctx.fillRect(px + 1, -W / 2 + 2, pw, W - 4);
+    ctx.strokeStyle = 'rgba(40,18,8,0.55)';
+    ctx.lineWidth = 1.5;
+    for (let i = 1; i < 5; i++) {
+      ctx.beginPath();
+      ctx.moveTo(px + 1 + (pw * i) / 5, -W / 2 + 2);
+      ctx.lineTo(px + 1 + (pw * i) / 5, W / 2 - 2);
+      ctx.stroke();
+    }
+    // manchas de óxido (más con cada oleada)
+    ctx.fillStyle = 'rgba(178,96,40,0.55)';
+    for (let i = 0; i < 2 + Math.round(wear * 4); i++) {
+      ctx.beginPath();
+      ctx.arc(px + 6 + ((i * 17 + k * 11) % (pw - 10)), -W / 2 + 7 + ((i * 13 + k * 5) % (W - 14)), 3 + (i % 2) * 2, 0, TAU);
+      ctx.fill();
+    }
+    if (wear > 0.5) {
+      // agujeros de la lámina carcomida
+      ctx.fillStyle = 'rgba(14,10,8,0.8)';
+      ctx.beginPath();
+      ctx.ellipse(px + pw * 0.6, 2, 4, 2.5, 0.4, 0, TAU);
+      ctx.fill();
+    }
+    ctx.fillStyle = '#3a2a1e';
+    for (const [rx, ry] of [
+      [px + 4, -W / 2 + 5],
+      [px + pw - 2, -W / 2 + 5],
+      [px + 4, W / 2 - 5],
+      [px + pw - 2, W / 2 - 5],
+    ])
+      ctx.fillRect(rx - 1, ry - 1, 2.5, 2.5);
+  }
+  ctx.strokeStyle = OUT;
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(-L / 2 + 1, -W / 2 + 2, L - 2, W - 4);
+  // pinchos torcidos en dos filas
+  ctx.fillStyle = w.hitT > 0 ? '#e0c8b0' : '#b49a82';
+  for (let r = 0; r < 2; r++) {
+    for (let i = 0; i < 9; i++) {
+      const sx = -L / 2 + 8 + i * ((L - 16) / 8) + (r ? 6 : 0);
+      if (sx > L / 2 - 4) continue;
+      const sy = r ? W / 4 : -W / 4;
+      const lean = ((i * 7 + r * 3) % 5) - 2;
+      ctx.beginPath();
+      ctx.moveTo(sx + lean, sy - 6);
+      ctx.lineTo(sx + 3, sy + 4);
+      ctx.lineTo(sx - 3, sy + 4);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+  ctx.restore();
 }
 
 function drawMine(ctx, w, time) {

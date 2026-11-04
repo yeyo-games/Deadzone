@@ -178,3 +178,25 @@ test('torretas con dueño: sólo él se sube y las presta; sin dueño (solitario
   Object.assign(beto, { x: 2030, y: 100 });
   assert.equal(st.nearHeavy(beto), libre, 'sin dueño se sube cualquiera');
 });
+
+test('la barrera de pinchos oxidada: tres bloques, $100, casi detiene, no se gasta y dura 3 oleadas', () => {
+  const d = SHOP.rusty;
+  assert.equal(d.price, 100);
+  assert.equal(d.w, 120, 'tres bloques de 40');
+  assert.ok(d.ground, 'no tapa el paso');
+  const st = new Structures();
+  st.wires.push({ kind: 'rusty', x: 0, y: 0, w: 120, h: 40, hp: d.hp, max: d.hp, hitT: 0, owner: null });
+  st.wires.push({ kind: 'spikes', x: 500, y: 0, w: 40, h: 40, hp: SHOP.spikes.hp, max: SHOP.spikes.hp, hitT: 0, owner: null });
+  const z = { x: 60, y: 20, r: 15, mass: 1 };
+  const efecto = st.trapAt(z, 1, fakeGame());
+  const pinchos = st.trapAt({ ...z, x: 520 }, 0.001, fakeGame());
+  assert.ok(efecto.slow < pinchos.slow / 3, 'frena mucho más que la trampa de pinchos');
+  for (let i = 0; i < 200; i++) st.trapAt(z, 1, fakeGame());
+  assert.equal(st.wires[0].hp, d.waves, 'pisarla no la gasta');
+  st.waveRepair();
+  st.waveRepair();
+  assert.equal(st.wires.filter((w) => w.kind === 'rusty').length, 1, 'aún aguanta tras 2 oleadas');
+  st.waveRepair();
+  assert.equal(st.wires.filter((w) => w.kind === 'rusty').length, 0, 'se deshace tras 3 oleadas');
+  assert.equal(st.wires.length, 1, 'las demás trampas siguen');
+});

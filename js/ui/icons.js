@@ -44,6 +44,8 @@ export const ITEM_ICONS = {
     '<svg viewBox="0 0 12 12"><rect x=".5" y=".5" width="11" height="11" rx="1.5" fill="#3a3e36" stroke="#141612" stroke-width=".7"/><path d="M1.8 3.4h4.6l2 1.6v2l-2 1.6H1.8z" fill="#5a6340" stroke="#141612" stroke-width=".7"/><rect x="8" y="5.4" width="4" height="1.2" fill="#4b5239" stroke="#141612" stroke-width=".4"/><circle cx="3.6" cy="5" r="1" fill="#3a4029"/></svg>',
   spikes:
     '<svg viewBox="0 0 12 12"><rect x="1" y="1" width="10" height="10" fill="#4a4740" stroke="#141612"/><path d="M3 5l1-2 1 2M7 5l1-2 1 2M3 10l1-2 1 2M7 10l1-2 1 2" fill="#b8b2a4"/></svg>',
+  rusty:
+    '<svg viewBox="0 0 12 12"><rect x=".5" y="3" width="11" height="6" fill="#8a4e28" stroke="#141612" stroke-width=".7"/><path d="M4.2 3v6M7.8 3v6" stroke="#3a1c0c" stroke-width=".6"/><path d="M1.5 6l.8-2 .8 2M5.3 6l.8-2 .8 2M9 6l.8-2 .8 2" fill="#c8b29a"/></svg>',
   mine: '<svg viewBox="0 0 12 12"><circle cx="6" cy="6" r="4.5" fill="#4a5236" stroke="#141612"/><circle cx="6" cy="6" r="1.4" fill="#ff5a3a"/></svg>',
   decoy:
     '<svg viewBox="0 0 12 12"><rect x="1.5" y="1.5" width="9" height="9" fill="#3a3e40" stroke="#141612"/><circle cx="6" cy="6.5" r="2.6" fill="#1c1e20"/><rect x="5" y="2.3" width="2" height="1.2" fill="#ff3a2a"/></svg>',

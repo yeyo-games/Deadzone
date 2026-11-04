@@ -2039,6 +2039,20 @@ export const SHOP = {
     h: 40,
     ground: true,
   },
+  // Tira de tres bloques de lámina oxidada con pinchos: no tapa el paso, pero frena muchísimo a los
+  // zombis que la cruzan (TRAP_RUSTY en build.ts). No se gasta con el uso: dura `waves` oleadas
+  // (su `hp` cuenta las oleadas que le quedan) y al final se deshace de óxido.
+  rusty: {
+    name: 'Barrera de pinchos oxidada',
+    desc: 'Tres bloques de lámina oxidada llena de pinchos: los zombis que la cruzan casi se detienen. Dura 3 oleadas.',
+    price: 100,
+    hp: 3,
+    waves: 3,
+    w: 120,
+    h: 40,
+    rotates: true,
+    ground: true,
+  },
   mine: {
     name: 'Mina terrestre',
     desc: 'Explota cuando un zombi la pisa y arrasa todo alrededor.',
@@ -2101,6 +2115,7 @@ export const BUILD_ORDER = [
   'military',
   'wire',
   'spikes',
+  'rusty',
   'mine',
   'decoy',
   'repair',
