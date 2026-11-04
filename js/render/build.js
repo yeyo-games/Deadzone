@@ -3,6 +3,7 @@ import { ABILITY, BUILD, SHOP } from '../core/config.ts';
 import { TAU, roundRect } from '../core/util.ts';
 import { OUT, flameSprite } from './sprites.js';
 import { drawRocket } from './bullets.js';
+import { drawDecoy, drawRepair } from './ops.js';
 import { heavyLevel, heavyLevels, milSalvo } from '../sim/heavy.ts';
 
 // Mira roja en el suelo que se cierra y el misil cayendo en picada sobre ella.
@@ -882,6 +883,8 @@ function drawMilitary(ctx, b) {
 }
 
 function drawBlock(ctx, b) {
+  if (b.kind === 'decoy') return drawDecoy(ctx, b);
+  if (b.kind === 'repair') return drawRepair(ctx, b);
   if (b.kind === 'heavy') return drawHeavy(ctx, b);
   if (b.kind === 'military') return drawMilitary(ctx, b);
   if (b.kind === 'reinforced') return drawReinforced(ctx, b);

@@ -134,7 +134,7 @@ test('entradas con valores raros se acotan y una ráfaga suma faltas, sin tirar 
     const c = slot.last;
     assert.ok(Math.hypot(c.mx, c.my) <= 1.0001, 'dirección acotada');
     assert.ok(Number.isFinite(c.mx) && Number.isFinite(c.a) && Math.abs(c.a) <= Math.PI + 1e-6, 'valores finitos');
-    assert.ok(c.f >= 0 && c.f <= 7 && c.w >= -1 && c.w <= 8, 'bits y arma en rango');
+    assert.ok(c.f >= 0 && c.f <= 15 && c.w >= -1 && c.w <= 8, 'bits y arma en rango');
   }
   assert.ok(slot.ack >= 4, 'las entradas llegaron a la simulación en orden');
   // una ráfaga muy por encima de 60 por segundo suma faltas

@@ -562,4 +562,76 @@ export class Sfx {
     this.tone({ freq: 880, dur: 0.08, gain: 0.18, type: 'triangle' });
     this.tone({ freq: 1320, dur: 0.12, gain: 0.15, type: 'triangle', delay: 0.06 });
   }
+
+  /* ---------- operaciones de alto riesgo (ui/ops.js) ---------- */
+
+  // Radio: chasquido de estática y dos pitidos.
+  radio() {
+    if (!this.ok('radio', 0.8, true)) return;
+    this.burst({ dur: 0.18, freq: 2400, gain: 0.12, type: 'bandpass', q: 0.8 });
+    this.tone({ freq: 1180, dur: 0.07, gain: 0.08, type: 'square', delay: 0.16 });
+    this.tone({ freq: 1180, dur: 0.07, gain: 0.08, type: 'square', delay: 0.27 });
+  }
+
+  // Interacción completada (componente conectado, cargamento recogido): clic metálico y tono que sube.
+  opDone() {
+    if (!this.ok('opDone', 0.15, true)) return;
+    this.burst({ dur: 0.05, freq: 3000, gain: 0.25, type: 'bandpass', q: 6 });
+    this.tone({ freq: 520, to: 880, dur: 0.18, gain: 0.16, type: 'triangle', delay: 0.04 });
+  }
+
+  // Golpe al objetivo (el camión): chapa abollada.
+  opHit() {
+    if (!this.ok('opHit', 0.3)) return;
+    this.burst({ dur: 0.16, freq: 420, gain: 0.32, type: 'bandpass', q: 3 });
+    this.tone({ freq: 140, to: 90, dur: 0.14, gain: 0.14, type: 'square' });
+  }
+
+  // Carga colocada en el nido: pitidos de armado.
+  opCharge() {
+    if (!this.ok('opCharge', 0.2, true)) return;
+    [1400, 1400, 1900].forEach((f, i) => this.tone({ freq: f, dur: 0.06, gain: 0.12, type: 'square', delay: i * 0.1 }));
+  }
+
+  // Cuenta atrás: un pitido por segundo, más agudo al final.
+  opTick(urgent) {
+    if (!this.ok('opTick', 0.4, true)) return;
+    this.tone({ freq: urgent ? 1760 : 1320, dur: 0.08, gain: urgent ? 0.18 : 0.12, type: 'square' });
+  }
+
+  // Entrega de un cargamento: golpe sordo y acorde.
+  opDeliver() {
+    if (!this.ok('opDeliver', 0.3, true)) return;
+    this.burst({ dur: 0.12, freq: 260, gain: 0.4 });
+    [523, 659, 784].forEach((f, i) => this.tone({ freq: f, dur: 0.3, gain: 0.12, type: 'triangle', delay: 0.05 + i * 0.05 }));
+  }
+
+  // Alerta: cambio de fase, respuesta enemiga o fallo.
+  opAlert() {
+    if (!this.ok('opAlert', 0.6, true)) return;
+    for (let i = 0; i < 3; i++) this.tone({ freq: 880, to: 620, dur: 0.22, gain: 0.13, type: 'sawtooth', delay: i * 0.26 });
+  }
+
+  // Recompensa de la operación: fanfarria corta.
+  reward() {
+    if (!this.ok('reward', 1, true)) return;
+    [392, 523, 659, 784, 1047].forEach((f, i) =>
+      this.tone({ freq: f, dur: 0.4, gain: 0.15, type: 'triangle', delay: i * 0.09 }),
+    );
+    this.tone({ freq: 131, dur: 0.9, gain: 0.18, type: 'sine', delay: 0.1 });
+  }
+
+  // Señuelo sonoro: sirena que sube y baja.
+  decoy() {
+    if (!this.ok('decoy', 0.5)) return;
+    for (let i = 0; i < 4; i++) this.tone({ freq: 700, to: 1200, dur: 0.45, gain: 0.1, type: 'sawtooth', delay: i * 0.5 });
+  }
+
+  // Reparador de campo: llave y chispa.
+  repair() {
+    if (!this.ok('repair', 0.3)) return;
+    this.burst({ dur: 0.08, freq: 2200, gain: 0.25, type: 'bandpass', q: 5 });
+    this.burst({ dur: 0.08, freq: 1800, gain: 0.2, type: 'bandpass', q: 5, delay: 0.12 });
+    this.tone({ freq: 660, to: 990, dur: 0.25, gain: 0.1, type: 'triangle', delay: 0.2 });
+  }
 }

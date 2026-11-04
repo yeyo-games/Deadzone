@@ -20,7 +20,11 @@ import {
   upDefs,
   upgradeHeavy,
   upOrder,
+  heavyFireOn,
+  heavyFireReady,
+  toggleHeavyFire,
 } from '../sim/heavy.ts';
+import { hasPlan } from './ops.js';
 import { MOUNTS } from '../sim/build.ts';
 import { drawHeavyPreview } from '../render/build.js';
 import { shareTurret } from '../actions.js';
@@ -33,6 +37,7 @@ const ICONS = {
   blast: `<svg viewBox="0 0 24 24" ${P}><path d="M12 2l2 6 6-2-3 5 5 3-6 1 1 6-5-4-4 5 0-6-6-1 5-4-3-5 6 2z"/></svg>`,
   armor: `<svg viewBox="0 0 24 24" ${P}><path d="M12 3 5 6v6c0 4.5 3 7.5 7 9 4-1.5 7-4.5 7-9V6z"/><path d="M9 12h6M12 9v6"/></svg>`,
   auto: `<svg viewBox="0 0 24 24" ${P}><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>`,
+  fire: `<svg viewBox="0 0 24 24" ${P}><path d="M12 3c1 4 6 6 6 11a6 6 0 0 1-12 0c0-3 2-5 3-6 0 2 1 3 2 3 0-3-1-5 1-8z"/></svg>`,
   warhead: `<svg viewBox="0 0 24 24" ${P}><path d="M3 12h10l5-4v8l-5-4"/><path d="M13 9.5v5M18 12h3"/></svg>`,
   reload: `<svg viewBox="0 0 24 24" ${P}><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v4h-4"/><path d="M9 12h6"/></svg>`,
   radar: `<svg viewBox="0 0 24 24" ${P}><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><path d="M12 12l6-6"/></svg>`,
@@ -76,10 +81,22 @@ export function closeTurret(game) {
   game.setState('play');
 }
 
+// Las mejoras que se ven: la munición incendiaria sólo con su plano (operación del nido).
+const shown = (game, b) => upOrder(b).filter((id) => id !== 'fire' || hasPlan(game, 'fire'));
+
+// Balas normales o incendiarias (si están instaladas).
+function toggleFire(game) {
+  const b = current(game);
+  if (!b || !heavyFireReady(b)) return;
+  if (game.mode.viaServer()) return game.online.buy('tfire', '');
+  game.toast(toggleHeavyFire(b) ? 'Balas incendiarias' : 'Balas normales');
+  renderTurret(game);
+}
+
 // Compra el siguiente nivel de la mejora id (en línea lo pide al servidor).
 export function buyTurretUp(game, id) {
   const b = current(game);
-  if (!b || !upDefs(b)[id]) return;
+  if (!b || !upDefs(b)[id] || !shown(game, b).includes(id)) return;
   const price = heavyPrice(b, id);
   if (!price) return game.toast(`${upDefs(b)[id].name}: ya está al máximo`);
   if (game.money < price) return game.toast(`Te faltan $${price - game.money}`);
@@ -106,6 +123,8 @@ function stepText(b, id) {
   if (id === 'blast') return `Radio ${arrow(d.r[lv], d.r[next], ' px')}`;
   if (id === 'armor')
     return `Vida ${arrow(d.hp[lv], d.hp[next])} · repara ${Math.round(d.repair[next < 0 ? lv : next] * 100)}%`;
+  if (id === 'fire')
+    return lv ? `Instalada · ahora dispara balas ${heavyFireOn(b) ? 'incendiarias' : 'normales'}` : '20% menos de daño directo, pero queman';
   return lv ? 'Activo: dispara sola cuando la dejas' : `Media cadencia · alcance ${d.range} px`;
 }
 
@@ -115,7 +134,7 @@ export function renderTurret(game) {
   const p = game.player;
   game.$('tup-money').textContent = `$${game.money}`;
   const lv = heavyLevels(b);
-  const order = upOrder(b);
+  const order = shown(game, b);
   const total = order.reduce((n, id) => n + lv[id], 0);
   const all = order.reduce((n, id) => n + heavyMax(b, id), 0);
   game.$('tup-name').textContent = SHOP[b.kind].name;
@@ -145,7 +164,9 @@ export function renderTurret(game) {
       const pips = Array.from({ length: max }, (_, k) => `<i class="${k < lv[id] ? 'on' : ''}"></i>`).join('');
       const btn = price
         ? `<button class="btn buy${poor ? ' poor' : ''}" data-tup="${id}" ${poor ? 'disabled' : ''}>$${price}</button>`
-        : '<span class="tup-max">Máximo</span>';
+        : id === 'fire'
+          ? `<button class="btn buy" data-tfire="1">${heavyFireOn(b) ? 'Usar normales' : 'Usar incendiarias'}</button>`
+          : '<span class="tup-max">Máximo</span>';
       return `<div class="tup-item${price ? '' : ' done'}">
       <span class="tup-ic">${ICONS[id]}</span>
       <div class="shop-txt"><b>${d.name} <span class="pips${max > 5 ? ' many' : ''}">${pips}</span></b><span>${d.desc}</span><small>${stepText(b, id)}<span class="key"> · tecla ${i + 1}</span></small></div>
@@ -179,7 +200,7 @@ export function updateTurret(game, dt) {
   if (inp.consume('share')) shareTurret(game, current(game));
   const s = inp.consume('slot');
   const was = current(game);
-  if (s && was && upOrder(was)[s - 1]) buyTurretUp(game, upOrder(was)[s - 1]);
+  if (s && was && shown(game, was)[s - 1]) buyTurretUp(game, shown(game, was)[s - 1]);
   const b = current(game);
   if (!b || b.hp <= 0 || !game.player.alive) {
     if (b?.hp <= 0 || !b) game.toast('La torreta fue destruida');
@@ -206,5 +227,6 @@ export function bindTurret(game) {
   game.$('tup-list').addEventListener('click', (e) => {
     const t = closest(e.target, '[data-tup]');
     if (t) buyTurretUp(game, t.dataset.tup);
+    if (closest(e.target, '[data-tfire]')) toggleFire(game);
   });
 }

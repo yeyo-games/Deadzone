@@ -17,7 +17,7 @@ import {
   EVENT_ORDER,
 } from '../core/config.ts';
 import { ServerClock, applyMove, BODY } from './netcode.ts';
-import { IN_RUN, IN_FIRE, IN_RELOAD } from './protocol.ts';
+import { IN_RUN, IN_FIRE, IN_RELOAD, IN_USE } from './protocol.ts';
 import { lookCode } from '../render/sprites.js';
 import { UPGRADES } from '../sim/upgrades.ts';
 import { Abilities } from '../sim/abilities.ts';
@@ -558,6 +558,7 @@ export class Online {
     let f = 0;
     if (live && inp.run) f |= IN_RUN;
     if (live && inp.firing) f |= IN_FIRE;
+    if (live && inp.useHeld()) f |= IN_USE;
     if (this.wantReload) {
       f |= IN_RELOAD;
       this.wantReload = false;

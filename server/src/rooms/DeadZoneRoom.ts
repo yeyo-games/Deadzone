@@ -126,6 +126,14 @@ export class DeadZoneRoom extends Room<{ state: LobbyStateT; input: MoveInputT }
         this.sim!.shop(c.sessionId, m.k, m.id, Number(m.n) | 0);
       }),
     );
+    // operaciones de alto riesgo: votar la oferta de la radio o pedir la retirada
+    this.onMessage('op', (c, m) =>
+      this.shopMsg(c, () => {
+        const ok = m && (m.k === 'ret' || (m.k === 'vote' && Number.isInteger(m.i) && m.i >= 0 && m.i <= 2));
+        if (!ok) return this.strike(c, 'operación mal formada');
+        this.sim!.opMsg(c.sessionId, m);
+      }),
+    );
     // construir, lanzar y subir al robot: se hacen en el paso de la entrada que indica (s)
     this.onMessage('act', (c, m) => {
       const l = this.limits.get(c.sessionId);
@@ -459,6 +467,8 @@ export class DeadZoneRoom extends Room<{ state: LobbyStateT; input: MoveInputT }
     while (this.acc >= step && n < CONFIG.maxCatchup) {
       const t0 = performance.now();
       this.checkFlood(sim);
+      // el líder de la sala decide los empates al votar una operación
+      sim.ops.leader = this.state.ownerId;
       sim.step();
       this.syncBodies(sim);
       countTick(performance.now() - t0);

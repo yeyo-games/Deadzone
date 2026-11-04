@@ -130,12 +130,18 @@ export class Director {
   }
 
   get hpMult() {
-    // en grupo: 1,4 veces la vida, pero la mitad de zombis (ver startWave)
-    return WAVES.hp * (1 + Math.max(0, this.wave - 4) * 0.07) * (this.coop ? 1.4 : 1);
+    return this.hpAt(this.wave);
   }
   get speedMult() {
-    const ev = this.eventDef;
-    return WAVES.speed * (1 + Math.min(0.25, Math.max(0, this.wave - 3) * 0.02)) * (ev?.speed ?? 1);
+    return this.speedAt(this.wave) * (this.eventDef?.speed ?? 1);
+  }
+  /** Vida de los zombis de la oleada w (en grupo: 1,4 veces, pero la mitad de zombis; ver startWave). */
+  hpAt(w: number) {
+    return WAVES.hp * (1 + Math.max(0, w - 4) * 0.07) * (this.coop ? 1.4 : 1);
+  }
+  /** Velocidad de los zombis de la oleada w (sin ronda especial). */
+  speedAt(w: number) {
+    return WAVES.speed * (1 + Math.min(0.25, Math.max(0, w - 3) * 0.02));
   }
 
   /** Cuántos zombis de cada tipo traería la oleada w con la escala de esta partida (sin ronda especial). */

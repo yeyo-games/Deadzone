@@ -14,6 +14,8 @@ interface ShopDef {
   ground?: boolean;
   turret?: boolean;
   armor?: number;
+  /** plano de una operación (sim/plans.ts) */
+  plan?: string;
 }
 const shopDef = (kind: string): ShopDef => (SHOP as unknown as Record<string, ShopDef>)[kind];
 
@@ -48,6 +50,10 @@ export interface Block {
   // jefes: s que le quedan a un bloque temporal (encierro, barrera) y a una torreta apagada (pulso)
   tempT?: number;
   empT?: number;
+  /** s desde el último daño (el reparador de campo sólo arregla lo que lleva un rato tranquilo) */
+  calm?: number;
+  /** reparador de campo: s de espera hasta el siguiente uso */
+  cdT?: number;
 }
 // Alambre, púas y minas (en el suelo).
 export interface Wire {
@@ -383,6 +389,8 @@ export class Structures {
   // se pueden encimar unas sobre otras (cada capa aguanta lo suyo); sólo la torreta necesita su sitio.
   fits(game: GameHost, def: ShopDef, x: number, y: number, w: number, h: number) {
     if (!game.world.rectFree(x, y, w, h, true)) return false;
+    // encima del objetivo de una operación o del espacio para usarlo (ver sim/ops.ts)
+    if (game.opsForbids?.(x, y, w, h)) return false;
     if (def.ground) return true;
     const p = game.player!;
     const px = clamp(p.x, x, x + w);
@@ -464,6 +472,7 @@ export class Structures {
     o = this.topOf(o);
     o.hp -= dmg * (1 - (shopDef(o.kind).armor || 0));
     o.hitT = 0.12;
+    o.calm = 0;
     game.particles.impact(
       o.x + o.w / 2 + rand(-o.w, o.w) * 0.3,
       o.y + o.h / 2 + rand(-o.h, o.h) * 0.3,
@@ -822,6 +831,7 @@ export class Structures {
     let gone: Block[] | null = null;
     for (const b of this.blocks) {
       b.hitT -= dt;
+      b.calm = (b.calm ?? 99) + dt;
       if (b.tempT !== undefined && (b.tempT -= dt) <= 0) (gone ||= []).push(b);
       // el pulso electromagnético de un jefe la dejó apagada
       if (b.empT && b.empT > 0) {

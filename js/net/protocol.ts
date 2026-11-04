@@ -3,7 +3,8 @@
 // El formato de la foto del mundo está en snapshot.js (quien la codifica) y como tipo en core/types.d.ts (WorldSnap).
 //
 // Mensajes del servidor en línea (Colyseus): snap (foto: WorldSnap + lo propio de cada jugador) · load · go · resume
-//   · results · notice · error · shutdown · p; el cliente manda in · act · buy · pick · next · ready · cls · start · loaded.
+//   · results · notice · error · shutdown · p; el cliente manda in · act · buy · pick · next · ready · cls · start · loaded
+//   · op (operaciones: votar la oferta { k: 'vote', i } o pedir la retirada { k: 'ret' }).
 
 // índices que viajan en las fotos en lugar de los nombres
 export const TYPES = [
@@ -38,6 +39,8 @@ export const PICKS = ['ammo', 'med', 'crate'];
 export const IN_RUN = 1;
 export const IN_FIRE = 2;
 export const IN_RELOAD = 4;
+// tecla H (o su botón) mantenida: operaciones y piezas de plano (sim/ops.ts)
+export const IN_USE = 8;
 
 // efectos que el cliente genera por su cuenta (no hace falta mandarlos)
 export const PARTICLE_SKIP = new Set([
@@ -80,5 +83,7 @@ export const SFX_SYNC = [
   'atgm',
   'boost',
   'miniBoom',
+  'decoy',
+  'repair',
 ];
 export const DECAL_SYNC = ['corpse', 'splat', 'drip', 'acid'];

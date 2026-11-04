@@ -26,6 +26,8 @@ export class Robot {
   declare legAngle: number;
   declare walk: number;
   declare hitT: number;
+  /** s desde el último daño (reparador de campo) */
+  declare calm?: number;
   declare stepSide: number;
   constructor() {
     this.reset();
@@ -105,11 +107,13 @@ export class Robot {
   damage(dmg: number) {
     this.hp -= dmg;
     this.hitT = 0.2;
+    this.calm = 0;
     return this.hp <= 0;
   }
 
   update(dt: number, p: Player, game: GameHost) {
     this.hitT -= dt;
+    this.calm = (this.calm ?? 99) + dt;
     if (!this.piloted) return;
     const moved = Math.hypot(p.x - this.x, p.y - this.y);
     this.x = p.x;

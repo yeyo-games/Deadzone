@@ -1804,6 +1804,7 @@ export interface HeavyUpDef {
   hp?: number[];
   repair?: number[];
   range?: number;
+  plan?: string;
   cd?: number[];
   reach?: number[];
   turn?: number[];
@@ -1842,8 +1843,15 @@ export const HEAVY_UP: Record<string, HeavyUpDef> = {
     rate: [0, 0.5],
     range: 520,
   },
+  // plano del nido (OPS.plans.fire): se instala una vez y se elige entre balas normales e incendiarias
+  fire: {
+    name: 'Munición incendiaria',
+    desc: 'Balas que prenden fuego: 20% menos de daño directo, pero queman a los zombis un rato.',
+    price: [3000],
+    plan: 'fire',
+  },
 };
-export const HEAVY_UP_ORDER = ['cal', 'rate', 'blast', 'armor', 'auto'];
+export const HEAVY_UP_ORDER = ['cal', 'rate', 'blast', 'armor', 'auto', 'fire'];
 
 // Mejoras de cada torreta militar (MILITARY): el mismo taller (tecla M), guardadas igual en `up`.
 //   warhead: multiplica el daño (dmg) y el radio (r) del estallido · reload: segundos entre misiles
@@ -2052,6 +2060,25 @@ export const SHOP = {
     price: 60,
     consumable: true,
   },
+  // Planos de las operaciones (OPS.plans): sólo se ven y se compran tras ganarlos (plan).
+  decoy: {
+    name: 'Señuelo sonoro',
+    desc: 'Altavoz con sirena: ponlo y actívalo con H. Atrae a los zombis normales cercanos 8 s y se gasta. Uno activo a la vez.',
+    price: 500,
+    hp: 900,
+    w: 40,
+    h: 40,
+    plan: 'decoy',
+  },
+  repair: {
+    name: 'Reparador de campo',
+    desc: 'Caja de herramientas con 3 cargas: con H repara un 25% a una estructura o robot cercano que lleve 5 s sin recibir daño.',
+    price: 1000,
+    hp: 600,
+    w: 40,
+    h: 40,
+    plan: 'repair',
+  },
   improv: {
     name: 'Misil improvisado',
     desc: 'Tubo, pólvora y cinta: sale recto hacia donde apuntas y estalla al primer golpe. De un solo uso.',
@@ -2075,6 +2102,8 @@ export const BUILD_ORDER = [
   'wire',
   'spikes',
   'mine',
+  'decoy',
+  'repair',
 ];
 export const THROWABLES = ['grenade', 'molotov', 'improv'];
 // Misil improvisado (SHOP.improv): vuela recto (cabeceando más que el cohete de la bazuca) hasta
@@ -2185,3 +2214,81 @@ export const ZOMBIE_VARIANTS = {
 
 // Colores de carrocería de los coches abandonados (el mundo elige uno al generarse).
 export const CAR_COLORS = ['#7d2f2a', '#c75f43', '#3f566b', '#6b6d68', '#b8b1a0', '#2f3a32', '#8a6a3a', '#4b4f63'];
+
+// Operaciones de alto riesgo (sim/ops.ts): encuentros opcionales entre oleadas, desde la oleada `from`
+// y luego cada `every`. Por radio se ofrecen dos de las tres (convoy, nido, suministros) o seguir con
+// las oleadas. Duración buscada: 2 a 4 minutos contando el camino.
+//   voteT: segundos para votar en grupo · dist: distancia por ruta (px) desde donde se aceptó hasta la
+//   zona · gap: distancia mínima a las zonas de las últimas operaciones · tries: lugares que se prueban
+//   arrive: a esta distancia del objetivo salen los guardias · reach: alcance de la tecla H
+//   outT: segundos de la transición de regreso · retreatHold: segundos que se mantiene «Retirada»
+//   budget: zombis de la operación como parte de la siguiente oleada (guardias incluidos) · guards: la
+//   parte del presupuesto que son guardias · pace: segundos en los que saldría todo el presupuesto a ritmo
+//   normal · burst: como mucho por segundo · reward: dinero (base + perWave por oleada pasada la 20, por
+//   el multiplicador de cada una) para cada participante
+export const OPS = {
+  from: 20,
+  every: 5,
+  voteT: 20,
+  dist: [1000, 1750],
+  gap: 900,
+  tries: 70,
+  arrive: 650,
+  reach: 58,
+  outT: 3,
+  retreatHold: 1.5,
+  budget: { convoy: 0.6, nest: 0.8, supply: 0.7 } as Record<string, number>,
+  guards: { convoy: 0.08, nest: 0.12, supply: 0.14 } as Record<string, number>,
+  pace: 150,
+  burst: 30,
+  reward: { base: 2000, perWave: 150, mult: { convoy: 1, nest: 1.25, supply: 1.15 } as Record<string, number> },
+  // Convoy: camión de w×h con vida hp; cada golpe le quita como mucho maxHit de su vida (así los
+  // multiplicadores contra muros no lo revientan de una vez). partT: segundos de H en cada componente ·
+  // unlockT: segundos de desbloqueo (en fases de `phase` s) mientras alguien esté a `near` px · truck: parte
+  // de los refuerzos que va por el camión · heavy: grupo resistente de la última fase · lootT: H en la caja
+  convoy: {
+    hp: 3200,
+    maxHit: 0.035,
+    w: 136,
+    h: 58,
+    partT: 2,
+    unlockT: 60,
+    phase: 20,
+    near: 320,
+    truck: 0.4,
+    heavy: { heavy: 3, rock: 1, bull: 1 } as Record<string, number>,
+    lootT: 1,
+    activity: [0.7, 1, 1.45],
+  },
+  // Nido: núcleo de core px; tres puntos de carga a ring px del centro (plantT s de H cada uno); la
+  // explosión alcanza R px a los fuse s de poner la tercera y quita blast de la vida máxima a quien siga
+  // dentro. exitK: la salida a pie más larga debe tardar como mucho esta parte de la cuenta atrás.
+  // activity: ritmo de refuerzos con 0, 1, 2 y 3 cargas puestas.
+  nest: { core: 92, ring: 132, plantT: 3, fuse: 12, R: 300, blast: 0.65, exitK: 0.6, activity: [0.55, 0.9, 1.3, 1.9] },
+  // Suministros: pickT s de H para recoger · slow: cuánto frena llevar uno · dropR: radio del punto de
+  // entrega · near/far/narrow: distancia por ruta (px) del punto de entrega a cada cargamento · answer:
+  // segundos de aviso y parte del presupuesto de cada respuesta tras una entrega · dropT: H para soltarlo
+  supply: {
+    pickT: 1,
+    slow: 0.15,
+    dropR: 78,
+    near: [420, 720],
+    far: [1050, 1500],
+    narrow: [600, 1150],
+    answer: [3, 0.06],
+    dropT: 0.5,
+  },
+  // Planos que se ganan (una vez por partida) al completar cada operación.
+  //   decoy (convoy): pieza que se activa con H y atrae a los zombis normales a radius px durante lure s
+  //   fire (nido): munición incendiaria del taller de la torreta pesada: dmg del daño y burn s de fuego
+  //   repair (suministros): pieza con charges cargas; cada una repara heal de la vida máxima de una
+  //   estructura o robot a range px que lleve quiet s sin daño; cd s entre usos
+  // Sus precios están en SHOP.decoy, SHOP.repair y HEAVY_UP.fire.
+  plans: {
+    decoy: { lure: 8, radius: 520 },
+    fire: { dmg: 0.8, burn: 2.5 },
+    repair: { charges: 3, heal: 0.25, quiet: 5, cd: 20, range: 240 },
+  },
+};
+// Qué plano da cada operación.
+export const OP_PLAN: Record<string, string> = { convoy: 'decoy', nest: 'fire', supply: 'repair' };

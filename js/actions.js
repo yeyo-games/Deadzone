@@ -3,6 +3,7 @@
 import { BUILD, BUILD_ORDER, SHOP } from './core/config.ts';
 import { Abilities, abilityTarget } from './sim/abilities.ts';
 import { LOCKED } from './sim/build.ts';
+import { opsView } from './sim/ops.ts';
 
 // X o el botón: misil donde apuntas, megarráfaga o impulso.
 export function useAbility(game) {
@@ -79,7 +80,12 @@ export function leaveHeavy(game) {
 }
 
 export function startNextRound(game) {
+  // con una operación en marcha la oleada siguiente espera (se termina o se abandona antes)
+  const ov = opsView(game);
+  if (ov && ov.op) return game.toast('Primero termina la operación o retírate');
   if (game.mode.sendNextRound()) return;
+  // empezar la oleada rechaza la oferta de la radio
+  if (game.ops.offer) game.ops.offer = null;
   if (game.state !== 'play' || (!game.player.alive && !game.mode.inGroup())) return;
   game.sfx.unlock();
   if (game.director.nextRound(game)) game.updateHud(false);

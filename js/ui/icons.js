@@ -45,5 +45,9 @@ export const ITEM_ICONS = {
   spikes:
     '<svg viewBox="0 0 12 12"><rect x="1" y="1" width="10" height="10" fill="#4a4740" stroke="#141612"/><path d="M3 5l1-2 1 2M7 5l1-2 1 2M3 10l1-2 1 2M7 10l1-2 1 2" fill="#b8b2a4"/></svg>',
   mine: '<svg viewBox="0 0 12 12"><circle cx="6" cy="6" r="4.5" fill="#4a5236" stroke="#141612"/><circle cx="6" cy="6" r="1.4" fill="#ff5a3a"/></svg>',
+  decoy:
+    '<svg viewBox="0 0 12 12"><rect x="1.5" y="1.5" width="9" height="9" fill="#3a3e40" stroke="#141612"/><circle cx="6" cy="6.5" r="2.6" fill="#1c1e20"/><rect x="5" y="2.3" width="2" height="1.2" fill="#ff3a2a"/></svg>',
+  repair:
+    '<svg viewBox="0 0 12 12"><rect x="1.5" y="3" width="9" height="7" fill="#c0702a" stroke="#141612"/><path d="M3.5 8.5l5-4" stroke="#e6e0d2" stroke-width="1.3"/></svg>',
   wire: '<svg viewBox="0 0 12 12"><path d="M0 6l2-3 2 6 2-6 2 6 2-6 2 3" fill="none" stroke="#c9c4b6" stroke-width="1.2"/></svg>',
 };

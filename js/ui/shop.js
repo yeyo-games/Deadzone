@@ -17,6 +17,7 @@ import { drawRocket } from '../render/bullets.js';
 import { drawGunIcon } from '../render/sprites.js';
 import { drawBottle, drawGrenades, drawBlocks, drawGround } from '../render/build.js';
 import { closest, on } from './dom.js';
+import { hasPlan } from './ops.js';
 
 export function openShop(game) {
   game.shopPending = false;
@@ -71,7 +72,8 @@ export function renderShop(game) {
       </div>
     </div>`;
     });
-  const gear = SHOP_ORDER.map((k) => {
+  // las piezas de plano sólo tras ganarlas en una operación (ui/ops.js)
+  const gear = SHOP_ORDER.filter((k) => !SHOP[k].plan || hasPlan(game, SHOP[k].plan)).map((k) => {
     const it = SHOP[k];
     const poor = game.money < it.price;
     return `<div class="shop-item${THROWABLES.includes(k) ? ' hot' : ''}">
@@ -256,7 +258,7 @@ export function drawShopIcon(game, c, k) {
 
 export function buy(game, k) {
   const it = SHOP[k];
-  if (!it || game.money < it.price) return;
+  if (!it || game.money < it.price || (it.plan && !hasPlan(game, it.plan))) return;
   game.analitica.compra('objeto', k, it.price);
   if (game.mode.viaServer()) return game.online.buy('item', k);
   game.money -= it.price;

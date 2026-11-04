@@ -111,6 +111,9 @@ export class Remote {
   declare danger: number;
   declare nearCount: number;
   declare net: NetStats;
+  /** obstáculo de la operación (camión o nido) en el mapa local */
+  declare opObs: any;
+  declare opKey: string;
   /**
    * @param {{ zombieSprites?: () => any }} [deps]  para probar sin lienzo
    */
@@ -152,6 +155,10 @@ export class Remote {
     this.danger = 0;
     this.nearCount = 0;
     this.net = new NetStats();
+    if (this.opObs && this.game.world) this.game.world.removeDynamic(this.opObs);
+    this.opObs = null;
+    this.opKey = '';
+    this.game.opsNet = null;
   }
 
   /**
@@ -176,6 +183,30 @@ export class Remote {
     this.applyBullets(s.b || []);
     this.applyStructures(s, opts.collide !== false);
     this.applyBosses(s.bo || [], s.bf || []);
+    this.applyOps(s.op || null, opts.myIdx ?? -1);
+  }
+
+  /* ---------- operaciones de alto riesgo ---------- */
+
+  // Lo que se ve de la operación (sim/ops.ts view): lo dibujan render/ops.js y ui/ops.js. El camión y el
+  // nido también chocan en el mapa local (para predecir igual que el servidor), y el propio jugador
+  // sabe si lleva un cargamento (va más lento).
+  applyOps(v: any, myIdx: number) {
+    const g = this.game;
+    g.opsNet = v;
+    const op = v && v.op;
+    const rect = op && op.s !== 'resolve' && op.ob ? op.ob : null;
+    const key = rect ? rect.join() : '';
+    if (key !== this.opKey && g.world) {
+      if (this.opObs) g.world.removeDynamic(this.opObs);
+      this.opObs = rect ? { k: 0, x: rect[0], y: rect[1], w: rect[2], h: rect[3], low: true, opObs: true } : null;
+      if (this.opObs) g.world.addDynamic(this.opObs);
+      this.opKey = key;
+    }
+    if (g.player) {
+      const c = op && op.k === 'supply' ? (op.cr || []).find((k: number[]) => k[3] === myIdx && !k[4]) : null;
+      g.player.cargo = c ? c[0] : 0;
+    }
   }
 
   /* ---------- jefes ---------- */

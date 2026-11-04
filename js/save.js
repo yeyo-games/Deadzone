@@ -70,21 +70,27 @@ export function saveProgress(game) {
     },
     // los bloques temporales de los jefes no se guardan
     blocks: s.blocks
-      .filter((b) => b.tempT === undefined)
+      .filter((b) => b.tempT === undefined && !(b.kind === 'decoy' && b.up))
       .map((b) => ({ kind: b.kind, x: b.x, y: b.y, w: b.w, h: b.h, hp: b.hp, up: b.up || 0 })),
     wires: s.wires.map((b) => ({ kind: b.kind, x: b.x, y: b.y, w: b.w, h: b.h, hp: b.hp })),
     robot: { ...game.robot.serialize(), piloted: game.robot.piloted },
+    // operación de alto riesgo (oferta, la que esté en curso con sus zombis) y planos ganados
+    ops: game.ops.serialize(),
+    opz: game.ops.saveZombies(game),
     // la misma partida sigue en las estadísticas al continuarla
     partida: game.analitica.partida ? game.analitica.partida.id : null,
   };
   storage.set(game.accounts.saveKey(), data);
-  if (ds === 'waiting') storage.set(game.accounts.checkKey(), data);
+  // el punto de control no se escribe en pleno combate de una operación (sí al aceptarla)
+  const op = game.ops.op;
+  const check = ds === 'waiting' && (!op || op.state === 'prep');
+  if (check) storage.set(game.accounts.checkKey(), data);
   // copia en la nube (si el juego corre como Artifact con base de datos), sin saturar
   const now = Date.now();
   if (ds === 'waiting' || now - (game.cloudSavedAt || 0) > 20000) {
     game.cloudSavedAt = now;
     game.accounts.cloudSave('save', data);
-    if (ds === 'waiting') game.accounts.cloudSave('check', data);
+    if (check) game.accounts.cloudSave('check', data);
   }
   game.saveT = 0;
 }
@@ -153,6 +159,9 @@ export function loadProgress(game, kind = 'save') {
       owner: null,
     };
     if (o.kind === 'heavy' || o.kind === 'military') o.max = heavyMaxHp(o);
+    // reparador de campo: cargas usadas y espera (en up); un señuelo guardado está sin activar
+    if (o.kind === 'repair') o.cdT = o.up >> 2;
+    if (o.kind === 'decoy') o.up = 0;
     game.structures.blocks.push(o);
     game.world.addDynamic(o);
   }
@@ -184,6 +193,9 @@ export function loadProgress(game, kind = 'save') {
       z.hp = Math.min(hp, z.maxHp);
     }
   }
+  // operación en curso (con sus zombis) o la oferta de la radio, y los planos ganados
+  game.ops.restore(game, d.ops);
+  for (const row of d.opz || []) game.ops.restoreZombie(game, row);
   game.camera.x = p.x;
   game.camera.y = p.y;
   game.world.updateFlow(p.x, p.y);
@@ -192,9 +204,11 @@ export function loadProgress(game, kind = 'save') {
   game.setState('play');
   game.updateHud(true);
   game.toast(
-    d.dstate === 'active'
-      ? `Progreso cargado · ronda ${d.wave} en curso`
-      : `Progreso cargado · ronda ${d.wave} superada`,
+    game.ops.op
+      ? 'Progreso cargado · operación en curso'
+      : d.dstate === 'active'
+        ? `Progreso cargado · ronda ${d.wave} en curso`
+        : `Progreso cargado · ronda ${d.wave} superada`,
   );
   game.saveT = 0;
   return true;

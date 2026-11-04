@@ -142,5 +142,5 @@ test('las partidas guardadas con 2 bits por mejora se pasan a 4 sin perder nivel
   // calibre 3, cadencia 1, carga 2, blindaje 0, piloto 1 con 2 bits por mejora
   const old = 3 + (1 << 2) + (2 << 4) + (1 << 8);
   const b = { up: widenHeavyUp(old) };
-  assert.deepEqual(heavyLevels(b), { cal: 3, rate: 1, blast: 2, armor: 0, auto: 1 });
+  assert.deepEqual(heavyLevels(b), { cal: 3, rate: 1, blast: 2, armor: 0, auto: 1, fire: 0 });
 });

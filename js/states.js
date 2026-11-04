@@ -64,6 +64,8 @@ export function updatePlay(game, dt) {
     }
   }
   Act.stepBuild(game);
+  // tecla H (o su botón): se usa mantenida en las operaciones y con las piezas de plano
+  p.use = p.alive && game.input.useHeld();
   if (p.alive) {
     p.update(dt, game);
     if (game.input.consume('ability')) Act.useAbility(game);
@@ -85,6 +87,7 @@ export function updatePlay(game, dt) {
   // un campo de flanqueo por fotograma (repartido): los zombis rodean por rutas reales
   if (p.alive) game.world.updateAnchors(p.x, p.y);
   game.director.update(dt, game);
+  game.ops.update(dt, game);
   // zombi dorado: de vez en cuando durante una ronda, nunca dos a la vez
   if (game.director.state === 'active' && p.alive) {
     game.goldenT = Rules.goldenTick(game, game.goldenT, dt, game.toast);

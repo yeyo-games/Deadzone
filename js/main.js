@@ -22,6 +22,7 @@ import { Floaters } from './render/floaters.js';
 import { Pickups } from './sim/pickups.ts';
 import { setChunkView } from './render/world.js';
 import { Director } from './sim/director.ts';
+import { Ops, opsView, viewForbids } from './sim/ops.ts';
 import { Lighting } from './render/lighting.js';
 import { Camera } from './render/camera.js';
 import { render, resize, adaptQuality } from './render/scene.js';
@@ -43,7 +44,11 @@ import { toast, banner, updateHud, updateNetStat, moneyPop, bindHud } from './ui
 import { Input } from './ui/input.js';
 import { Sfx } from './ui/audio.js';
 import { bindDev, toggleDev, updateDev } from './ui/dev.js';
+import { bindOps, updateOpsHud } from './ui/ops.js';
 import { cleanLook } from './render/sprites.js';
+
+// pantallas en las que se ve lo de las operaciones (ui/ops.js)
+const OPS_STATES = new Set(['play', 'pause', 'levelup', 'shop', 'turret']);
 
 class Game {
   constructor() {
@@ -74,6 +79,9 @@ class Game {
     this.bullets = new Bullets();
     this.structures = new Structures();
     this.robot = new Robot();
+    // operaciones de alto riesgo entre oleadas (sim/ops.ts); en línea llegan con la foto (opsNet)
+    this.ops = new Ops(false);
+    this.opsNet = null;
     this.mode = new Solo(this);
     // lo que llega por la red (jugadores, zombis, balas de adorno) en línea
     this.remote = new Remote(this);
@@ -162,6 +170,14 @@ class Game {
   setAcid = (t) => Ev.setAcid(this, t);
   updateAcid = (dt) => Ev.updateAcid(this, dt);
 
+  // Lo que las operaciones (sim/ops.ts) piden a quien simula: quién juega, pagar, avisar y terminar.
+  opsWho = () => Ev.opsWho(this);
+  opsPay = (n) => Ev.opsPay(this, n);
+  opsToast = (_id, msg) => this.toast(msg);
+  opsForbids = (x, y, w, h) => viewForbids(opsView(this), x, y, w, h);
+  opsMoved = () => Ev.opsMoved(this);
+  opsDone = () => Ev.opsDone(this);
+
   // Accesos que usan los demás módulos y las pruebas e2e: cada uno delega en su módulo.
   saveProgress = () => saveProgress(this);
   loadProgress = (kind) => loadProgress(this, kind);
@@ -227,6 +243,8 @@ class Game {
     // una partida nueva siempre empieza en solitario (los modos de grupo lo cambian al arrancar)
     this.mode = new Solo(this);
     this.robot.reset();
+    this.ops.reset();
+    this.opsNet = null;
     this.setAcid(0);
     this.kills = { normal: 0, swat: 0, sprinter: 0, fat: 0, heavy: 0, bull: 0, rock: 0, giant: 0, supremo: 0 };
     this.level = 1;
@@ -269,6 +287,7 @@ class Game {
     bindBoard(this);
     bindLobby(this);
     bindDev(this);
+    bindOps(this);
   }
 
   /* ---------- bucle ---------- */
@@ -288,6 +307,7 @@ class Game {
       // en línea el mundo sigue aunque haya otra pantalla encima (mejoras, tienda, pausa)
       if (this.mode.viaServer()) this.online.update(dt);
       stepState(this, dt);
+      if (OPS_STATES.has(this.state)) updateOpsHud(this, dt);
       this.floaters.update(dt);
       render(this);
     } catch (err) {

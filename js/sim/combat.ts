@@ -11,6 +11,8 @@ export function bulletHit(game: GameHost, z: Zombie, b: Bullet, hx: number, hy: 
   const res = z.buffT > 0 ? (z.buffRes ?? 1) : 1;
   z.hp -= (z.def?.boss ? b.dmg * bossDamage(z, b) : b.dmg) * res;
   z.flash = 0.08;
+  // balas incendiarias (torreta pesada): fuego con tope, nunca se acumula más que su duración
+  if (b.burn && !b.flame) z.burn = Math.max(z.burn, b.burn);
   // llamarada del lanzallamas: no frena ni empuja, lo deja ardiendo
   if (b.flame) {
     z.burn = Math.max(z.burn, b.burn || 0);

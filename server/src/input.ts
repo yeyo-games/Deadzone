@@ -7,7 +7,7 @@ export const MoveInput = schema(
   {
     mx: t.float32(), // movimiento, -1..1
     my: t.float32(),
-    f: t.uint8(), // bits: IN_RUN, IN_FIRE, IN_RELOAD (js/net/protocol.ts)
+    f: t.uint8(), // bits: IN_RUN, IN_FIRE, IN_RELOAD, IN_USE (js/net/protocol.ts)
     a: t.float32(), // ángulo de la mira
     w: t.int8(), // arma elegida, -1 = la actual
   },
@@ -20,7 +20,7 @@ export type MoveInputT = SchemaType<typeof MoveInput>;
 export const MOVE_SANITIZE = {
   mx: [-1, 1],
   my: [-1, 1],
-  f: [0, 7],
+  f: [0, 15],
   a: [-1000, 1000],
   w: [-1, 8],
 } as const;

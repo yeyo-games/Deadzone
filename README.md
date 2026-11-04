@@ -58,6 +58,40 @@ azul, torbellino) parpadean un momento antes de hacer daño. Cuando le queda el 
 y suelta cajas de armas, botiquines y munición. En línea su vida crece un 60 % por cada jugador extra.
 Después del Rey (oleada 75) la lista vuelve a empezar, con 1,5 veces la vida en cada vuelta.
 
+**Operaciones de alto riesgo:** al superar la oleada 20 (y luego la 25, la 30…), durante el descanso llega
+un mensaje por radio con **dos operaciones** de las tres y la opción **Seguir con las oleadas**. Cada tarjeta
+dice el objetivo, la amenaza, el dinero exacto y el plano que da la primera vez. Son opcionales y van
+**entre oleadas**: si aceptas una tras la 20, al terminar sigue pendiente la 21 (y el jefe sigue en la 25).
+Al aceptarla la zona se marca en el mapa (rombo, flecha en la orilla y distancia) y puedes comprar y
+prepararte; nada corre hasta que usas el objetivo por primera vez. Los puntos se usan **manteniendo H**
+(en el celular, el botón **H**). Arriba se ve el objetivo actual, su progreso y el estado del objeto.
+
+- **Convoy militar perdido** (defender): elimina a los guardias, conecta el motor y la batería del camión
+  (2 s cada uno) y protege 60 s el desbloqueo de su caja. Sólo avanza si alguien está cerca (si os alejáis
+  se pausa y no se pierde lo que llevaba). Llegan primero por una calle, a los 20 s por otra y en los
+  últimos 20 s más fuerte y con un grupo blindado; la radio y flechas rojas avisan por dónde. Algunos zombis
+  van por el camión: si cae, la operación falla. Puedes construir alrededor (no encima ni tapando sus
+  componentes). Al abrirse, saca el contenido con H.
+- **Destruir el nido** (entrar y escapar): coloca una carga en cada uno de sus tres puntos (3 s; un golpe o
+  alejarte la corta) y el nido se agita más con cada una. Con la tercera empiezan **12 s**: el área de la
+  explosión se marca en rojo y una flecha verde lleva a la salida más cercana (siempre se llega a pie con
+  margen; dentro del área no se puede construir). Quien siga dentro recibe un daño fuerte.
+- **Recuperar suministros** (transportar): tres cargamentos (uno cerca, otro lejos y otro en un sitio
+  estrecho con guardias resistentes) y un punto de entrega. Recoges uno con H (1 s); llevarlo te frena un
+  15% (en el robot no) pero puedes disparar. Mantén H medio segundo para soltarlo. Cada entrega trae una
+  respuesta anunciada junto al punto de entrega.
+
+Recompensa: $2 000 + $150 por cada oleada pasada la 20 (convoy ×1, nido ×1,25, suministros ×1,15) y, la
+primera vez en la partida, un **plano**: el **señuelo sonoro** (convoy; pieza de $500 que se activa con H y
+atrae 8 s a los zombis normales cercanos), la **munición incendiaria** de la torreta pesada (nido; $3 000 en
+su taller, 20% menos de daño pero quema, y eliges balas normales o incendiarias) y el **reparador de campo**
+(suministros; pieza de $1 000 con 3 cargas: con H repara un 25% a una estructura o robot cercano que lleve
+5 s sin daño, cada 20 s). Fallar o retirarte (mantén **Retirada**) no termina la partida, pero no da
+recompensa y gasta la oportunidad; morir sigue las reglas de siempre. Al terminar, una transición breve os
+devuelve a donde aceptasteis la operación, sin sus zombis. En línea se vota (20 s, gana la mayoría y el
+líder desempata), cada participante conectado cobra, la retirada pide la mayoría y quien cayó revive al
+terminar la operación.
+
 | # | Jefe | Oleada | Vida | Ataques | Punto débil | Premio |
 |---|------|--------|------|---------|-------------|--------|
 | 1 | El Rocoso Supremo | 5 | 15 000 | Embestida rocosa · Pisotón · Lanzamiento de roca · Piel endurecida (8 s, la mitad del daño) · Furia de piedra (30 %) | La espalda de lava: +40 % | $1500 |
@@ -275,6 +309,7 @@ tienes.
 | `F`: modo construir (clic coloca, `R` gira, rueda o `1`–`9` cambia de pieza) | Botón **Construir**: arrastra una pieza de la barra al mapa y suéltala (o toca el mapa y ✓), **Girar** la gira |
 | `G`: lanzar granada · `T`: molotov · `Z`: misil improvisado · `E`: robot o torreta pesada | Botones pequeños de **granada**, **molotov** y **misil** (apuntan solos) |
 | `M`: taller de la torreta pesada o militar (junto a ella) | Botón de la **llave** |
+| `H` mantenida: usar el objetivo de una operación, soltar un cargamento, activar un señuelo o el reparador | Botón **H** (aparece cuando hay algo que usar) |
 | `L`: en línea, dejar o no que otros se suban a tu torreta | Botón del **candado** |
 | `Enter`: iniciar siguiente ronda (en línea: estoy listo) | Botón del panel **Ronda completada** |
 | `Esc` / `P`: pausa | Botón de pausa |
@@ -293,7 +328,8 @@ El panel muestra, cuatro veces por segundo: la oleada y su estado, los zombis **
 nivel y dinero del jugador, y balas, partículas, estructuras y FPS. Y tiene botones para: dar **dinero**
 (+$1 000 y +$10 000), **subir de nivel**, **matar a todos** (con botín), **terminar la ronda** (abre la
 tienda como siempre), **saltar a cualquier ronda** (la que esté en curso se descarta), **generar N zombis**
-de un tipo junto a la pantalla, sacar un **zombi dorado**, cambiar la **velocidad del juego** (×0,25 a
+de un tipo junto a la pantalla, sacar un **zombi dorado**, abrir ya la **oferta de operaciones** (deja la
+partida en el descanso tras la oleada 20 o la siguiente que toque), cambiar la **velocidad del juego** (×0,25 a
 ×3), ser **invencible**, tener **munición infinita**, desbloquear **todas las armas** y desplegar el
 **robot**.
 
@@ -441,7 +477,8 @@ El panel muestra, cuatro veces por segundo: la oleada y su estado, los zombis **
 nivel y dinero del jugador, y balas, partículas, estructuras y FPS. Y tiene botones para: dar **dinero**
 (+$1 000 y +$10 000), **subir de nivel**, **matar a todos** (con botín), **terminar la ronda** (abre la
 tienda como siempre), **saltar a cualquier ronda** (la que esté en curso se descarta), **generar N zombis**
-de un tipo junto a la pantalla, sacar un **zombi dorado**, cambiar la **velocidad del juego** (×0,25 a
+de un tipo junto a la pantalla, sacar un **zombi dorado**, abrir ya la **oferta de operaciones** (deja la
+partida en el descanso tras la oleada 20 o la siguiente que toque), cambiar la **velocidad del juego** (×0,25 a
 ×3), ser **invencible**, tener **munición infinita**, desbloquear **todas las armas** y desplegar el
 **robot**.
 

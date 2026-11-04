@@ -12,6 +12,7 @@ import {
   MILITARY,
   GUN_REACH,
   RELOAD_STEPS,
+  OPS,
 } from '../core/config.ts';
 import { clamp, rand, angleTo } from '../core/util.ts';
 import { flameBullet } from './bullets.ts';
@@ -130,6 +131,13 @@ export class Player {
   /** frenado por un jefe (onda, cadena, zona): s que le quedan y a qué parte de su velocidad (0: quieto) */
   declare slowT?: number;
   declare slowK?: number;
+  /** operación de suministros: id del cargamento que lleva (0 = nada); frena OPS.supply.slow */
+  declare cargo?: number;
+  /** tecla H (o su botón) mantenida en este paso, la del paso anterior y cuánto lleva para soltar */
+  declare use?: boolean;
+  declare useWas?: boolean;
+  declare dropT?: number;
+  declare useLock?: boolean;
   /** daño de las zonas de los jefes que se va juntando */
   declare zoneAcc?: number;
   /** en línea: id de su ranura (para dar las bajas que hace volando) */
@@ -378,6 +386,7 @@ export class Player {
       this.slowT = Math.max(0, this.slowT - dt);
       speed *= this.slowK ?? 1;
     }
+    if (this.cargo && !this.inRobot) speed *= 1 - OPS.supply.slow;
     if (this.inRobot) {
       speed *= ROBOT.speed;
       // con el peso del robot casi nada lo empuja

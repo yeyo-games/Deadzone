@@ -3,7 +3,7 @@
 // ?dev=1 en la dirección (queda guardado en este navegador; ?dev=0 lo quita) o tocando cinco veces el
 // número de versión del menú; la tecla º / ` (la que está a la izquierda del 1) enseña u oculta el
 // panel. Una partida en la que se usó una trampa queda marcada (game.devUsed) y no cuenta para récords.
-import { BOSS_ORDER, BOSSES, GOLDEN, ROBOT, WEAPON_ORDER, WEAPONS, WORLD_SIZE, ZOMBIES } from '../core/config.ts';
+import { BOSS_ORDER, BOSSES, GOLDEN, OPS, ROBOT, WEAPON_ORDER, WEAPONS, WORLD_SIZE, ZOMBIES } from '../core/config.ts';
 import { clamp, rand, storage } from '../core/util.ts';
 import * as Rules from '../sim/rules.ts';
 import { spawnBoss } from '../sim/bosses.ts';
@@ -103,6 +103,23 @@ function clearHorde(game, goldenToo) {
   game.horde.removeDead();
 }
 
+// Operaciones de alto riesgo ya: deja la partida en el descanso tras la oleada 20 (o la siguiente que
+// toque) con la oferta de la radio abierta. Sólo en solitario (en línea manda el servidor).
+function offerOps(game) {
+  if (game.mode.viaServer()) return game.toast('En línea las operaciones las ofrece el servidor');
+  if (game.ops.op) return game.toast('Ya hay una operación en marcha');
+  const dir = game.director;
+  clearHorde(game, true);
+  dir.queue.length = 0;
+  dir.state = 'waiting';
+  dir.event = '';
+  dir.wave = Math.max(OPS.from, dir.wave);
+  while ((dir.wave - OPS.from) % OPS.every) dir.wave++;
+  game.devUsed = true;
+  game.ops.afterWave(game, dir.wave);
+  game.updateHud(true);
+}
+
 function endRound(game) {
   const d = game.director;
   if (d.state === 'break') {
@@ -186,6 +203,8 @@ function act(game, btn) {
     case 'golden':
       if (!Rules.spawnGolden(game, game.toast)) game.toast('No cupo el dorado: muévete a un sitio abierto');
       return;
+    case 'ops':
+      return offerOps(game);
     case 'god':
       d.god = !d.god;
       btn.classList.toggle('on', d.god);

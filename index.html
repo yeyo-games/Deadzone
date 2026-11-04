@@ -76,6 +76,18 @@
         <div class="boss-top"><b id="boss-name"></b><span id="boss-tag"></span></div>
         <i class="boss-track"><u id="boss-fill"></u></i>
       </div>
+      <!-- operación de alto riesgo en curso (ui/ops.js) -->
+      <div id="op-hud" hidden>
+        <div class="op-top"><b id="op-title"></b><span id="op-goal"></span></div>
+        <div class="op-row">
+          <span id="op-dist"></span>
+          <div class="op-bar" id="op-bar" hidden><i id="op-bar-fill"></i><span id="op-bar-lbl"></span></div>
+          <button class="op-btn" id="btn-op-shop" type="button">Tienda</button>
+          <button class="op-btn op-ret" id="btn-op-ret" type="button" title="Mantén pulsado para retirarte">Retirada<span id="op-ret-n"></span></button>
+        </div>
+      </div>
+      <div id="op-use" hidden><kbd>H</kbd><span id="op-use-t"></span></div>
+      <div id="op-radio" aria-live="polite"><svg viewBox="0 0 24 24"><rect x="4" y="9" width="16" height="11" rx="2"/><path d="M8 9l9-5M8 14h3M14 14.5h3"/></svg><span id="op-radio-t"></span></div>
       <div id="toast"></div>
       <div id="banner"><b id="banner-title"></b><span id="banner-sub"></span></div>
     </div>
@@ -131,6 +143,8 @@
             <svg class="ic-open" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="1.5"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></svg>
           </button>
         </div>
+        <!-- acción de las operaciones y los planos (tecla H): mantener pulsado -->
+        <button class="tbtn gone" id="btn-use" aria-label="Acción (H)"><b>H</b></button>
         <button class="tbtn big" id="btn-fire" aria-label="Disparar">
           <svg class="ic-fire" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><path d="M12 2v5M12 17v5M2 12h5M17 12h5"/></svg>
           <svg class="ic-place" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
@@ -153,6 +167,7 @@
         <label>Zombis <input id="dev-n" type="number" min="1" max="500" value="10"></label>
         <span class="dev-pair"><select id="dev-type" aria-label="Tipo de zombi"></select><button type="button" data-act="spawn">Generar</button></span>
         <button type="button" data-act="golden">Zombi dorado ya</button>
+        <button type="button" data-act="ops">Operación ya</button>
         <button type="button" data-act="speed">Velocidad ×1</button>
         <button type="button" data-act="god">Invencible</button>
         <button type="button" data-act="ammo">Munición infinita</button>
@@ -172,6 +187,19 @@
       </div>
       <p class="round-key">Tecla <kbd>Enter</kbd></p>
     </div>
+
+    <!-- radio: operaciones de alto riesgo entre oleadas (ui/ops.js) -->
+    <div id="op-offer" role="dialog" aria-labelledby="op-offer-title" hidden>
+      <p class="op-kicker">Radio · operaciones de alto riesgo</p>
+      <h2 id="op-offer-title">Dos operaciones disponibles</h2>
+      <p class="op-offer-sub" id="op-offer-sub"></p>
+      <div class="op-cards" id="op-cards"></div>
+      <div class="op-actions">
+        <button class="btn" id="btn-op-skip" type="button" data-op="2">Seguir con las oleadas</button>
+        <button class="btn" id="btn-op-shop2" type="button">Tienda</button>
+      </div>
+    </div>
+    <div id="op-fade" hidden><b id="op-fade-t"></b><span id="op-fade-s"></span></div>
 
     <section class="screen" id="screen-start">
       <div class="menu-layout">

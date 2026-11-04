@@ -343,6 +343,13 @@ export class Horde {
           IDLE.x = z.x + 1;
           IDLE.y = z.y;
         }
+      } else p = p0;
+      // va por un objetivo (el camión de una operación, un señuelo): le pega en su punto más cercano
+      if (z.goal) {
+        if (z.goal.alive) {
+          z.goal.aim(z.x, z.y);
+          p = z.goal;
+        } else z.goal = null;
       }
       z.flash -= dt;
       z.slow -= dt;
@@ -434,7 +441,7 @@ export class Horde {
       } else {
         // ruta: hacia su punto de flanqueo mientras esté lejos; después, directo por ti
         let field = world.main;
-        if (targets) field = p.field || world.main;
+        if (p.isGoal || targets) field = p.field || world.main;
         else if (!z.planned && d > 320 && p.alive) this.planRoute(z, p, world);
         if (!targets && p === p0 && z.anchor >= 0) {
           const a = world.anchors[z.anchor];
@@ -556,11 +563,14 @@ export class Horde {
           z.lunge = 1;
           p.lastHit = z.type;
           p.hurt(def.damage * (z.dmgK || 1), game);
-          game.onZombieHit(z, p);
-          const push = def.punch || 40 * Math.sqrt(z.mass);
-          p.kx += (dx / d) * push;
-          p.ky += (dy / d) * push;
-          if (def.punch) game.onSuperPunch(z, p.x, p.y);
+          // a un objetivo no se le cobra dinero ni se le empuja
+          if (!p.isGoal) {
+            game.onZombieHit(z, p);
+            const push = def.punch || 40 * Math.sqrt(z.mass);
+            p.kx += (dx / d) * push;
+            p.ky += (dy / d) * push;
+            if (def.punch) game.onSuperPunch(z, p.x, p.y);
+          }
         }
       } else {
         z.inRange = false;

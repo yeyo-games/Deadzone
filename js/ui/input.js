@@ -21,6 +21,8 @@ export class Input {
     // pieza tomada de la barra que se lleva con el dedo hasta el mapa
     this.carry = null;
     this.touchFire = false;
+    // botón de acción (H) mantenido en el celular
+    this.touchUse = false;
     this.runToggle = false;
     this.blockFire = false;
     this.pressed = {};
@@ -211,6 +213,7 @@ export class Input {
       this.on(el, 'pointercancel', up);
       this.on(el, 'lostpointercapture', up);
     };
+    hold('#btn-use', (v) => (this.touchUse = v));
     hold('#btn-fire', (v) => {
       this.touchFire = v;
       // en el modo construir el botón de disparo coloca la pieza
@@ -307,6 +310,11 @@ export class Input {
     return !this.blockFire && (this.mouse.down || this.touchFire || this.keys.has('Space'));
   }
 
+  // H (o su botón) mantenida: operaciones y piezas de plano (ver sim/ops.ts)
+  useHeld() {
+    return this.keys.has('KeyH') || this.touchUse;
+  }
+
   consume(name) {
     const v = this.pressed[name];
     this.pressed[name] = false;
@@ -317,6 +325,7 @@ export class Input {
     this.keys.clear();
     this.mouse.down = false;
     this.touchFire = false;
+    this.touchUse = false;
     this.carry = null;
     this.root.classList.remove('carrying');
     this.pressed = {};

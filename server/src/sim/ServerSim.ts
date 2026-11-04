@@ -15,7 +15,8 @@ import { Robot } from '../../../js/sim/robot.ts';
 import { applyMove, TICK } from '../../../js/net/netcode.ts';
 import { ServerMode } from '../../../js/net/mode.ts';
 import { encodeStatic, encodeWorld } from '../../../js/net/snapshot.ts';
-import { IN_RELOAD, IN_FIRE, IN_RUN, PARTICLE_SKIP, SFX_SYNC, DECAL_SYNC } from '../../../js/net/protocol.ts';
+import { IN_RELOAD, IN_FIRE, IN_RUN, IN_USE, PARTICLE_SKIP, SFX_SYNC, DECAL_SYNC } from '../../../js/net/protocol.ts';
+import { Ops, viewForbids } from '../../../js/sim/ops.ts';
 import {
   GOLDEN,
   NET,
@@ -33,7 +34,7 @@ import {
 import { rollUpgrades, UPGRADES } from '../../../js/sim/upgrades.ts';
 import { Abilities, isClass } from '../../../js/sim/abilities.ts';
 import * as Rules from '../../../js/sim/rules.ts';
-import { heavyAuto, heavyPrice, upgradeHeavy } from '../../../js/sim/heavy.ts';
+import { heavyAuto, heavyPrice, toggleHeavyFire, upgradeHeavy } from '../../../js/sim/heavy.ts';
 import { comboBreak, comboKill, comboTick, packCombo } from '../../../js/sim/combo.ts';
 import { TAU } from '../../../js/core/util.ts';
 import type { Cmd, Act } from '../validate.ts';
@@ -136,6 +137,8 @@ export class ServerSim {
   over = false;
   kills: Record<string, number> = {};
   snapN = 0;
+  // operaciones de alto riesgo (js/sim/ops.ts): aquí manda el servidor (oferta votada, refuerzos, pagos)
+  ops = new Ops(true);
 
   constructor(seed: number, players: { id: string; idx: number; name: string; cls?: string }[]) {
     this.seed = seed;
@@ -278,6 +281,22 @@ export class ServerSim {
         this.toastAll('El zombi dorado escapó');
       },
       onWaveCleared: () => this.onWaveCleared(),
+      // lo que piden las operaciones: quién juega, pagar a cada presente, avisar a uno y terminar
+      opsWho: () =>
+        [...this.slots.values()].map((s) => ({ id: s.id, idx: s.idx, name: s.name, p: s.p, robot: s.robot, away: s.away })),
+      opsPay: (n: number) => {
+        for (const s of this.slots.values()) {
+          if (s.away) continue;
+          s.money += n;
+          s.toasts.push(`¡Operación completada! +$${n}`);
+        }
+      },
+      opsToast: (id: string, m: string) => this.slots.get(id)?.toasts.push(m),
+      opsForbids: (x: number, y: number, w: number, h: number) => viewForbids(this.ops.view(), x, y, w, h),
+      opsMoved: () => {
+        for (const s of this.slots.values()) if (s.p.alive) this.world.computeField(s.p.field, s.p.x, s.p.y);
+      },
+      opsDone: () => this.reviveFallen(),
       spawnFocus: () => {
         const alive = [...this.slots.values()].filter((s) => !s.away && s.p.alive);
         const s = alive.length ? alive[(Math.random() * alive.length) | 0] : null;
@@ -427,7 +446,10 @@ export class ServerSim {
     if (!s || !s.p.alive) return false;
     // las mejoras de la torreta pesada se compran junto a ella, también a mitad de oleada
     if (k === 'tup') return this.buyHeavyUp(s, wid);
-    if (this.director.state !== 'waiting') return false;
+    // balas normales o incendiarias (plano del nido) en la torreta que tiene al lado
+    if (k === 'tfire') return this.toggleFire(s);
+    // durante el combate de una operación no hay tienda (sí mientras se prepara)
+    if (this.director.state !== 'waiting' || !this.ops.canShop()) return false;
     if (k === 'item') return this.buyItem(s, wid);
     if (k === 'robot') return this.buyRobot(s, wid);
     if (k === 'heavy') return this.buyHeavyAmmo(s, n);
@@ -459,6 +481,8 @@ export class ServerSim {
   buyItem(s: Slot, k: string) {
     const it = Object.hasOwn(SHOP, k) ? (SHOP as any)[k] : null;
     if (!it || s.money < it.price) return false;
+    // las piezas de plano sólo tras ganarlo en una operación
+    if (it.plan && !this.ops.hasPlan(it.plan)) return false;
     s.money -= it.price;
     s.inv[k]++;
     return true;
@@ -477,12 +501,29 @@ export class ServerSim {
   buyHeavyUp(s: Slot, up: string) {
     const b = this.structures.heavyFor(s.p);
     if (!b) return false;
+    if (up === 'fire' && !this.ops.hasPlan('fire')) return false;
     const price = heavyPrice(b, up);
     if (!price || s.money < price) return false;
     s.money -= price;
     upgradeHeavy(b, up);
     this.game.sfx.build();
     return true;
+  }
+
+  toggleFire(s: Slot) {
+    const b = this.structures.heavyFor(s.p);
+    if (!b || b.kind !== 'heavy') return false;
+    s.toasts.push(toggleHeavyFire(b) ? 'Balas incendiarias' : 'Balas normales');
+    return true;
+  }
+
+  // Mensajes de las operaciones: votar la oferta (0, 1 o 2 = seguir) o pedir la retirada.
+  opMsg(id: string, m: { k: string; i?: number }) {
+    const s = this.slots.get(id);
+    if (!s || s.away) return false;
+    if (m.k === 'vote') return this.ops.vote(this.game, id, m.i ?? -1);
+    if (m.k === 'ret') return this.ops.retreat(this.game, id);
+    return false;
   }
 
   buyRobot(s: Slot, what: string) {
@@ -668,7 +709,7 @@ export class ServerSim {
       s.deaths++;
       s.queue.length = 0;
       s.acts.length = 0;
-      this.toastAll(`${s.name} cayó: revive al terminar la oleada`);
+      this.toastAll(`${s.name} cayó: revive al terminar la ${this.ops.op ? 'operación' : 'oleada'}`);
     }
   }
 
@@ -681,7 +722,14 @@ export class ServerSim {
       s.money += bonus;
       s.toasts.push(`¡Oleada superada! +$${bonus}`);
     }
-    // al terminar la oleada revive quien haya caído, junto a un compañero vivo
+    this.reviveFallen();
+    // tras la 20 y cada 5: la radio ofrece operaciones de alto riesgo (se votan)
+    this.ops.afterWave(this.game, this.director.wave);
+  }
+
+  // Al terminar la oleada (o una operación) revive quien haya caído, junto a un compañero vivo.
+  reviveFallen() {
+    for (const s of this.slots.values()) s.ready = false;
     const alive = [...this.slots.values()].filter((s) => s.p.alive && !s.away);
     for (const s of this.slots.values()) {
       if (s.p.alive || !alive.length) continue;
@@ -737,6 +785,10 @@ export class ServerSim {
   ready(id: string) {
     const s = this.slots.get(id);
     if (!s || this.director.state !== 'waiting') return false;
+    if (this.ops.busy()) {
+      s.toasts.push('Primero termina la operación o pedid la retirada');
+      return false;
+    }
     s.ready = !s.ready;
     const [n, of] = this.readyCount();
     if (s.ready && n < of) this.toastAll(`${s.name} está listo (${n}/${of})`);
@@ -751,11 +803,14 @@ export class ServerSim {
 
   // (también si se va quien faltaba)
   tryNext() {
+    if (this.ops.busy()) return;
     const [n, of] = this.readyCount();
     if (of > 0 && n >= of) this.nextRound();
   }
 
   nextRound() {
+    // empezar la oleada rechaza la oferta de la radio que siga abierta
+    this.ops.offer = null;
     if (!this.director.nextRound(this.game)) return false;
     for (const s of this.slots.values()) s.ready = false;
     return true;
@@ -806,6 +861,7 @@ export class ServerSim {
     }
     const d = this.director;
     d.update(TICK, g);
+    this.ops.update(TICK, g);
     if (d.state === 'active' && live.some((s) => s.p.alive)) {
       this.goldenT = Rules.goldenTick(g, this.goldenT, TICK, (m) => this.toastAll(m));
     }
@@ -827,6 +883,8 @@ export class ServerSim {
     const p = s.p;
     g.player = p;
     g.input.cmd = cmd;
+    // H mantenida: la usan las operaciones en su paso (ops.update)
+    p.use = !!(cmd.f & IN_USE);
     this.actor = s.id;
     this.toastTo = s.id;
     const before = this.bullets.list.length;
@@ -929,6 +987,8 @@ export class ServerSim {
       ab: [CLASS_ORDER.indexOf(me.cls), Math.ceil((me.abCd || 0) * 10), r100(me.rageT || 0)],
       // racha propia: bajas seguidas y décimas que le quedan
       cb: packCombo(me.combo),
+      // operación de alto riesgo: oferta, la que está en curso y planos ganados (ver sim/ops.ts view)
+      op: this.ops.view(),
     };
     this.structSnap(s, snap);
     if (s.lost) {

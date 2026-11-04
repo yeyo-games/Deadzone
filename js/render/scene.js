@@ -16,6 +16,7 @@ import {
 } from './build.js';
 import { drawPickups } from './pickups.js';
 import { drawBossAir, drawBossGround } from './bosses.js';
+import { drawOpsArrows, drawOpsCarried, drawOpsGround, drawOpsUi } from './ops.js';
 import { drawBullets } from './bullets.js';
 import { drawPeers, drawRemoteBullets } from './remote.js';
 import { drawHorde } from './zombies.js';
@@ -54,6 +55,7 @@ export function render(game) {
   drawBlocks(ctx, game.structures, v);
   drawPickups(ctx, game.pickups.list, v, game.time);
   drawBossGround(ctx, game, game.time);
+  if (playing) drawOpsGround(ctx, game, game.time);
   if (game.building && game.state === 'play' && p.alive && game.inv[game.buildSel] > 0)
     drawGhost(ctx, game.structures, game, game.buildSel, game.time, game.buildTarget());
   drawHorde(ctx, game.horde.list, v, base, 'small');
@@ -68,6 +70,7 @@ export function render(game) {
     ctx.globalAlpha = 1;
     drawPeers(ctx, game);
     drawMannedHeavy(ctx, game.structures);
+    drawOpsCarried(ctx, game, game.time);
   }
   drawHorde(ctx, game.horde.list, v, base, 'giant');
   drawBullets(ctx, game.bullets.list);
@@ -83,6 +86,7 @@ export function render(game) {
   ctx.setTransform(z, 0, 0, z, tx, ty);
   if (playing) game.floaters.draw(ctx);
   if (playing) drawWorldUi(game, ctx);
+  if (playing) drawOpsUi(ctx, game, game.time);
   if (game.state === 'play') drawHeavyPrompt(ctx, game);
 
   ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -98,6 +102,7 @@ export function render(game) {
     drawAcid(game, ctx, W, H);
     if (game.state === 'play') {
       drawGiantMarkers(game, ctx, W, H);
+      drawOpsArrows(game, ctx, W, H);
       if (game.input.mode === 'mouse' && p.alive) drawCrosshair(game, ctx);
     }
   }

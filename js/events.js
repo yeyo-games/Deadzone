@@ -174,6 +174,8 @@ export function onPlayerDeath(game) {
 
 export function onWaveCleared(game) {
   game.structures.waveRepair();
+  // tras la 20 y cada 5: la radio ofrece operaciones de alto riesgo (se guarda con la partida)
+  game.ops.afterWave(game, game.director.wave);
   // premio por superar la oleada
   const bonus = Rules.waveBonus(game.director.wave);
   game.money += bonus;
@@ -187,6 +189,38 @@ export function onWaveCleared(game) {
   game.toast(`¡Oleada superada! +$${bonus}`);
   game.earnCans(game.director.wave);
   game.analitica.guardar(false);
+}
+
+/* ---------- operaciones de alto riesgo (sim/ops.ts) ---------- */
+
+// En solitario la operación la juega sólo este jugador.
+export function opsWho(game) {
+  const w = (game.opsMe ||= { id: 'me', idx: 0, name: '', away: false });
+  w.p = game.player;
+  w.robot = game.robot;
+  return [w];
+}
+
+// Recompensa de la operación (una sola vez por operación: lo controla Ops).
+export function opsPay(game, n) {
+  game.money += n;
+  game.moneyEarned += n;
+  game.moneyPop(`+$${n}`, 'gold');
+}
+
+// Volvió al lugar donde se aceptó: la cámara salta con él y las rutas se rehacen.
+export function opsMoved(game) {
+  const p = game.player;
+  game.camera.x = p.x;
+  game.camera.y = p.y;
+  game.world.updateFlow(p.x, p.y);
+  game.flowT = 0;
+}
+
+// Terminó (ganada, fallida o abandonada): de vuelta al descanso, se guarda.
+export function opsDone(game) {
+  game.saveProgress();
+  game.updateHud(true);
 }
 
 // Mejor marca de la cuenta: oleada alcanzada y bajas.

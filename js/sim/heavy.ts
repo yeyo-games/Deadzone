@@ -2,7 +2,7 @@
 // niveles en `up`, un número con 4 bits por mejora en el orden de HEAVY_UP_ORDER o MILITARY_UP_ORDER
 // según su `kind` (así viaja en la foto y en la partida guardada).
 // También el disparo del cañón doble, que comparten quien la maneja (Player.actMounted) y el piloto automático.
-import { HEAVY, HEAVY_UP, HEAVY_UP_ORDER, MILITARY_UP, MILITARY_UP_ORDER, WEAPONS } from '../core/config.ts';
+import { HEAVY, HEAVY_UP, HEAVY_UP_ORDER, MILITARY_UP, MILITARY_UP_ORDER, OPS, WEAPONS } from '../core/config.ts';
 import { angleTo, rand } from '../core/util.ts';
 import type { GameHost, Zombie } from '../core/types.d.ts';
 import type { Player } from './player.ts';
@@ -30,6 +30,8 @@ const GUN = (WEAPONS as Record<string, { damage: number; speed: number; range: n
   .heavy;
 
 const BITS = 4;
+// munición incendiaria (plano del nido): instalada es la mejora 'fire'; este bit dice si está en uso
+const FIRE_BIT = 1 << (HEAVY_UP_ORDER.length * BITS);
 
 /** Lo que hace falta para leer las mejoras: los niveles y de qué torreta son (sin kind, la pesada). */
 type Up = Pick<HeavyGun, 'up'> & { kind?: string };
@@ -75,6 +77,17 @@ export const heavyRate = (b: Pick<HeavyGun, 'up'>) => HEAVY_UP.rate.rate![heavyL
 export const heavyBlastR = (b: Pick<HeavyGun, 'up'>) => HEAVY_UP.blast.r![heavyLevel(b, 'blast')];
 export const heavyMaxHp = (b: Up) => upDefs(b).armor.hp![heavyLevel(b, 'armor')];
 export const heavyAuto = (b: Pick<HeavyGun, 'up'>) => heavyLevel(b, 'auto') > 0;
+/** ¿Dispara balas incendiarias? (instaladas y elegidas; sólo la torreta pesada) */
+export const heavyFireOn = (b: Up) => !isMil(b) && heavyLevel(b, 'fire') > 0 && ((b.up || 0) & FIRE_BIT) !== 0;
+/** ¿Tiene instalada la munición incendiaria? */
+export const heavyFireReady = (b: Up) => !isMil(b) && heavyLevel(b, 'fire') > 0;
+
+/** Cambia entre balas normales e incendiarias (si están instaladas). Devuelve si quedan incendiarias. */
+export function toggleHeavyFire(b: HeavyGun & { kind?: string }) {
+  if (!heavyFireReady(b)) return false;
+  b.up = (b.up || 0) ^ FIRE_BIT;
+  return heavyFireOn(b);
+}
 
 // Y los de la torreta militar.
 const milUp = (id: string, k: 'dmg' | 'r' | 'cd' | 'reach' | 'turn' | 'n') => (b: Pick<HeavyGun, 'up'>) =>
@@ -92,6 +105,8 @@ export function upgradeHeavy(b: HeavyGun & { kind?: string }, id: string) {
   if (i < 0 || !heavyPrice(b, id)) return false;
   const before = heavyMaxHp(b);
   b.up = (b.up || 0) + (1 << (i * BITS));
+  // la munición incendiaria se instala ya puesta
+  if (id === 'fire') b.up |= FIRE_BIT;
   if (id === 'armor') {
     b.max = heavyMaxHp(b);
     b.hp = Math.min(b.max, b.hp + b.max - before);
@@ -121,7 +136,8 @@ export function fireHeavy(game: GameHost, b: HeavyGun, dmgMult = 1, spread = 0, 
   const sx = cx + ca * 40 - sa * b.side * 7;
   const sy = cy + sa * 40 + ca * b.side * 7;
   const a = b.ang + rand(-1, 1) * (GUN.spread + spread);
-  const k = heavyDmg(b);
+  const fire = heavyFireOn(b);
+  const k = heavyDmg(b) * (fire ? OPS.plans.fire.dmg : 1);
   game.bullets.spawn({
     x: sx,
     y: sy,
@@ -138,6 +154,7 @@ export function fireHeavy(game: GameHost, b: HeavyGun, dmgMult = 1, spread = 0, 
     blast: true,
     blastR: heavyBlastR(b),
     blastP: HEAVY.blastPower * k,
+    ...(fire ? { burn: OPS.plans.fire.burn } : {}),
     ...(owner !== undefined ? { owner, auto: true } : {}),
   });
   b.recoil = 1;
