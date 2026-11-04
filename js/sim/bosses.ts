@@ -77,8 +77,8 @@ export function bossPhase(z: Pick<Zombie, 'hp' | 'maxHp'>) {
   return k > BOSS.rage ? 0 : k > BOSS.despair ? 1 : 2;
 }
 
-/** Multiplicador de vida del jefe según cuántos juegan (n) y la vuelta a la lista (loop). */
-export const bossHp = (n: number, loop = 0) => (1 + BOSS.perPlayer * Math.max(0, n - 1)) * BOSS.loop ** loop;
+/** Multiplicador de vida del jefe (BOSS.hp) según cuántos juegan (n) y la vuelta a la lista (loop). */
+export const bossHp = (n: number, loop = 0) => BOSS.hp * (1 + BOSS.perPlayer * Math.max(0, n - 1)) * BOSS.loop ** loop;
 
 /** Cuántos juegan esta partida: los del servidor o uno solo. */
 export const playersIn = (game: GameHost) => game.targets?.length || (game.mode?.inGroup() ? 2 : 1);
@@ -94,7 +94,7 @@ export function spawnBoss(game: GameHost, type: string, x: number, y: number, lo
   for (const a of B?.atk || []) if (a.cd) z.acds[a.id] = a.cd * rand(0.3, 0.7);
   if (B?.part) z.partHp = z.partMax = z.maxHp * B.part.hp;
   z.partK = 1;
-  z.dmgK = 1;
+  z.dmgK = BOSS.dmg;
   return z;
 }
 
@@ -284,7 +284,7 @@ function passives(h: Horde, z: Zombie, B: BossDef, dt: number, game: GameHost) {
     game.sfx.bullRoar();
     game.banner(`¡${B.name} enfurece!`, 'Es su última fase: cuidado');
   }
-  if (B.hunger) z.dmgK = 1 + Math.floor((1 - k) / B.hunger.step) * B.hunger.dmg;
+  if (B.hunger) z.dmgK = BOSS.dmg * (1 + Math.floor((1 - k) / B.hunger.step) * B.hunger.dmg);
   if (z.selfA) {
     z.selfT -= dt;
     if (z.selfA.aura) {
@@ -912,7 +912,7 @@ export function updateBossWorld(h: Horde, dt: number, game: GameHost) {
       if (Z.slow < 1) slow(p, Z.slow, 0.25);
       if (!Z.dps) continue;
       // el daño se junta y entra de a pocos (no un golpe por fotograma)
-      p.zoneAcc = (p.zoneAcc || 0) + Z.dps * dt;
+      p.zoneAcc = (p.zoneAcc || 0) + Z.dps * BOSS.dmg * dt;
       if (p.zoneAcc >= 4) {
         p.lastHit = `boss_${zn.kind}`;
         p.hurt(p.zoneAcc, game);
@@ -931,7 +931,7 @@ export function onFallen(game: GameHost, z: Zombie) {
   for (const b of h.list) {
     const H = !b.dead && defOf(b)?.heal;
     if (!H || Math.hypot(b.x - z.x, b.y - z.y) > H.r) continue;
-    b.hp = Math.min(b.maxHp, b.hp + H.per);
+    b.hp = Math.min(b.maxHp, b.hp + H.per * BOSS.hp);
     game.particles.ring(b.x, b.y, b.r * 1.1, '120,220,120');
   }
 }

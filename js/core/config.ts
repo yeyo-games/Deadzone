@@ -477,7 +477,20 @@ function bossZombies() {
 // lista vuelve a empezar, por loop cada vuelta. La horda que lo acompaña es support de la normal y la
 // oleada del jefe nunca es ronda especial. Fases según la vida que le queda: normal, enfurecido (≤ rage)
 // y desesperado (≤ despair); en cada una espera cd[fase] veces menos entre ataque y ataque.
-export const BOSS = { every: 5, perPlayer: 0.6, support: 0.5, rage: 0.6, despair: 0.3, cd: [1, 0.8, 0.6], loop: 1.5 };
+// hp: multiplicador de la vida de todos los jefes (sobre la de ZOMBIES; también su curación) · dmg:
+// multiplicador de todo el daño que hacen al jugador (cuerpo a cuerpo, ataques y zonas; no a las barricadas).
+// Peleas cortas y peligrosas: poca vida, mucho daño.
+export const BOSS = {
+  every: 5,
+  perPlayer: 0.6,
+  support: 0.5,
+  rage: 0.6,
+  despair: 0.3,
+  cd: [1, 0.8, 0.6],
+  loop: 1.5,
+  hp: 0.3,
+  dmg: 2,
+};
 export const BOSS_ORDER = [
   'supremo',
   'aplastador',

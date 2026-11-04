@@ -986,7 +986,7 @@ test('jefe en línea: llega en la oleada 5 con más vida por jugador, se ve en l
     z = sim.horde.list.find((q: any) => q.type === 'supremo');
   }
   assert.ok(z, 'apareció');
-  assert.equal(z.maxHp, ZOMBIES.supremo.hp * (1 + BOSS.perPlayer));
+  assert.equal(z.maxHp, ZOMBIES.supremo.hp * BOSS.hp * (1 + BOSS.perPlayer));
   // Beto, lejos de él, también ve su barra (bo) aunque no lo tenga en pantalla
   b.p.x = z.x + 3000;
   const snap = sim.snapshot('b', 0)!;

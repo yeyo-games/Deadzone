@@ -137,8 +137,8 @@ test('un jefe cada 5 oleadas, en orden, y la lista vuelve a empezar más dura', 
   assert.equal(bossLoop(75), 0);
   assert.equal(bossLoop(80), 1);
   assert.equal(ZOMBIES.rey.hp, 1200000);
-  assert.equal(bossHp(3), 1 + 2 * BOSS.perPlayer);
-  assert.equal(bossHp(1, 1), BOSS.loop);
+  assert.equal(bossHp(3), BOSS.hp * (1 + 2 * BOSS.perPlayer));
+  assert.equal(bossHp(1, 1), BOSS.hp * BOSS.loop);
   const t = partida();
   t.game.targets = [t.player, new Player(0, 0)];
   assert.equal(jefe(t).maxHp, ZOMBIES.supremo.hp * bossHp(2));
@@ -359,9 +359,17 @@ test('el Devorador se cura con las bajas cercanas y el hambre sube su daño', ()
   const o = t.horde.spawn('normal', d.x + 100, d.y, 1, 1);
   const hp = d.hp;
   Rules.killZombie(t.game, o, { kills: {}, xp: () => {}, bounty: () => {}, golden: () => {}, toast: () => {} });
-  assert.equal(d.hp, hp + BOSSES.devorador.heal.per);
+  assert.equal(d.hp, hp + BOSSES.devorador.heal.per * BOSS.hp);
   correr(t, 0.02);
-  assert.ok(d.dmgK > 1);
+  assert.ok(d.dmgK > BOSS.dmg);
+});
+
+test('los jefes tienen BOSS.hp de su vida y pegan BOSS.dmg veces más (golpe, ataques y zonas)', () => {
+  assert.ok(BOSS.hp < 1 && BOSS.dmg > 1);
+  const t = partida();
+  const z = jefe(t);
+  assert.equal(z.maxHp, ZOMBIES.supremo.hp * BOSS.hp);
+  assert.equal(z.dmgK, BOSS.dmg);
 });
 
 test('el Rey levanta a los caídos y cada núcleo roto de su corona lo debilita', () => {
