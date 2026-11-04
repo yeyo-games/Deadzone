@@ -2,7 +2,7 @@
 // - obstáculos (rectángulos y círculos) con rejilla espacial
 // - campo de flujo (BFS) para que los zombis rodeen edificios y coches
 // - lista de ops de dibujo (datos: render/world.js las pinta en trozos con caché LRU)
-import { WORLD_SIZE, ROAD_CENTERS, ROAD_HALF, SIDEWALK, NAV_CELL, CAR_COLORS } from '../core/config.ts';
+import { WORLD_SIZE, ROAD_CENTERS, ROAD_HALF, SIDEWALK, NAV_CELL, CAR_COLORS, WAVES } from '../core/config.ts';
 import type { Block } from './build.ts';
 import { mulberry32, rrange, rpick, clamp, TAU } from '../core/util.ts';
 
@@ -160,6 +160,10 @@ export class World {
   declare navN: number;
   declare blocked: Uint8Array;
   declare queue: Int32Array;
+  /** zona conectada de cada celda (-1 bloqueada); la ciudad abierta es la zona más grande */
+  declare zone: Int32Array;
+  declare zoneOpen: number;
+  declare zoneDirty: boolean;
   declare main: FlowField;
   declare dist: Uint16Array;
   declare anchors: Anchor[];
@@ -820,6 +824,97 @@ export class World {
       }
     }
     this.flowCell = -1;
+    this.zoneDirty = true;
+  }
+
+  /* ---------- bases del jugador ---------- */
+
+  // Etiqueta las zonas conectadas de la rejilla (las barricadas cuentan como muro). La más grande es
+  // la ciudad abierta; cualquier otra es un hueco cerrado: el interior de una base.
+  labelZones() {
+    const n = this.navN;
+    if (!this.zone || this.zone.length !== n * n) this.zone = new Int32Array(n * n);
+    const zone = this.zone;
+    const blocked = this.blocked;
+    const q = this.queue;
+    zone.fill(-1);
+    let label = 0;
+    let best = -1;
+    let bestSize = 0;
+    for (let s = 0; s < n * n; s++) {
+      if (blocked[s] || zone[s] >= 0) continue;
+      let head = 0;
+      let tail = 0;
+      zone[s] = label;
+      q[tail++] = s;
+      while (head < tail) {
+        const c = q[head++];
+        const ci = c % n;
+        const cj = (c / n) | 0;
+        for (let k = 0; k < 4; k++) {
+          const i = ci + (k === 0 ? 1 : k === 1 ? -1 : 0);
+          const j = cj + (k === 2 ? 1 : k === 3 ? -1 : 0);
+          if (i < 0 || j < 0 || i >= n || j >= n) continue;
+          const nc = j * n + i;
+          if (blocked[nc] || zone[nc] >= 0) continue;
+          zone[nc] = label;
+          q[tail++] = nc;
+        }
+      }
+      if (tail > bestSize) {
+        bestSize = tail;
+        best = label;
+      }
+      label++;
+    }
+    this.zoneOpen = best;
+    this.zoneDirty = false;
+  }
+
+  // ¿(x, y) queda dentro de una base cerrada (fuera de la ciudad abierta)? En una celda pegada a un
+  // muro mira las vecinas: basta una que sea de dentro.
+  inBase(x: number, y: number): boolean {
+    if (this.zoneDirty !== false) this.labelZones();
+    const n = this.navN;
+    const ci = clamp(Math.floor(x / NAV_CELL), 0, n - 1);
+    const cj = clamp(Math.floor(y / NAV_CELL), 0, n - 1);
+    const own = this.zone[cj * n + ci];
+    if (own >= 0) return own !== this.zoneOpen;
+    let free = false;
+    for (let j = cj - 1; j <= cj + 1; j++) {
+      for (let i = ci - 1; i <= ci + 1; i++) {
+        if (i < 0 || j < 0 || i >= n || j >= n) continue;
+        const z = this.zone[j * n + i];
+        if (z < 0) continue;
+        if (z !== this.zoneOpen) return true;
+        free = true;
+      }
+    }
+    return !free;
+  }
+
+  // ¿Prohibido para que salga un zombi? Dentro de una base cerrada o a menos de WAVES.baseGap de
+  // algo construido (un zombi nunca nace dentro ni pegado a las bases de los jugadores).
+  baseSpot(x: number, y: number): boolean {
+    return this.nearBlock(x, y, WAVES.baseGap) || this.inBase(x, y);
+  }
+
+  // ¿Hay alguna pieza construida por un jugador a menos de pad px de (x, y)?
+  nearBlock(x: number, y: number, pad: number): boolean {
+    const n = this.obsN;
+    const x0 = clamp(Math.floor((x - pad) / OBS_CELL), 0, n - 1);
+    const y0 = clamp(Math.floor((y - pad) / OBS_CELL), 0, n - 1);
+    const x1 = clamp(Math.floor((x + pad) / OBS_CELL), 0, n - 1);
+    const y1 = clamp(Math.floor((y + pad) / OBS_CELL), 0, n - 1);
+    for (let j = y0; j <= y1; j++) {
+      for (let i = x0; i <= x1; i++) {
+        for (const o of this.obsGrid[j * n + i]) {
+          if (!o.block || !isRect(o)) continue;
+          if (x > o.x - pad && x < o.x + o.w + pad && y > o.y - pad && y < o.y + o.h + pad) return true;
+        }
+      }
+    }
+    return false;
   }
 
   // ¿Cabe un rectángulo sin tocar ningún obstáculo? (ignoreBlocks: las barricadas del jugador no cuentan)
@@ -887,6 +982,7 @@ export class World {
       }
     }
     this.queue = new Int32Array(n * n);
+    this.zoneDirty = true;
     // campo principal (rutas hacia el jugador) y 8 campos de flanqueo hacia puntos
     // alrededor del jugador, para que algunos zombis lo rodeen por los lados o por detrás
     this.main = { dist: new Uint16Array(n * n).fill(65535), cell: -1, ok: false };

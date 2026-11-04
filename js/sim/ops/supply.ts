@@ -254,7 +254,11 @@ export const Supply: OpDef & {
       const r = rand(70, 220);
       const x = c.x + Math.cos(a) * r;
       const y = c.y + Math.sin(a) * r;
-      if (ctx.game.world.pointBlocked(x, y, 26) || ctx.who.some((q) => Math.hypot(q.p.x - x, q.p.y - y) < 280))
+      if (
+        ctx.game.world.pointBlocked(x, y, 26) ||
+        ctx.game.world.baseSpot(x, y) ||
+        ctx.who.some((q) => Math.hypot(q.p.x - x, q.p.y - y) < 280)
+      )
         continue;
       const type = t === 2 ? TOUGH[k % TOUGH.length] : t === 1 && k % 4 === 0 ? 'fat' : 'normal';
       ctx.spawn(type, x, y, null, true);

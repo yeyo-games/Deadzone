@@ -1532,6 +1532,7 @@ export const BOUNTY = {
 // nadie aparece dentro de la vista de ningún jugador vivo
 // offscreen: multiplicador de velocidad de un zombi que ningún jugador ve (llegan antes, sin rezagados)
 // lost: px desde el jugador más cercano a partir de los que un zombi fuera de vista se da por perdido
+// baseGap: ningún zombi aparece dentro de una base cerrada ni a menos de estos px de algo construido
 export const WAVES = {
   count: 0.75,
   hp: 0.9,
@@ -1542,6 +1543,7 @@ export const WAVES = {
   view: [680, 520],
   offscreen: 1.8,
   lost: 1100,
+  baseGap: 140,
 };
 
 // Embestida del toro: te ve, escarba y carga en línea recta.

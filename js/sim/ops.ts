@@ -566,7 +566,12 @@ export class Ops {
       const type = this.pickType(op);
       const r = ((ZOMBIES as Record<string, { radius: number }>)[type]?.radius ?? 15) + 2;
       const q = jitter(at.x, at.y, 46);
-      if (w.pointBlocked(q.x, q.y, r) || targets.some((p) => Math.hypot(p.x - q.x, p.y - q.y) < 260)) continue;
+      if (
+        w.pointBlocked(q.x, q.y, r) ||
+        w.baseSpot(q.x, q.y) ||
+        targets.some((p) => Math.hypot(p.x - q.x, p.y - q.y) < 260)
+      )
+        continue;
       this.spawn(game, type, q.x, q.y, goal && Math.random() < OPS.convoy.truck ? goal : null, guard);
       out++;
     }

@@ -166,7 +166,12 @@ export function spawnGolden(game: GameHost, toast: (msg: string) => void) {
   for (let i = 0; i < 20; i++) {
     const c = d.edgePoint(game, rand(60, 140));
     if (c.x < 80 || c.y < 80 || c.x > WORLD_SIZE - 80 || c.y > WORLD_SIZE - 80) continue;
-    if (game.world.pointBlocked(c.x, c.y, 16) || !d.canReach(game, c.x, c.y) || d.seen(d.views(game), c.x, c.y, 16))
+    if (
+      game.world.pointBlocked(c.x, c.y, 16) ||
+      game.world.baseSpot(c.x, c.y) ||
+      !d.canReach(game, c.x, c.y) ||
+      d.seen(d.views(game), c.x, c.y, 16)
+    )
       continue;
     game.horde.spawn('golden', c.x, c.y, 1, d.speedMult);
     game.sfx.goldenSpawn();

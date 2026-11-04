@@ -169,7 +169,7 @@ function spawnZombies(game, type, n) {
   for (let t = 0; t < n * 10 && made < n; t++) {
     const c = d.edgePoint(game, rand(40, 140), views, false);
     if (c.x < 80 || c.y < 80 || c.x > WORLD_SIZE - 80 || c.y > WORLD_SIZE - 80) continue;
-    if (game.world.pointBlocked(c.x, c.y, r + 2)) continue;
+    if (game.world.pointBlocked(c.x, c.y, r + 2) || game.world.baseSpot(c.x, c.y)) continue;
     if (ZOMBIES[type].boss) spawnBoss(game, type, c.x, c.y);
     else game.horde.spawn(type, c.x, c.y, d.hpMult, d.speedMult);
     made++;

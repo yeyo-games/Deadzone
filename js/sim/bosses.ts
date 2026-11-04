@@ -646,15 +646,17 @@ export function summon(game: GameHost, z: Zombie, n: number, types: string[], at
   const far = at === 'target' ? 420 : z.r + 180;
   const hpK = game.director?.hpMult ?? 1;
   const spK = game.director?.speedMult ?? 1;
+  // nunca dentro de una base (salvo que el jefe ya esté dentro y los llame a su lado)
+  const fence = at === 'target' || !game.world.inBase(cx, cy);
   for (let i = 0; i < n; i++) {
     const type = types[i % types.length];
     const rr = (ZOMBIES as Record<string, { radius: number }>)[type]?.radius ?? 14;
-    for (let t = 0; t < 8; t++) {
+    for (let t = 0; t < 12; t++) {
       const ang = rand(0, TAU);
       const d = rand(near, far);
       const x = cx + Math.cos(ang) * d;
       const y = cy + Math.sin(ang) * d;
-      if (game.world.pointBlocked(x, y, rr + 2)) continue;
+      if (game.world.pointBlocked(x, y, rr + 2) || (fence && game.world.baseSpot(x, y))) continue;
       const o = game.horde.spawn(type, x, y, hpK, spK);
       o.spawnT = 0.5;
       if (i % 3 === 0) game.particles.dust(x, y, 8);

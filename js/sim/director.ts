@@ -310,6 +310,7 @@ export class Director {
         if (c.x < 80 || c.y < 80 || c.x > WORLD_SIZE - 80 || c.y > WORLD_SIZE - 80) continue;
         if (
           game.world.pointBlocked(c.x, c.y, z.r + 2) ||
+          game.world.baseSpot(c.x, c.y) ||
           this.seen(views, c.x, c.y, z.r) ||
           !this.canReach(game, c.x, c.y)
         )
@@ -374,7 +375,7 @@ export class Director {
       tries++;
       const c = this.edgePoint(game, rand(70, 180), views, tries <= 28);
       if (c.x < 80 || c.y < 80 || c.x > WORLD_SIZE - 80 || c.y > WORLD_SIZE - 80) continue;
-      if (world.pointBlocked(c.x, c.y, 18) || !this.canReach(game, c.x, c.y)) continue;
+      if (world.pointBlocked(c.x, c.y, 18) || world.baseSpot(c.x, c.y) || !this.canReach(game, c.x, c.y)) continue;
       const cluster = Math.min(left, randInt(2, 5));
       for (let i = 0; i < cluster && this.queue.length; i++) {
         const type = this.queue[0];
@@ -391,7 +392,13 @@ export class Director {
         for (let t = 0; t < 6; t++) {
           const x = c.x + rand(-45, 45);
           const y = c.y + rand(-45, 45);
-          if (world.pointBlocked(x, y, r + 2) || !this.canReach(game, x, y) || this.seen(views, x, y, r)) continue;
+          if (
+            world.pointBlocked(x, y, r + 2) ||
+            world.baseSpot(x, y) ||
+            !this.canReach(game, x, y) ||
+            this.seen(views, x, y, r)
+          )
+            continue;
           this.spawnOne(game, type, x, y);
           this.queue.shift();
           left--;
@@ -400,11 +407,12 @@ export class Director {
       }
     }
     if (left <= 0 || !this.queue.length) return;
-    // si el jugador está encerrado por barricadas no hay ruta: aparecer igualmente en las orillas
-    for (let attempt = 0; attempt < 12 && left > 0 && this.queue.length; attempt++) {
-      const c = this.edgePoint(game, rand(70, 180), views, attempt < 6);
+    // si el jugador está encerrado por barricadas no hay ruta: aparecer igualmente, fuera de la base
+    // (luego la asedian). Si la base es más grande que la vista, cada intento busca más lejos.
+    for (let attempt = 0; attempt < 30 && left > 0 && this.queue.length; attempt++) {
+      const c = this.edgePoint(game, rand(70, 180) + attempt * 45, views, attempt % 2 === 0);
       if (c.x < 80 || c.y < 80 || c.x > WORLD_SIZE - 80 || c.y > WORLD_SIZE - 80) continue;
-      if (world.pointBlocked(c.x, c.y, 26) || this.seen(views, c.x, c.y, 26)) continue;
+      if (world.pointBlocked(c.x, c.y, 26) || world.baseSpot(c.x, c.y) || this.seen(views, c.x, c.y, 26)) continue;
       const type = this.queue.shift();
       if (!type) break;
       this.spawnOne(game, type, c.x, c.y);
