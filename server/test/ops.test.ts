@@ -228,6 +228,8 @@ test('nido: cargas en puntos distintos a la vez, un punto no admite dos y explot
   const sim = cleared(team(2), 25);
   const op = accept(sim, 'nest');
   const [p1, p2, p3] = op.d.pts;
+  // sin golpes de los refuerzos mientras se prueban las cargas (el daño que corta se prueba aparte)
+  for (const s of sim.slots.values()) s.p.boostT = 99;
   // los dos quieren el mismo punto: sólo uno lo usa
   run(sim, sec(1), { j0: p1, j1: p1 });
   assert.ok(p1.by === 'j0' || p1.by === 'j1');
@@ -246,7 +248,7 @@ test('nido: cargas en puntos distintos a la vez, un punto no admite dos y explot
   // (sin más golpes de los refuerzos mientras termina)
   sim.slots.get('j0')!.p.boostT = 99;
   run(sim, sec(OPS.nest.plantT + 0.3), { j0: p3 });
-  sim.slots.get('j0')!.p.boostT = 0;
+  for (const s of sim.slots.values()) s.p.boostT = 0;
   assert.ok(p3.done);
   assert.equal(op.d.fuse !== null, true);
   // salir por la salida marcada: se llega caminando con margen
