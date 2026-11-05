@@ -434,6 +434,7 @@ test('la foto lleva la barra (ataque y parte) y los avisos', () => {
   assert.ok(cast);
 });
 
+// Pelea al menos 40 s; si al azar todavía no usó 3 ataques distintos, sigue hasta 80 s.
 test('cada jefe pelea 40 s sin errores y usa varios de sus ataques', () => {
   for (const type of BOSS_ORDER) {
     const t = partida();
@@ -441,7 +442,7 @@ test('cada jefe pelea 40 s sin errores y usa varios de sus ataques', () => {
     pieza(t.game, 'metal', Math.round(t.player.x / 20) * 20 + 80, Math.round(t.player.y / 20) * 20);
     pieza(t.game, 'turret', Math.round(t.player.x / 20) * 20 - 120, Math.round(t.player.y / 20) * 20);
     const usados = new Set();
-    for (let s = 0; s < 40 * 60; s++) {
+    for (let s = 0; s < 80 * 60 && (s < 40 * 60 || usados.size < 3); s++) {
       t.player.hp = 1000;
       t.player.alive = true;
       t.game.time += 1 / 60;
