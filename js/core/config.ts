@@ -1639,9 +1639,9 @@ export const ROCK = {
 //     sube con up px/s y cae a land px de ti; al caer te golpea enseguida
 //   frenzy: cada every s corre como loco time s: speed veces más rápido, zigzagueando (zig rad)
 export const DEMON = {
-  from: 15,
-  first: 1,
-  per: 0.4,
+  from: 6,
+  first: 2,
+  per: 0.7,
   leap: { cd: [2.5, 5], min: 110, max: 420, up: 330, land: 6 },
   frenzy: { every: [2.5, 5], time: [0.9, 1.6], speed: 1.45, zig: 0.55 },
 };
