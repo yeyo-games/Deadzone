@@ -15,7 +15,7 @@ export function hitZombie(game, z, b, hx, hy) {
 }
 
 // Bajas que congelan el mundo un instante por sí solas.
-const HEFTY = new Set(['bull', 'heavy', 'giant', 'golden', 'rock', ...BOSS_ORDER]);
+const HEFTY = new Set(['bull', 'heavy', 'giant', 'golden', 'rock', 'demon', ...BOSS_ORDER]);
 
 export function killZombie(game, z) {
   // la baja alarga la racha de quien la hizo y su multiplicador sube el dinero y la experiencia
@@ -252,6 +252,7 @@ export function totalKills(game) {
     (k.heavy || 0) +
     (k.bull || 0) +
     (k.rock || 0) +
+    (k.demon || 0) +
     (k.golden || 0) +
     BOSS_ORDER.reduce((n, b) => n + (k[b] || 0), 0) +
     k.giant

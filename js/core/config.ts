@@ -403,6 +403,23 @@ export const ZOMBIES = {
     frames: 6,
     turn: 2,
   },
+  // Demonio rojo: alto como un jefe y flaco, piel roja, máscara de madera y brazos destrozados. Desde la
+  // oleada DEMON.from. La vida del rocoso y el más rápido de todos (más que los velocistas); las balas no
+  // lo frenan, pero el fuego lo mata mucho más rápido (fire: multiplica el daño de llamas y quemaduras).
+  // A ratos salta hacia ti y corre como loco (ver DEMON).
+  demon: {
+    hp: 42 * 100,
+    speed: 1.7,
+    radius: 18,
+    damage: 16,
+    attackRate: 1.5,
+    xp: 40,
+    mass: 4,
+    reach: 12,
+    frames: 6,
+    turn: 9,
+    fire: 4,
+  },
   // Zombi dorado: poco común, huye de ti y desaparece si no lo matas a tiempo.
   golden: {
     hp: 42 * 3,
@@ -1536,6 +1553,7 @@ export const BOUNTY = {
   heavy: 12.5,
   bull: 7.5,
   rock: 10,
+  demon: 10,
   giant: 2.5,
   golden: 0,
   supremo: 100,
@@ -1612,7 +1630,20 @@ export const ROCK = {
   long: 120,
   longHit: 700,
   ramSpeed: 300,
-  grab: { cd: 6, hold: 0.35, hit: 50, throw: 1700, fly: 0.55, big: ['rock', 'heavy', 'giant', 'bull'] },
+  grab: { cd: 6, hold: 0.35, hit: 50, throw: 1700, fly: 0.55, big: ['rock', 'heavy', 'giant', 'bull', 'demon'] },
+};
+
+// Demonio rojo (ZOMBIES.demon): desde la oleada `from`, `first` por oleada y `per` más por cada oleada
+// siguiente (escalado como la horda).
+//   leap: si estás entre min y max px y lo ve directo, salta hacia ti (cada cd s, al azar entre los dos):
+//     sube con up px/s y cae a land px de ti; al caer te golpea enseguida
+//   frenzy: cada every s corre como loco time s: speed veces más rápido, zigzagueando (zig rad)
+export const DEMON = {
+  from: 15,
+  first: 1,
+  per: 0.4,
+  leap: { cd: [2.5, 5], min: 110, max: 420, up: 330, land: 6 },
+  frenzy: { every: [2.5, 5], time: [0.9, 1.6], speed: 1.45, zig: 0.55 },
 };
 
 export const BULL = {
@@ -1793,6 +1824,7 @@ export const DROPS = {
   heavy: { ammo: 0.6, med: 0.25 },
   bull: { ammo: 0.4, med: 0.15 },
   rock: { ammo: 0.5, med: 0.2 },
+  demon: { ammo: 0.5, med: 0.2 },
   golden: { ammo: 0.5, med: 0.5 },
 };
 
@@ -1821,7 +1853,7 @@ export const MILITARY = {
   manual: 1.6,
   seat: 8,
   speed: 620,
-  big: ['rock', 'heavy', 'giant', 'bull', 'fat'],
+  big: ['rock', 'demon', 'heavy', 'giant', 'bull', 'fat'],
 };
 
 // Mejoras de cada torreta pesada: se compran junto a ella (tecla M o el botón Mejorar) y son de esa
@@ -2267,6 +2299,7 @@ export const ZOMBIE_VARIANTS = {
   fat: 4,
   bull: 3,
   rock: 2,
+  demon: 2,
   giant: 2,
   supremo: 1,
   aplastador: 1,

@@ -6,10 +6,10 @@ import { TAU, makeCanvas, mulberry32, rrange, rpick, roundRect, shade } from '..
 export const OUT = '#141612';
 
 /** @typedef {CanvasRenderingContext2D} Ctx */
-/** @typedef {'normal' | 'golden' | 'swat' | 'heavy' | 'sprinter' | 'fat' | 'bull' | 'rock' | 'giant'} ZType zombis comunes (los jefes van en bossart.js) */
+/** @typedef {'normal' | 'golden' | 'swat' | 'heavy' | 'sprinter' | 'fat' | 'bull' | 'rock' | 'demon' | 'giant'} ZType zombis comunes (los jefes van en bossart.js) */
 /** @typedef {{ skin: string, pants: string, hair: string, seed: number }} PalBase */
 /** @typedef {PalBase & { shirt: string }} PalShirt */
-/** @typedef {{ normal: PalShirt, golden: PalShirt, sprinter: PalShirt, fat: PalShirt, swat: PalShirt & { vest: string, shield: string }, heavy: PalShirt & { plate: string, dark: string, camo: string }, bull: PalBase & { bone: string, vein: string }, rock: { stone: string, light: string, dark: string, moss: string, skin: string, eye: string, seed: number }, giant: PalShirt & { metal: string } }} PalOf paleta de cada tipo de zombi */
+/** @typedef {{ normal: PalShirt, golden: PalShirt, sprinter: PalShirt, fat: PalShirt, swat: PalShirt & { vest: string, shield: string }, heavy: PalShirt & { plate: string, dark: string, camo: string }, bull: PalBase & { bone: string, vein: string }, rock: { stone: string, light: string, dark: string, moss: string, skin: string, eye: string, seed: number }, demon: { skin: string, dark: string, flesh: string, bone: string, mask: string, grain: string, eye: string, seed: number }, giant: PalShirt & { metal: string } }} PalOf paleta de cada tipo de zombi */
 /** @typedef {{ [K in ZType]: (g: Ctx, r: number, p: PalOf[K], ph: number) => void }} Drawers */
 /** @typedef {{ frames: HTMLCanvasElement[], flash: HTMLCanvasElement[], dead: HTMLCanvasElement, burnt: HTMLCanvasElement, size: number, half: number }} ZSet */
 /** @typedef {{ id: string, name: string, colors: string[] }} LookPart */
@@ -250,6 +250,28 @@ const BULL_PALETTES = [
 const ROCK_PALETTES = [
   { stone: '#7d776c', light: '#9b9487', dark: '#565046', moss: '#5d6a3a', skin: '#8a9178', eye: '#f0a848' },
   { stone: '#76695a', light: '#948672', dark: '#4d4338', moss: '#8a7a4a', skin: '#939880', eye: '#e8d070' },
+];
+// Demonios rojos: piel roja con sombras oscuras, carne viva en los brazos destrozados, hueso y una
+// máscara de madera (clara o curtida) con ojos encendidos.
+const DEMON_PALETTES = [
+  {
+    skin: '#b8352c',
+    dark: '#6a1510',
+    flesh: '#d9616a',
+    bone: '#e6d8bc',
+    mask: '#9a6b3c',
+    grain: '#5e3e20',
+    eye: '#ffcf5a',
+  },
+  {
+    skin: '#a32a24',
+    dark: '#5a110d',
+    flesh: '#c94f5a',
+    bone: '#ddd0b2',
+    mask: '#7a5232',
+    grain: '#46301a',
+    eye: '#ff8a3a',
+  },
 ];
 const GIANT_PALETTES = [
   { skin: '#748262', shirt: '#3a3631', pants: '#28282a', hair: '#151311', metal: '#6d6f70' },
@@ -764,6 +786,123 @@ export function rockBody(g, r, p, ph, rng, boulder, stone) {
   stone(r * 0.92 - sw, r * 0.7, r * 0.26, r * 0.24, 6, 1.8);
 }
 
+// Demonio rojo: alto y flaco (el dibujo es del tamaño de un jefe, pero el cuerpo es angosto), piel roja,
+// piernas largas y huesudas, brazos larguísimos y destrozados (jirones de carne, hueso a la vista y garras)
+// y la cabeza cubierta por una máscara de madera con ojos huecos encendidos y boca de dientes.
+/** @param {Ctx} g @param {number} r @param {PalOf["demon"]} p @param {number} ph */
+function drawDemon(g, r, p, ph) {
+  softShadow(g, r * 1.15, 0.42);
+  const s = Math.sin(ph);
+  const c = Math.cos(ph);
+  const rng = mulberry32(p.seed);
+  // piernas largas: zancadas enormes
+  const stride = r * 0.78;
+  for (const k of [-1, 1]) {
+    const fx = -k * s * stride;
+    const fy = k * r * 0.26;
+    limb(g, -r * 0.04, k * r * 0.14, fx * 0.5 - r * 0.02, k * r * 0.22, r * 0.13, p.skin);
+    limb(g, fx * 0.5 - r * 0.02, k * r * 0.22, fx, fy, r * 0.11, p.dark);
+    ell(g, fx + r * 0.05, fy, r * 0.12, r * 0.07, 0, p.dark, OUT, 1);
+  }
+  // torso flaco con costillas marcadas
+  g.save();
+  g.rotate(s * 0.1);
+  ell(g, -r * 0.04, 0, r * 0.22, r * 0.46, 0, p.skin);
+  g.strokeStyle = p.dark;
+  g.lineWidth = 1;
+  g.beginPath();
+  for (let i = -2; i <= 2; i++) {
+    if (!i) continue;
+    g.moveTo(r * 0.08, i * r * 0.1);
+    g.quadraticCurveTo(-r * 0.04, i * r * 0.13, -r * 0.14, i * r * 0.1);
+  }
+  g.moveTo(-r * 0.16, -r * 0.3);
+  g.lineTo(-r * 0.16, r * 0.3);
+  g.stroke();
+  rips(g, rng, -r * 0.04, 0, r * 0.2, r * 0.42, p.dark, 4);
+  g.restore();
+  // brazos larguísimos y destrozados que cuelgan hacia adelante
+  const ax = c * r * 0.12;
+  const ay = s * r * 0.06;
+  for (const k of [-1, 1]) {
+    const sx = k < 0 ? ax : -ax;
+    const sy = k < 0 ? ay : -ay;
+    const shx = r * 0.02;
+    const shy = k * r * 0.42;
+    const ex = r * 0.5 + sx * 0.5;
+    const ey = k * r * 0.56 + sy * 0.5;
+    const hx = r * 1.12 + sx;
+    const hy = k * r * 0.4 + sy;
+    limb(g, shx, shy, ex, ey, r * 0.12, p.skin);
+    limb(g, ex, ey, hx, hy, r * 0.1, p.flesh);
+    // hueso a la vista a lo largo del antebrazo
+    g.strokeStyle = p.bone;
+    g.lineWidth = r * 0.035;
+    g.beginPath();
+    g.moveTo(ex + (hx - ex) * 0.2, ey + (hy - ey) * 0.2);
+    g.lineTo(ex + (hx - ex) * 0.85, ey + (hy - ey) * 0.85);
+    g.stroke();
+    // jirones de carne colgando
+    g.fillStyle = p.dark;
+    for (let i = 0; i < 4; i++) {
+      const t = 0.15 + i * 0.22;
+      const px = ex + (hx - ex) * t;
+      const py = ey + (hy - ey) * t;
+      const out = k * r * rrange(rng, 0.08, 0.16);
+      g.beginPath();
+      g.moveTo(px - r * 0.05, py);
+      g.lineTo(px + r * 0.05, py);
+      g.lineTo(px + rrange(rng, -0.04, 0.04) * r, py + out);
+      g.closePath();
+      g.fill();
+    }
+    // garras
+    g.strokeStyle = OUT;
+    g.lineWidth = 1.6;
+    g.beginPath();
+    for (let i = -1; i <= 1; i++) {
+      g.moveTo(hx, hy);
+      g.lineTo(hx + r * 0.2, hy + i * r * 0.07 + k * r * 0.02);
+    }
+    g.stroke();
+    g.strokeStyle = p.bone;
+    g.lineWidth = 0.9;
+    g.stroke();
+    circ(g, hx, hy, r * 0.07, p.flesh, OUT, 1);
+  }
+  // cabeza calva y máscara de madera al frente
+  const hx = r * 0.3;
+  const hy = s * r * 0.03;
+  circ(g, hx - r * 0.02, hy, r * 0.2, p.dark);
+  ell(g, hx + r * 0.08, hy, r * 0.13, r * 0.2, 0, p.mask, OUT, 1.3);
+  g.strokeStyle = p.grain;
+  g.lineWidth = 0.8;
+  g.beginPath();
+  for (let i = -1; i <= 1; i++) {
+    g.moveTo(hx + r * 0.0, hy + i * r * 0.09 - r * 0.02);
+    g.quadraticCurveTo(hx + r * 0.1, hy + i * r * 0.07, hx + r * 0.18, hy + i * r * 0.09 + r * 0.02);
+  }
+  g.stroke();
+  // ojos huecos encendidos
+  for (const k of [-1, 1]) {
+    ell(g, hx + r * 0.13, hy + k * r * 0.08, r * 0.045, r * 0.055, 0, '#120806', null);
+    circ(g, hx + r * 0.14, hy + k * r * 0.08, r * 0.02, p.eye, null);
+  }
+  // boca de dientes en el borde de la máscara
+  g.fillStyle = '#120806';
+  g.beginPath();
+  g.ellipse(hx + r * 0.2, hy, r * 0.03, r * 0.08, 0, 0, TAU);
+  g.fill();
+  g.strokeStyle = p.bone;
+  g.lineWidth = 0.8;
+  g.beginPath();
+  for (let i = -2; i <= 2; i++) {
+    g.moveTo(hx + r * 0.18, hy + i * r * 0.03);
+    g.lineTo(hx + r * 0.22, hy + i * r * 0.03);
+  }
+  g.stroke();
+}
+
 /** @type {Drawers} */
 const DRAWERS = {
   normal: drawNormal,
@@ -774,6 +913,7 @@ const DRAWERS = {
   fat: drawFat,
   bull: drawBull,
   rock: drawRock,
+  demon: drawDemon,
   giant: drawGiant,
 };
 /** @type {{ [K in ZType]: Omit<PalOf[K], 'seed'>[] }} */
@@ -786,6 +926,7 @@ const PALETTES = {
   fat: FAT_PALETTES,
   bull: BULL_PALETTES,
   rock: ROCK_PALETTES,
+  demon: DEMON_PALETTES,
   giant: GIANT_PALETTES,
 };
 
@@ -882,6 +1023,7 @@ export function zombieSprites() {
     fat: [],
     bull: [],
     rock: [],
+    demon: [],
     giant: [],
   };
   /** @type {Record<ZType, { r: number, frames: number, scale: number, pad: number }>} */
@@ -895,6 +1037,8 @@ export function zombieSprites() {
     heavy: { r: 22, frames: 6, scale: 2.4, pad: 1.45 },
     bull: { r: 17, frames: 6, scale: 2.5, pad: 1.65 },
     rock: { r: 34, frames: 6, scale: 2.3, pad: 1.5 },
+    // alto como un jefe: el dibujo es de radio 38 aunque su cuerpo (ZOMBIES.demon.radius) sea angosto
+    demon: { r: 38, frames: 6, scale: 2.2, pad: 1.45 },
   };
   for (const type of /** @type {ZType[]} */ (Object.keys(conf))) {
     const k = conf[type];

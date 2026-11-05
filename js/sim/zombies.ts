@@ -11,6 +11,7 @@ import {
   AIR,
   ROCK,
   DEATH,
+  DEMON,
 } from '../core/config.ts';
 import { clamp, rand, angleTo, TAU } from '../core/util.ts';
 import type { Zombie, ZombieDef } from '../core/types.d.ts';
@@ -384,7 +385,8 @@ export class Horde {
       // en llamas: se queman, se retuercen y corren desesperados
       if (z.burn > 0) {
         z.burn -= dt;
-        z.hp -= MOLOTOV.dps * dt;
+        // al demonio rojo el fuego lo mata más rápido (def.fire)
+        z.hp -= MOLOTOV.dps * dt * (def.fire || 1);
         z.fireFx -= dt;
         if (z.fireFx <= 0) {
           z.fireFx = 0.08;
@@ -417,6 +419,7 @@ export class Horde {
         (z.wounded ? Math.sin(time * 5 + z.wob) * 0.16 : 0) + (z.burn > 0 ? Math.sin(time * 23 + z.wob) * 0.28 : 0);
       if (z.type === 'bull' && this.bullThink(z, p, dx, dy, d, dt, game, world)) continue;
       if (z.type === 'rock' && this.rockThink(z, p, d, dt, game)) continue;
+      if (z.type === 'demon') this.demonThink(z, p, dx, dy, d, dt, game, world);
       if (def.boss && bossThink(this, z, p, d, dt, game)) continue;
       let mx;
       let my;
@@ -504,6 +507,15 @@ export class Horde {
       const wy = mx * sw + my * cw;
       mx = wx;
       my = wy;
+      // demonio rojo corriendo como loco: zigzaguea a tirones
+      if (z.rageT > 0) {
+        const a = Math.sin(time * 11 + z.wob) * DEMON.frenzy.zig;
+        const ca = Math.cos(a);
+        const sa = Math.sin(a);
+        const rx = mx * ca - my * sa;
+        my = mx * sa + my * ca;
+        mx = rx;
+      }
       z.mx = mx;
       z.my = my;
 
@@ -530,6 +542,7 @@ export class Horde {
         z.buffT -= dt;
         sp *= z.buffK || 1;
       }
+      if (z.rageT > 0) sp *= DEMON.frenzy.speed;
       // sólo frenan cuando ya te tienen encima (para pegarte); antes vienen a toda velocidad
       if (inRange && d < z.r + p.r + 4) sp *= 0.15;
       else if (views && z.type !== 'golden') {
@@ -564,7 +577,8 @@ export class Horde {
       if (inRange) {
         if (!z.inRange) {
           z.inRange = true;
-          z.atk = 0.35;
+          // el demonio rojo que acaba de caer de un salto te golpea enseguida
+          z.atk = z.pounceT > 0 ? 0.05 : 0.35;
         }
         z.atk -= dt;
         if (z.atk <= 0) {
@@ -712,6 +726,51 @@ export class Horde {
 
   pairCell(z: Zombie, c: Zombie[], dt: number) {
     for (let k = 0; k < c.length; k++) if (c[k].r <= BIG_R) pairUp(z, c[k], dt);
+  }
+
+  /* ---------- demonio rojo ---------- */
+
+  // Corre como loco a ratos y salta hacia ti (DEMON). No toma el control: el resto del fotograma sigue
+  // su ruta normal (el salto usa el vuelo de los lanzados: z.air, y el impulso kx/ky).
+  demonThink(z: Zombie, p: Player, dx: number, dy: number, d: number, dt: number, game: GameHost, world: World) {
+    const L = DEMON.leap;
+    const F = DEMON.frenzy;
+    z.pounceT = (z.pounceT || 0) - dt;
+    if (z.leaping && !(z.air > 0)) {
+      // cae de pie, sin tropezar, listo para golpear
+      z.leaping = false;
+      z.stumbleT = 0;
+      z.pounceT = 0.4;
+      game.particles.dust(z.x, z.y, 12);
+      game.camera.shake(0.12, z.x, z.y);
+    }
+    z.rageCd = (z.rageCd ?? rand(1, F.every[1])) - dt;
+    z.rageT = (z.rageT || 0) - dt;
+    if (z.rageCd <= 0) {
+      z.rageCd = rand(F.every[0], F.every[1]);
+      z.rageT = rand(F.time[0], F.time[1]);
+    }
+    // las piernas y el cuerpo se sacuden mientras corre como loco
+    if (z.rageT > 0) z.tilt += Math.sin(game.time * 31 + z.wob) * 0.22;
+    z.leapCd = (z.leapCd ?? rand(1, L.cd[1])) - dt;
+    if (z.leapCd > 0 || z.air > 0 || z.spawnT > 0 || !p.alive || d < L.min || d > L.max) return;
+    if (!clearLine(world, z.x, z.y, p.x, p.y)) return;
+    z.leapCd = rand(L.cd[0], L.cd[1]);
+    // vuela T = 2·up/g s frenándose en el aire (e^-1.5t) y al caer se desliza un poco (e^-7t):
+    // recorre kx·(k + e^(-1.5T)/7); se busca caer a land px de ti
+    const T = (2 * L.up) / AIR.gravity;
+    const k = (1 - Math.exp(-1.5 * T)) / 1.5 + Math.exp(-1.5 * T) / 7;
+    const v = Math.max(0, d - z.r - p.r - L.land) / k;
+    z.kx = (dx / d) * v;
+    z.ky = (dy / d) * v;
+    z.air = 0.01;
+    z.airV = L.up;
+    z.spinV = 0;
+    z.angle = Math.atan2(dy, dx);
+    z.leaping = true;
+    z.lunge = 1;
+    game.particles.dust(z.x, z.y, 8);
+    game.sfx.demonShriek();
   }
 
   /* ---------- toro ---------- */

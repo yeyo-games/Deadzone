@@ -32,6 +32,7 @@ export const TYPES = [
   'tormenta',
   'titan',
   'rey',
+  'demon',
 ];
 export const PICKS = ['ammo', 'med', 'crate'];
 
@@ -90,5 +91,6 @@ export const SFX_SYNC = [
   'stickyBeep',
   'stickyBoom',
   'bossQuake',
+  'demonShriek',
 ];
 export const DECAL_SYNC = ['corpse', 'splat', 'drip', 'acid', 'crack'];

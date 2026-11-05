@@ -18,6 +18,7 @@ const ZOMBI = {
   bull_charge: 'Toro (cornada)',
   rock: 'Rocoso (golpe)',
   rock_throw: 'Rocoso (lanzamiento)',
+  demon: 'Demonio rojo',
   fat: 'Gordo',
   golden: 'Dorado',
   giant: 'Gigante',

@@ -500,6 +500,15 @@ export class Sfx {
     this.burst({ dur: 0.06, freq: 3200, gain: 0.15, type: 'bandpass', q: 6, delay: 0.02 });
   }
 
+  /* ---------- demonio rojo ---------- */
+
+  // Chillido agudo y rasposo al saltar hacia ti.
+  demonShriek() {
+    if (!this.ok('demonShriek', 0.35, true)) return;
+    this.burst({ dur: 0.4, freq: 2600, sweep: 1200, gain: 0.35, type: 'bandpass', q: 4, attack: 0.02 });
+    this.groan(2, { base: [300, 380], dur: [0.45, 0.6], formant: 1500, vol: 0.2 });
+  }
+
   /* ---------- toro ---------- */
 
   // Resoplido y bramido grave al verte.

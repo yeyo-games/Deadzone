@@ -6,6 +6,7 @@ import {
   EVENTS,
   MAX_ALIVE,
   ROCK,
+  DEMON,
   START,
   WORLD_SIZE,
   WAVES,
@@ -33,6 +34,7 @@ export interface WaveCounts {
   heavy: number;
   bull: number;
   rock: number;
+  demon: number;
   /** el jefe de la oleada (1) o ninguno */
   boss?: number;
   total: number;
@@ -57,12 +59,14 @@ export function waveCounts(w: number, m: number, ev: EventDef | null): WaveCount
   let bull = few(w >= 3 ? 2 + Math.floor((w - 3) * 2) : 0);
   // rocosos desde la oleada ROCK.from: pocos, lentos y muy duros
   let rock = few(w >= ROCK.from ? ROCK.first + Math.floor((w - ROCK.from) * ROCK.per) : 0);
+  // demonios rojos desde la oleada DEMON.from: pocos, rapidísimos y duros
+  let demon = few(w >= DEMON.from ? DEMON.first + Math.floor((w - DEMON.from) * DEMON.per) : 0);
   if (ev?.size) {
     // estampida: una horda más chica, toda de velocistas y toros
     const total = Math.round((normalTotal + sprinter + fat + bull) * ev.size);
     bull = Math.max(few(2), Math.round(total * (ev.bulls ?? 0)));
     sprinter = total - bull;
-    normal = swat = fat = heavy = rock = 0;
+    normal = swat = fat = heavy = rock = demon = 0;
   }
   normal -= heavy;
   return {
@@ -73,7 +77,8 @@ export function waveCounts(w: number, m: number, ev: EventDef | null): WaveCount
     heavy,
     bull,
     rock,
-    total: normal + swat + sprinter + fat + heavy + bull + rock,
+    demon,
+    total: normal + swat + sprinter + fat + heavy + bull + rock + demon,
   };
 }
 
@@ -169,6 +174,7 @@ export class Director {
       heavy: heavies,
       bull: bulls,
       rock: rocks,
+      demon: demons,
     } = waveCounts(w, boss ? m * BOSS.support : m, ev);
     const q: string[] = [];
     for (let i = 0; i < normals; i++) q.push('normal');
@@ -178,6 +184,7 @@ export class Director {
     for (let i = 0; i < fats; i++) q.splice(randInt(Math.floor(q.length * 0.2), q.length), 0, 'fat');
     for (let i = 0; i < bulls; i++) q.splice(randInt(Math.floor(q.length * 0.15), q.length), 0, 'bull');
     for (let i = 0; i < rocks; i++) q.splice(randInt(Math.floor(q.length * 0.1), q.length), 0, 'rock');
+    for (let i = 0; i < demons; i++) q.splice(randInt(Math.floor(q.length * 0.1), q.length), 0, 'demon');
     // el jefe sale en la primera ráfaga
     if (boss) q.unshift(boss);
     this.queue = q;
@@ -396,7 +403,7 @@ export class Director {
           ? big.radius + 4
           : type === 'rock'
             ? 36
-            : type === 'fat' || type === 'heavy' || type === 'bull'
+            : type === 'fat' || type === 'heavy' || type === 'bull' || type === 'demon'
               ? 24
               : type === 'sprinter'
                 ? 12

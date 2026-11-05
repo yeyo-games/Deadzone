@@ -200,7 +200,7 @@ export class Ops {
     const d = game.director;
     const next = d.wave + 1;
     const c = d.composition(next);
-    const mix: [string, number][] = (['normal', 'swat', 'sprinter', 'fat', 'heavy', 'bull', 'rock'] as const)
+    const mix: [string, number][] = (['normal', 'swat', 'sprinter', 'fat', 'heavy', 'bull', 'rock', 'demon'] as const)
       .map((k): [string, number] => [k, c[k]])
       .filter(([, n]) => n > 0);
     // el escalado del grupo (crowd) ya va en composition: se fija aquí y no cambia si alguien se va

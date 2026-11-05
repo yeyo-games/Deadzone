@@ -246,7 +246,18 @@ class Game {
     this.ops.reset();
     this.opsNet = null;
     this.setAcid(0);
-    this.kills = { normal: 0, swat: 0, sprinter: 0, fat: 0, heavy: 0, bull: 0, rock: 0, giant: 0, supremo: 0 };
+    this.kills = {
+      normal: 0,
+      swat: 0,
+      sprinter: 0,
+      fat: 0,
+      heavy: 0,
+      bull: 0,
+      rock: 0,
+      demon: 0,
+      giant: 0,
+      supremo: 0,
+    };
     this.level = 1;
     this.xp = 0;
     this.xpNeed = xpForLevel(1);

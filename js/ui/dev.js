@@ -21,6 +21,7 @@ const NAMES = {
   heavy: 'Super blindado',
   bull: 'Toro',
   rock: 'Rocoso',
+  demon: 'Demonio rojo',
   giant: 'Gigante',
   golden: 'Dorado',
   ...Object.fromEntries(BOSS_ORDER.map((k) => [k, BOSSES[k].name])),

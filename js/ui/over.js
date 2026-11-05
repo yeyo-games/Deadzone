@@ -29,6 +29,7 @@ export function gameOver(game) {
     ['Super blindados', game.kills.heavy],
     ['Toros', game.kills.bull || 0],
     ['Rocosos', game.kills.rock || 0],
+    ['Demonios rojos', game.kills.demon || 0],
     ['sep'],
     ['Mejor racha', comboTxt],
     ['Precisión', `${acc}%`],
