@@ -513,6 +513,15 @@ export class Sfx {
     this.burst({ dur: 0.3, freq: 1200, sweep: 200, gain: 0.8 });
   }
 
+  // Golpe de jefe que hace temblar el suelo: retumbo grave y largo con crujido de piedra (big: más largo).
+  bossQuake(big) {
+    if (!this.ok('bossQuake', 0.1, true)) return;
+    this.tone({ freq: big ? 70 : 90, to: 22, dur: big ? 1 : 0.6, gain: 1 });
+    this.tone({ freq: 46, to: 26, dur: big ? 1.3 : 0.8, gain: 0.7, type: 'triangle' });
+    this.burst({ dur: big ? 0.9 : 0.5, freq: 1600, sweep: 90, gain: 0.9 });
+    this.burst({ dur: 0.12, freq: 3000, sweep: 600, gain: 0.35, delay: 0.02 });
+  }
+
   // Embestida contra una estructura (larga: estruendo; corta: golpe seco).
   bullSlam(long) {
     if (!this.ok('bullSlam', 0.12, true)) return;

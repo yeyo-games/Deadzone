@@ -56,8 +56,12 @@ morado cuando llama a la horda o prepara algo. Las zonas que dejan (veneno verde
 azul, torbellino) parpadean un momento antes de hacer daño. Cuando le queda el 60 % de vida se
 **enfurece** y ataca más seguido; al final entra en **furia**. Al derrotarlo, cada jugador gana su premio
 y suelta cajas de armas, botiquines y munición. Las peleas son cortas pero peligrosas: los jefes tienen
-poca vida (la de la tabla) y **pegan el doble** (golpes, ataques y zonas). En línea su vida crece un 60 %
-por cada jugador extra.
+poca vida (la de la tabla) y **pegan el doble** (golpes, ataques y zonas). Sus ataques especiales son
+devastadores: pegan otro 25 % más, abarcan un 20 % más, te avientan un 40 % más lejos y destrozan las
+barricadas un 50 % más; cada golpe hace temblar la pantalla con una onda expansiva, piedras que vuelan y
+grietas en el suelo. Si un jefe se atora entre los edificios (o no logra acercarse), da un **salto colosal**
+hasta junto a ti, avisado con un círculo rojo donde va a caer (nunca dentro de una base). En línea su vida
+crece un 60 % por cada jugador extra.
 Después del Rey (oleada 75) la lista vuelve a empezar, con 1,5 veces la vida en cada vuelta.
 
 **Operaciones de alto riesgo:** al superar la oleada 20 (y luego la 25, la 30…), durante el descanso llega
@@ -97,7 +101,7 @@ terminar la operación.
 | # | Jefe | Oleada | Vida | Ataques | Punto débil | Premio |
 |---|------|--------|------|---------|-------------|--------|
 | 1 | El Rocoso Supremo | 5 | 4 500 | Embestida rocosa · Pisotón · Lanzamiento de roca · Piel endurecida (8 s, la mitad del daño) · Furia de piedra (30 %) | La espalda de lava: +40 % | $1500 |
-| 2 | El Aplastador | 10 | 7 500 | Martillazo (rompe construcciones) · Carga brutal · Agarre demoledor (90 y te lanza) · Golpes consecutivos (3) · Rompefilas (acelera a la horda) | Si su carga choca con un edificio, 3 s aturdido | $2200 |
+| 2 | El Aplastador | 10 | 7 500 | Martillazo (rompe construcciones) · Carga brutal · Agarre demoledor (112 y te lanza) · Golpes consecutivos (3) · Rompefilas (acelera a la horda) | Si su carga choca con un edificio, 3 s aturdido | $2200 |
 | 3 | El Campanero | 15 | 11 400 | Llamada de la horda (20 zombis) · Onda sonora (te frena 4 s) · Campanada de guerra (+35 % de velocidad a la horda) · Golpe de cadena · Última llamada (20 %: corredores) | Rompe la **campana** de su espalda y se acaban la llamada, la onda y la campanada | $3000 |
 | 4 | El Contaminado | 20 | 16 500 | Nube tóxica (8 s) · Proyectil corrosivo (rompe barricadas) · Rastro venenoso · Explosión química · Lluvia corrosiva | Sus depósitos de la espalda: el doble | $3800 |
 | 5 | El Carcelero | 25 | 23 400 | Escudo de frente (sólo le entra el 20 %) · Golpe de prisión · Cadena de captura (te jala y te deja quieto) · Encierro (muros de metal temporales) · Carga blindada | Costados y espalda | $4600 |

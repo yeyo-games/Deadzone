@@ -12,6 +12,8 @@ const EMBER = 4;
 const RING = 5;
 const FIREBALL = 6;
 const CHUNK = 7;
+// onda expansiva gruesa de los golpes de jefe (anillo ancho que se adelgaza al abrirse)
+const SHOCK = 8;
 // estela del misil antitanque: segundos que tarda en apagarse, y sus pasadas (ancho, color, opacidad,
 // curva: el núcleo se apaga antes que el halo)
 const STREAK = 1.6;
@@ -273,6 +275,65 @@ export class Particles {
 
   ring(x, y, r, color = '200,190,170') {
     this.add(RING, x, y, 0, 0, 0.45, r * 0.4, color, 0, r * 3);
+  }
+
+  // Golpe de jefe que hace temblar el suelo (radio r): destello, dos ondas expansivas (una blanca y rápida,
+  // otra del color del ataque), piedras y tierra que salen volando, chispas y una nube de polvo en el borde.
+  quake(x, y, r, color = '210,180,140') {
+    const k = Math.min(2.2, Math.max(0.5, r / 140));
+    this.flash(x, y, r * 1.6, 0.22);
+    this.add(SHOCK, x, y, 0, 0, 0.32, r * 0.25, '255,245,225', 0, r * 3.4);
+    this.add(SHOCK, x, y, 0, 0, 0.6, r * 0.15, color, 0, r * 1.75);
+    this.add(RING, x, y, 0, 0, 0.8, r * 0.3, color, 0, r * 1.1);
+    const rock = ['#6b5a48', '#8a7660', '#4a3e32', '#a39079', '#3a3129'];
+    for (let i = 0; i < 18 + 8 * k; i++) {
+      const a = rand(0, TAU);
+      const s = rand(120, 460) * k;
+      this.add(
+        DOT,
+        x + Math.cos(a) * r * 0.2,
+        y + Math.sin(a) * r * 0.2,
+        Math.cos(a) * s,
+        Math.sin(a) * s,
+        rand(0.5, 1.1),
+        rand(3, 7) * Math.min(1.5, k),
+        pick(rock),
+        3.2,
+      );
+    }
+    for (let i = 0; i < 12; i++) {
+      const a = rand(0, TAU);
+      const s = rand(200, 520) * k;
+      this.add(
+        SPARK,
+        x,
+        y,
+        Math.cos(a) * s,
+        Math.sin(a) * s,
+        rand(0.1, 0.25),
+        1,
+        pick(['#fff2d0', '#ffd890', `rgb(${color})`]),
+        6,
+      );
+    }
+    const n = 10 + Math.round(4 * k);
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * TAU + rand(-0.2, 0.2);
+      const s = rand(50, 120) * k;
+      this.add(
+        SMOKE,
+        x + Math.cos(a) * r * 0.75,
+        y + Math.sin(a) * r * 0.75,
+        Math.cos(a) * s,
+        Math.sin(a) * s,
+        rand(0.8, 1.4),
+        r * 0.12,
+        '125,110,90',
+        2.2,
+        r * 0.35,
+      );
+    }
+    this.add(SMOKE, x, y, 0, 0, 1.2, r * 0.3, '110,96,80', 1, r * 0.5);
   }
 
   ember(x, y, s = 1) {
@@ -885,6 +946,19 @@ export class Particles {
           ctx.fillRect(-q.size / 2, -q.size / 3, q.size * 0.4, q.size * 0.66);
           ctx.restore();
           break;
+        case SHOCK:
+          ctx.globalAlpha = t * 0.55;
+          ctx.strokeStyle = `rgb(${q.color})`;
+          ctx.lineWidth = 16 * t + 2;
+          ctx.beginPath();
+          ctx.arc(q.x, q.y, q.size, 0, TAU);
+          ctx.stroke();
+          ctx.globalAlpha = t * 0.9;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(q.x, q.y, q.size + 8 * t, 0, TAU);
+          ctx.stroke();
+          break;
         case RING:
           ctx.globalAlpha = t * 0.6;
           ctx.strokeStyle = `rgb(${q.color})`;
@@ -930,6 +1004,56 @@ function poolSprite(seed, dark = '#5e1411', light = 'rgba(160,40,32,0.45)') {
   g.beginPath();
   g.ellipse(42, 42, 14, 9, -0.5, 0, TAU);
   g.fill();
+  return c;
+}
+
+// Grieta en el suelo de un golpe de jefe: hundimiento oscuro en el centro y rajaduras que se ramifican.
+const CRACKS = [];
+function crackSprite(seed) {
+  const size = 128;
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const g = c.getContext('2d');
+  let s = seed;
+  const r = () => (s = (s * 16807) % 2147483647) / 2147483647;
+  const m = size / 2;
+  const gr = g.createRadialGradient(m, m, 2, m, m, 26);
+  gr.addColorStop(0, 'rgba(20,16,12,0.75)');
+  gr.addColorStop(0.6, 'rgba(40,32,24,0.35)');
+  gr.addColorStop(1, 'rgba(40,32,24,0)');
+  g.fillStyle = gr;
+  g.fillRect(0, 0, size, size);
+  g.lineCap = 'round';
+  g.lineJoin = 'round';
+  const crack = (x, y, a, len, w) => {
+    g.lineWidth = w;
+    g.beginPath();
+    g.moveTo(x, y);
+    let d = 0;
+    while (d < len) {
+      const step = 5 + r() * 6;
+      a += (r() - 0.5) * 0.9;
+      x += Math.cos(a) * step;
+      y += Math.sin(a) * step;
+      d += step;
+      g.lineTo(x, y);
+      // ramas que salen de lado
+      if (w > 1.2 && r() < 0.12) crack(x, y, a + (r() < 0.5 ? -1 : 1) * (0.5 + r() * 0.6), (len - d) * 0.6, w * 0.55);
+    }
+    g.stroke();
+  };
+  const n = 7 + Math.floor(r() * 4);
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * TAU + (r() - 0.5) * 0.5;
+    g.strokeStyle = 'rgba(18,14,10,0.85)';
+    crack(m + Math.cos(a) * 6, m + Math.sin(a) * 6, a, 34 + r() * 26, 3.2);
+  }
+  // borde claro de tierra levantada
+  g.strokeStyle = 'rgba(190,170,140,0.25)';
+  g.lineWidth = 3;
+  g.beginPath();
+  g.arc(m, m, 14 + r() * 4, 0, TAU);
+  g.stroke();
   return c;
 }
 
@@ -1015,6 +1139,21 @@ export class Decals {
       size: rand(2.5, 4.5),
       t: 0,
       life: 8,
+      delay: 0,
+    });
+  }
+  // grieta en el suelo de un golpe de jefe (radio r)
+  crack(x, y, r) {
+    if (!CRACKS.length) for (let i = 1; i <= 4; i++) CRACKS.push(crackSprite(i * 6151));
+    if (this.pools.length >= this.maxPools) this.pools.shift();
+    this.pools.push({
+      img: CRACKS[(Math.random() * CRACKS.length) | 0],
+      x,
+      y,
+      a: rand(0, TAU),
+      size: r * 0.9,
+      t: 0,
+      life: 14,
       delay: 0,
     });
   }

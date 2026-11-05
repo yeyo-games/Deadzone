@@ -6,8 +6,8 @@
 //
 // Estados (z.bs): walk (camina con la horda y elige ataque) → windup (prepara z.atk, con su aviso) →
 // charge (embestida) · act (golpes seguidos o succión) · under (bajo tierra) · leap (en el aire) →
-// recover (se repone; puede quedar expuesto) → walk.
-import { BOSS, BOSS_ORDER, BOSS_ZONE_ORDER, BOSS_ZONES, BOSSES, ZOMBIES } from '../core/config.ts';
+// recover (se repone; puede quedar expuesto) → walk. Si se atasca caminando, salta hasta ti (escape).
+import { BOSS, BOSS_ORDER, BOSS_ZONE_ORDER, BOSS_ZONES, BOSSES, WORLD_SIZE, ZOMBIES } from '../core/config.ts';
 import type { BossAtk, BossDef } from '../core/config.ts';
 import { angleTo, clamp, rand, TAU } from '../core/util.ts';
 import type { GameHost, Zombie } from '../core/types.d.ts';
@@ -217,6 +217,41 @@ export function addZone(h: Horde, kind: string, x: number, y: number, r: number,
   h.zones.push({ x, y, r, t: 0, life, arm, kind });
 }
 
+// Los ataques tal como pegan: la ficha con la fuerza, el área, el empuje y el destrozo de BOSS.
+const SCALED = new WeakMap<BossAtk, BossAtk>();
+const NO_AREA: Record<string, boolean> = { buff: true, emp: true, pull: true };
+export function scaled(a: BossAtk): BossAtk {
+  let s = SCALED.get(a);
+  if (s) return s;
+  s = { ...a };
+  if (a.hit) s.hit = a.hit * BOSS.power;
+  if (a.r && !NO_AREA[a.k]) s.r = a.r * BOSS.area;
+  if (a.wid) s.wid = a.wid * BOSS.area;
+  if (a.push) s.push = a.push * BOSS.push;
+  if (a.throw) s.throw = a.throw * BOSS.push;
+  if (a.block) s.block = a.block * BOSS.wreck;
+  SCALED.set(a, s);
+  return s;
+}
+
+/**
+ * Golpe que hace temblar el suelo en (x, y), radio r: onda expansiva, piedras, polvo, grieta, temblor de
+ * pantalla (k: más o menos fuerte) y estruendo.
+ */
+function quake(game: GameHost, x: number, y: number, r: number, col = '210,180,140', k = 1) {
+  game.particles.quake(x, y, r, col);
+  game.decals.crack(x, y, r);
+  game.camera.shake(Math.min(1, (0.45 + r / 350) * k), x, y);
+  game.sfx.bossQuake(r > 150);
+}
+
+/** Golpe cuerpo a cuerpo de un jefe: lo mismo en chico, donde te pegó (desde Horde.update). */
+export function bossPunch(game: GameHost, z: Zombie, p: { x: number; y: number }) {
+  game.particles.quake(p.x, p.y, z.r * 1.2, '235,205,170');
+  game.camera.shake(0.6, p.x, p.y);
+  game.sfx.bullHit();
+}
+
 /** Aviso en el suelo del ataque que prepara: tipo, dónde, radio (o largo), ángulo y ancho. */
 function telegraph(z: Zombie, k: number, x: number, y: number, r: number, a = 0, w = 0) {
   z.tk = k;
@@ -254,6 +289,7 @@ export function bossThink(h: Horde, z: Zombie, p: Player, d: number, dt: number,
   if (z.bs === 'walk') {
     z.tk = 0;
     if (z.selfA?.still) return true;
+    if (stuck(z, p, d, dt) && escape(game, z, p)) return true;
     if (z.cd > 0 || !p.alive || z.air > 0) return false;
     return choose(h, z, B, p, d, game);
   }
@@ -384,10 +420,11 @@ function choose(h: Horde, z: Zombie, B: BossDef, p: Player, d: number, game: Gam
     }
   }
   if (a.cd) z.acds[a.id] = a.cd;
+  z.ai = B.atk.indexOf(a);
+  a = scaled(a);
   z.angle = Math.atan2(p.y - z.y, p.x - z.x);
   z.bs = 'windup';
   z.atk = a;
-  z.ai = B.atk.indexOf(a);
   z.bt = a.windup;
   z.tdur = a.windup;
   z.tk = 0;
@@ -433,6 +470,11 @@ function windingUp(h: Horde, z: Zombie, p: Player, dt: number, game: GameHost) {
     z.ty = z.y;
   } else if (z.tk === FX_RING) z.angle = angleTo(z.angle, Math.atan2(z.ty - z.y, z.tx - z.x), 4 * dt);
   else z.angle = angleTo(z.angle, Math.atan2(p.y - z.y, p.x - z.x), 4 * dt);
+  // justo antes de soltarlo, la tierra tiembla a su alrededor
+  if (z.bt < 0.4 && Math.random() < dt * 14) {
+    const ang = rand(0, TAU);
+    game.particles.dust(z.x + Math.cos(ang) * z.r * 1.2, z.y + Math.sin(ang) * z.r * 1.2, z.r * 0.5);
+  }
   if (z.bt > 0) return true;
   fire(h, z, a, p, game);
   return true;
@@ -561,10 +603,7 @@ function ringAt(h: Horde, z: Zombie, a: BossAtk, tx: number, ty: number, game: G
   else if (a.at === 'front') [x, y] = frontOf(z, a.r!);
   else if ((a.at === 'block' || a.at === 'strong') && z.tb) [x, y] = [z.tb.x + z.tb.w / 2, z.tb.y + z.tb.h / 2];
   areaHit(game, h, z, x, y, a.r!, a, cause);
-  game.particles.ring(x, y, a.r!, a.zone ? BOSS_ZONES[a.zone].col : '210,180,140');
-  game.particles.dust(x, y, 18);
-  game.camera.shake(Math.min(1, 0.3 + a.r! / 400), x, y);
-  game.sfx.bullSlam(a.r! > 150);
+  quake(game, x, y, a.r!, a.zone ? BOSS_ZONES[a.zone].col : '210,180,140');
 }
 
 function throwLobs(h: Horde, z: Zombie, a: BossAtk, p: Player, tx: number, ty: number, game: GameHost) {
@@ -628,13 +667,16 @@ function lineHit(h: Horde, z: Zombie, a: BossAtk, game: GameHost, cause: string)
     if (a.block) for (const b of blocksIn(game, x, y, half)) hitB.add(b);
     if (s % 90 === 0) {
       game.particles.dust(x, y, 4);
+      // el suelo se raja a lo largo del golpe
+      game.decals.crack(x, y, Math.max(34, half * 1.3));
       if (a.zone && s > 0) addZone(h, a.zone, x, y, Math.max(40, half), 5);
     }
   }
   for (const b of hitB) game.structures.damageBlock(game, b, a.block!);
   const col = a.zone ? BOSS_ZONES[a.zone].col : '230,210,180';
   game.particles.ring(sx + (ux * a.len!) / 2, sy + (uy * a.len!) / 2, half + 10, col);
-  game.camera.shake(0.4, z.x, z.y);
+  game.particles.quake(sx + ux * a.len!, sy + uy * a.len!, Math.max(60, half * 2), col);
+  game.camera.shake(0.7, z.x, z.y);
   game.sfx.bullHit();
 }
 
@@ -719,7 +761,8 @@ function charging(z: Zombie, p: Player, game: GameHost, h: Horde) {
     hurt(game, z, q, { hit: a.hit }, 0, 0, `boss_${a.id}`);
     q.kx += (z.cdx * 0.8 - z.cdy * side * 0.6) * (a.throw || 0);
     q.ky += (z.cdy * 0.8 + z.cdx * side * 0.6) * (a.throw || 0);
-    game.camera.shake(0.75, q.x, q.y);
+    game.particles.quake(q.x, q.y, z.r * 1.4, '255,205,160');
+    game.camera.shake(0.95, q.x, q.y);
     game.sfx.bullHit();
   }
   if (z.bt > 0) return true;
@@ -791,9 +834,7 @@ function underground(h: Horde, z: Zombie, p: Player, dt: number, game: GameHost)
   z.under = false;
   areaHit(game, h, z, z.x, z.y, a.r!, a, `boss_${a.id}`);
   game.particles.debris(z.x, z.y, 40, 'rock');
-  game.particles.ring(z.x, z.y, a.r!, '200,170,120');
-  game.camera.shake(0.9, z.x, z.y);
-  game.sfx.bullSlam(true);
+  quake(game, z.x, z.y, a.r!, '200,170,120', 1.4);
   recover(z, a.after || 1, a.vuln);
   return true;
 }
@@ -812,11 +853,82 @@ function leaping(h: Horde, z: Zombie, game: GameHost) {
   z.air = 0;
   z.tk = 0;
   areaHit(game, h, z, z.x, z.y, a.r!, a, `boss_${a.id}`);
-  game.particles.ring(z.x, z.y, a.r!, '220,190,150');
-  game.particles.dust(z.x, z.y, 20);
-  game.camera.shake(0.6, z.x, z.y);
-  game.sfx.bullSlam(false);
+  game.particles.debris(z.x, z.y, 30, 'rock');
+  quake(game, z.x, z.y, a.r!, '220,190,150', 1.3);
   recover(z, a.after || 0.6, a.vuln);
+  return true;
+}
+
+/**
+ * Atasco (ver BOSS.stuck): caminando, si en BOSS.stuck s casi no se movió, o estando a más de BOSS.farD
+ * px no se te acercó en BOSS.far s. Mientras muerde una barricada o te tiene cerca, no cuenta.
+ */
+function stuck(z: Zombie, p: Player, d: number, dt: number) {
+  z.blockT = (z.blockT || 0) - dt;
+  if (!p.alive || z.air > 0 || z.blockT > 0 || d < z.r + 160 || z.stkX === undefined) {
+    z.stkT = 0;
+    z.farT = 0;
+    z.stkX = z.x;
+    z.stkY = z.y;
+    z.farD = d;
+    return false;
+  }
+  z.stkT += dt;
+  z.farT += dt;
+  if (d < BOSS.farD || d < z.farD - 60) {
+    z.farD = d;
+    z.farT = 0;
+  }
+  if (z.stkT >= BOSS.stuck) {
+    const moved = Math.hypot(z.x - z.stkX, z.y - z.stkY);
+    z.stkT = 0;
+    z.stkX = z.x;
+    z.stkY = z.y;
+    if (moved < 40) return true;
+  }
+  return z.farT >= BOSS.far;
+}
+
+// Dónde cae el salto: libre para todo su cuerpo, cerca de ti (mejor de su lado) y nunca dentro de una base
+// ni pegado a ella.
+function landing(game: GameHost, z: Zombie, p: Player): [number, number] | null {
+  const from = Math.atan2(z.y - p.y, z.x - p.x);
+  for (let t = 0; t < 40; t++) {
+    const ang = from + rand(-1, 1) * (t < 20 ? 1.1 : Math.PI);
+    const d = z.r + p.r + rand(70, 160) + t * 12;
+    const x = p.x + Math.cos(ang) * d;
+    const y = p.y + Math.sin(ang) * d;
+    if (x < z.r + 40 || y < z.r + 40 || x > WORLD_SIZE - z.r - 40 || y > WORLD_SIZE - z.r - 40) continue;
+    if (game.world.pointBlocked(x, y, z.r) || game.world.baseSpot(x, y)) continue;
+    return [x, y];
+  }
+  return null;
+}
+
+/** Salto colosal para salir de un atasco: por encima de todo hasta junto a ti; al caer, golpe en anillo. */
+const ESCAPE: BossAtk = { id: 'escape', name: 'Salto colosal', k: 'leap', windup: 0, hit: 16, push: 800, block: 400 };
+function escape(game: GameHost, z: Zombie, p: Player) {
+  z.stkT = 0;
+  z.farT = 0;
+  z.farD = Number.POSITIVE_INFINITY;
+  const spot = landing(game, z, p);
+  if (!spot) return false;
+  const dist = Math.hypot(spot[0] - z.x, spot[1] - z.y);
+  const a: BossAtk = { ...ESCAPE, r: Math.round(z.r * 2.4), time: clamp(dist / 650, 0.8, 1.5), after: 0.8, vuln: 1.3 };
+  z.atk = a;
+  z.ai = -1;
+  z.bs = 'leap';
+  z.bt = a.time!;
+  z.lx0 = z.x;
+  z.ly0 = z.y;
+  z.lunge = 1;
+  telegraph(z, FX_RING, spot[0], spot[1], a.r!);
+  z.tdur = a.time!;
+  // despega: la tierra revienta bajo sus pies
+  game.particles.quake(z.x, z.y, z.r * 1.8, '190,165,130');
+  game.decals.crack(z.x, z.y, z.r * 1.6);
+  game.camera.shake(0.5, z.x, z.y);
+  game.sfx.bullRoar();
   return true;
 }
 
@@ -853,6 +965,8 @@ function plow(h: Horde, z: Zombie) {
  * aplasta (si crush) y sigue; lo demás lo golpea fuerte y se detiene; contra un edificio queda aturdido.
  */
 export function bossImpact(z: Zombie, bumped: boolean, block: Block | null, obs: Obstacle | null, game: GameHost) {
+  // mordiendo una barricada no está atascado: está asediando
+  if (block) z.blockT = 0.8;
   if (z.bs !== 'charge') return;
   const a = z.atk as BossAtk;
   if (block) {
@@ -862,8 +976,7 @@ export function bossImpact(z: Zombie, bumped: boolean, block: Block | null, obs:
     }
     game.structures.damageBlock(game, block, a.block || 0);
     game.particles.dust(z.x + z.cdx * z.r, z.y + z.cdy * z.r, 30);
-    game.camera.shake(0.5, z.x, z.y);
-    game.sfx.bullSlam(true);
+    quake(game, z.x + z.cdx * z.r, z.y + z.cdy * z.r, z.r * 1.6, '200,180,150', 0.9);
     z.dashLeft = 0;
     recover(z, 0.6);
     return;
@@ -879,8 +992,8 @@ export function bossImpact(z: Zombie, bumped: boolean, block: Block | null, obs:
   }
   // contra un edificio: se aturde (es el momento de dispararle)
   game.particles.dust(z.x + z.cdx * z.r, z.y + z.cdy * z.r, 26);
-  game.camera.shake(0.6, z.x, z.y);
-  game.sfx.bullSlam(true);
+  game.particles.debris(z.x + z.cdx * z.r, z.y + z.cdy * z.r, 24, 'rock');
+  quake(game, z.x + z.cdx * z.r, z.y + z.cdy * z.r, z.r * 1.6, '200,180,150', 0.9);
   z.dashLeft = 0;
   recover(z, a.stun || 1, a.vuln || 1.2);
 }
@@ -894,9 +1007,7 @@ export function updateBossWorld(h: Horde, dt: number, game: GameHost) {
     h.lobs.splice(i, 1);
     areaHit(game, h, l.by, l.x, l.y, l.r, l, 'boss_lob');
     game.particles.debris(l.x, l.y, 24, 'rock');
-    game.particles.dust(l.x, l.y, 14);
-    game.camera.shake(0.45, l.x, l.y);
-    game.sfx.bullSlam(false);
+    quake(game, l.x, l.y, l.r, l.zone ? BOSS_ZONES[l.zone].col : '200,170,120', 0.8);
   }
   for (let i = h.zones.length - 1; i >= 0; i--) {
     const zn = h.zones[i];

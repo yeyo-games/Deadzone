@@ -17,7 +17,7 @@ import type { GameHost } from '../core/types.d.ts';
 import type { Block } from './build.ts';
 import type { Player } from './player.ts';
 import type { Obstacle, World } from './world.ts';
-import { bossImpact, bossThink, type Fallen, type Lob, updateBossWorld, type Zone } from './bosses.ts';
+import { bossImpact, bossPunch, bossThink, type Fallen, type Lob, updateBossWorld, type Zone } from './bosses.ts';
 
 const CELL = 64;
 
@@ -563,6 +563,7 @@ export class Horde {
           z.lunge = 1;
           p.lastHit = z.type;
           p.hurt(def.damage * (z.dmgK || 1), game);
+          if (def.boss) bossPunch(game, z, p);
           // a un objetivo no se le cobra dinero ni se le empuja
           if (!p.isGoal) {
             game.onZombieHit(z, p);

@@ -19,6 +19,7 @@ import {
   FX_RING,
   FX_ZONE,
   STATUS_N,
+  scaled,
   spawnBoss,
 } from '../js/sim/bosses.ts';
 import { Structures } from '../js/sim/build.ts';
@@ -198,7 +199,7 @@ test('anillo (pisotón): avisa, golpea, avienta y daña barricadas', () => {
     assert.equal(z.bs, 'windup');
     const fx = bossFx(t.horde);
     assert.equal(fx[0][0], FX_RING);
-    assert.equal(fx[0][3], a.r);
+    assert.equal(fx[0][3], scaled(a).r);
     let golpe = false;
     correr(t, a.windup + 0.1, () => {
       golpe ||= t.player.hp < hp0;
@@ -459,4 +460,92 @@ test('cada jefe pelea 40 s sin errores y usa varios de sus ataques', () => {
     assert.ok(usados.size >= 3, `${type} usó ${[...usados].join(', ')}`);
     assert.ok(z.fury || !BOSSES[type].fury, `${type} llegó a la furia`);
   }
+});
+
+test('los ataques especiales pegan con la fuerza, el área, el empuje y el destrozo de BOSS', () => {
+  const stomp = BOSSES.supremo.atk.find((a) => a.id === 'stomp');
+  const s = scaled(stomp);
+  assert.equal(s.hit, stomp.hit * BOSS.power);
+  assert.equal(s.r, stomp.r * BOSS.area);
+  assert.equal(s.push, stomp.push * BOSS.push);
+  assert.equal(s.block, stomp.block * BOSS.wreck);
+  assert.equal(scaled(stomp), s, 'se calcula una vez');
+  const charge = scaled(BOSSES.supremo.atk.find((a) => a.id === 'charge'));
+  assert.equal(charge.throw, BOSSES.supremo.atk[0].throw * BOSS.push);
+  // el alcance del ánimo a la horda no cambia
+  const rally = BOSSES.aplastador.atk.find((a) => a.id === 'rally');
+  assert.equal(scaled(rally).r, rally.r);
+  assert.ok(BOSS.power > 1 && BOSS.area > 1 && BOSS.push > 1 && BOSS.wreck > 1);
+});
+
+// Un jefe que no se puede mover (como atorado en un callejón) y no ataca.
+function atorado(t, dx, dy) {
+  const z = jefe(t, 'supremo', dx, dy);
+  z.speed = z.speed0 = 0;
+  z.acds = Object.fromEntries(BOSSES.supremo.atk.map((a) => [a.id, 1e9]));
+  return z;
+}
+
+test('si se atasca caminando, da un salto colosal (con aviso) hasta junto a ti', () => {
+  const t = partida();
+  const z = atorado(t, 0, -560);
+  let fx = null;
+  correr(t, BOSS.stuck + 0.6, () => {
+    if (z.bs === 'leap' && !fx) fx = bossFx(t.horde)[0];
+  });
+  assert.ok(fx, 'saltó');
+  assert.equal(fx[0], FX_RING, 'avisa dónde cae');
+  let cayo = false;
+  correr(t, 2, () => {
+    cayo ||= z.bs === 'recover';
+  });
+  assert.ok(cayo);
+  const d = Math.hypot(z.x - t.player.x, z.y - t.player.y);
+  assert.ok(d < 400, `cayó a ${Math.round(d)} px`);
+  assert.ok(!t.world.pointBlocked(z.x, z.y, z.r * 0.8), 'en un lugar libre');
+});
+
+test('estando lejos y sin acercarse, también salta; mordiendo una barricada, no', () => {
+  const t = partida();
+  const z = atorado(t, 0, -700);
+  // da vueltas a tu alrededor (se mueve, no está atorado) pero nunca se acerca
+  let salto = 0;
+  correr(t, BOSS.far + 1, () => {
+    if (z.bs === 'walk' && !salto) {
+      const a = t.game.time * 0.12;
+      z.x = t.player.x + Math.sin(a) * 700;
+      z.y = t.player.y - Math.cos(a) * 700;
+    }
+    if (z.bs === 'leap' && !salto) salto = t.game.time;
+  });
+  assert.ok(salto >= BOSS.far - 0.5, `saltó a los ${salto.toFixed(1)} s`);
+  const t2 = partida();
+  const z2 = atorado(t2, 0, -560);
+  correr(t2, BOSS.stuck * 2, () => {
+    z2.blockT = 1;
+  });
+  assert.equal(z2.bs, 'walk', 'asediando no salta');
+});
+
+test('el salto nunca cae dentro de una base ni pegado a ella', () => {
+  const t = partida();
+  const { x, y } = t.player;
+  const half = 200;
+  for (const w of [
+    { x: x - half, y: y - half, w: half * 2, h: 20 },
+    { x: x - half, y: y + half - 20, w: half * 2, h: 20 },
+    { x: x - half, y: y - half, w: 20, h: half * 2 },
+    { x: x + half - 20, y: y - half, w: 20, h: half * 2 },
+  ])
+    t.world.addDynamic({ k: 0, block: true, ...w });
+  const z = atorado(t, 0, -700);
+  let saltos = 0;
+  correr(t, 8, () => {
+    if (z.bs === 'recover') {
+      assert.ok(!t.world.inBase(z.x, z.y), 'cayó dentro de la base');
+      assert.ok(!t.world.baseSpot(z.x, z.y), 'cayó pegado a la base');
+      saltos++;
+    }
+  });
+  assert.ok(saltos > 0, 'saltó');
 });

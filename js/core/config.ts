@@ -480,6 +480,12 @@ function bossZombies() {
 // hp: multiplicador de la vida de todos los jefes (sobre la de ZOMBIES; también su curación) · dmg:
 // multiplicador de todo el daño que hacen al jugador (cuerpo a cuerpo, ataques y zonas; no a las barricadas).
 // Peleas cortas y peligrosas: poca vida, mucho daño.
+// Ataques especiales (los que avisan en el suelo; no el golpe cuerpo a cuerpo): power multiplica su daño
+// (además de dmg), area su radio y ancho, push lo que te avientan (y lo que atraen) y wreck el daño a las
+// barricadas.
+// Atasco: si caminando casi no se movió en stuck s, o estando a más de farD px no se te acercó en far s
+// (sin contar mientras muerde una barricada), da un salto colosal hasta junto a ti por encima de lo que
+// haya; nunca cae dentro de una base ni pegado a ella.
 export const BOSS = {
   every: 5,
   perPlayer: 0.6,
@@ -490,6 +496,13 @@ export const BOSS = {
   loop: 1.5,
   hp: 0.3,
   dmg: 2,
+  power: 1.25,
+  area: 1.2,
+  push: 1.4,
+  wreck: 1.5,
+  stuck: 2,
+  far: 7,
+  farD: 420,
 };
 export const BOSS_ORDER = [
   'supremo',
