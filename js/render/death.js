@@ -4,7 +4,16 @@
 import { DEATH } from '../core/config.ts';
 import { rand, TAU } from '../core/util.ts';
 
-/** Empieza el festín sobre el cuerpo en (x, y). */
+/** @typedef {import('../core/types.d.ts').GameHost} GameHost */
+/** @typedef {import('../core/types.d.ts').Zombie} Zombie */
+/** @typedef {{ x: number, y: number, t: number, next: number, burst: boolean }} Feast */
+
+/**
+ * Empieza el festín sobre el cuerpo en (x, y).
+ * @param {GameHost} game
+ * @param {number} x
+ * @param {number} y
+ */
 export function startDeath(game, x, y) {
   game.feast = { x, y, t: 0, next: 0.05, burst: false };
   game.particles.bite(x, y, rand(0, TAU));
@@ -12,8 +21,13 @@ export function startDeath(game, x, y) {
   game.sfx.chomp();
 }
 
-// Un zombi pegado al cuerpo, para que la mordida salga de su lado y se le vea tirar el bocado.
+/**
+ * Un zombi pegado al cuerpo, para que la mordida salga de su lado y se le vea tirar el bocado.
+ * @param {GameHost} game
+ * @param {Feast} f
+ */
 function eater(game, f) {
+  /** @type {Zombie | null} */
   let best = null;
   let bd = Number.POSITIVE_INFINITY;
   for (const z of game.horde.list) {
@@ -27,8 +41,13 @@ function eater(game, f) {
   return best;
 }
 
-/** Mordidas y destripe mientras dura; luego se olvida. */
+/**
+ * Mordidas y destripe mientras dura; luego se olvida.
+ * @param {GameHost} game
+ * @param {number} dt
+ */
 export function updateDeath(game, dt) {
+  /** @type {Feast | null} */
   const f = game.feast;
   if (!f) return;
   f.t += dt;
