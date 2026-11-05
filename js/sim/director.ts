@@ -279,6 +279,18 @@ export class Director {
     return false;
   }
 
+  // Cuántos px le faltan a un círculo de radio r en (x, y) para entrar en la vista de alguien (0: ya se ve).
+  outside(views: View[], x: number, y: number, r: number) {
+    const m = r + 40;
+    let best = Number.POSITIVE_INFINITY;
+    for (const v of views) {
+      const ox = Math.max(0, Math.abs(x - v.x) - v.hw - m);
+      const oy = Math.max(0, Math.abs(y - v.y) - v.hh - m);
+      best = Math.min(best, Math.hypot(ox, oy));
+    }
+    return best;
+  }
+
   // ¿Hay ruta desde (x, y) hasta algún jugador? En el servidor cada jugador tiene su propio campo.
   canReach(game: GameHost, x: number, y: number) {
     const world = game.world;

@@ -10,6 +10,7 @@ import {
   ZOMBIE_VARIANTS,
   AIR,
   ROCK,
+  DEATH,
 } from '../core/config.ts';
 import { clamp, rand, angleTo, TAU } from '../core/util.ts';
 import type { Zombie, ZombieDef } from '../core/types.d.ts';
@@ -489,7 +490,8 @@ export class Horde {
       if (z.wander > 0.4) z.wander = 0.4;
       else if (z.wander < -0.4) z.wander = -0.4;
       z.nextStumble -= dt;
-      if (z.nextStumble <= 0 && d > 40) {
+      // cerca de ti ya no tropiezan: vienen derecho
+      if (z.nextStumble <= 0 && d > 220) {
         z.stumbleT = rand(0.25, 0.6);
         z.wander += rand(-0.45, 0.45);
         z.nextStumble = z.role === 'lag' ? rand(1.5, 4) : rand(3, 9);
@@ -528,8 +530,15 @@ export class Horde {
         z.buffT -= dt;
         sp *= z.buffK || 1;
       }
-      if (inRange) sp *= 0.15;
-      else if (views && z.type !== 'golden' && !dir.seen(views, z.x, z.y, z.r)) sp *= WAVES.offscreen;
+      // sólo frenan cuando ya te tienen encima (para pegarte); antes vienen a toda velocidad
+      if (inRange && d < z.r + p.r + 4) sp *= 0.15;
+      else if (views && z.type !== 'golden') {
+        // fuera de la vista corren más, y el impulso se apaga antes de que aparezcan (WAVES.offRamp)
+        const out = dir.outside(views, z.x, z.y, z.r);
+        if (out > 0) sp *= 1 + (WAVES.offscreen - 1) * Math.min(1, out / WAVES.offRamp);
+      }
+      // te moriste: los de cerca corren a comerte (render/death.js)
+      if (!p.alive && !targets && p !== IDLE && d < DEATH.feastR) sp *= DEATH.feast;
       // alambre de púas: frena y hiere
       const trap = game.structures.wires.length ? game.structures.trapAt(z, dt, game) : null;
       if (trap) {

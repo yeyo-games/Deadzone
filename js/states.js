@@ -15,6 +15,7 @@ import { chooseClass } from './ui/class.js';
 import { openLevelUp, chooseUpgrade } from './ui/levelup.js';
 import { drawLookPreview } from './ui/look.js';
 import { bossView } from './render/bosses.js';
+import { updateDeath } from './render/death.js';
 
 /** @typedef {import('./core/types').GameHost} GameHost */
 
@@ -117,6 +118,7 @@ export function updatePlay(game, dt) {
   game.hurtFlash = Math.max(0, game.hurtFlash - dt * 1.4);
   updateAcid(game, dt);
   updateCombo(game, dt);
+  updateDeath(game, dt);
   game.updateHud(false);
   if (!p.alive) {
     game.deathT -= dt;

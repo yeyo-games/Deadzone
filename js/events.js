@@ -5,6 +5,8 @@ import { clamp, storage } from './core/util.ts';
 import * as Rules from './sim/rules.ts';
 import { comboBreak, comboKill, comboTick } from './sim/combo.ts';
 import { causaDe } from './analitica.js';
+import { DEATH } from './core/config.ts';
+import { startDeath } from './render/death.js';
 
 export function hitZombie(game, z, b, hx, hy) {
   // cliente en línea: sus balas son de adorno, el daño real lo calcula el servidor
@@ -155,9 +157,10 @@ export function addXp(game, n) {
 export function onPlayerDeath(game) {
   game.analitica.muerte(causaDe(game.player));
   // la partida venía de una sala en línea (te fuiste): se pierde sólo esa
+  startDeath(game, game.player.x, game.player.y);
   if (!game.mode.savesProgress()) {
     recordScore(game);
-    game.deathT = 1.6;
+    game.deathT = DEATH.time;
     game.input.reset();
     game.camera.shake(0.6);
     return;
@@ -167,7 +170,7 @@ export function onPlayerDeath(game) {
   storage.remove(game.accounts.checkKey());
   game.accounts.cloudClear();
   recordScore(game);
-  game.deathT = 1.6;
+  game.deathT = DEATH.time;
   game.input.reset();
   game.camera.shake(0.6);
 }

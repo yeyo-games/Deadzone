@@ -262,6 +262,7 @@ class Game {
     this.shopPending = false;
     this.structures.clear();
     this.deathT = 0;
+    this.feast = null;
     this.goldenT = GOLDEN.firstAfter;
     this.stepT = 0;
     this.music.reset();

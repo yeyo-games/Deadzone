@@ -14,6 +14,9 @@ const FIREBALL = 6;
 const CHUNK = 7;
 // onda expansiva gruesa de los golpes de jefe (anillo ancho que se adelgaza al abrirse)
 const SHOCK = 8;
+// tripa: un tramo de intestino que sale volando girando y queda tirado en el suelo
+const GUT = 9;
+const GUT_COLORS = ['#c45a62', '#b04850', '#d0727a', '#a8424c', '#c97a6e'];
 // estela del misil antitanque: segundos que tarda en apagarse, y sus pasadas (ancho, color, opacidad,
 // curva: el núcleo se apaga antes que el halo)
 const STREAK = 1.6;
@@ -653,6 +656,34 @@ export class Particles {
     this.ring(x, y, R * 0.7, '200,60,40');
   }
 
+  // Mordida de zombi (al jugador muerto): chorro de sangre hacia a, gotas y algún trozo de carne.
+  bite(x, y, a) {
+    for (let i = 0; i < 22; i++) {
+      const aa = a + rand(-0.7, 0.7);
+      const s = rand(90, 380);
+      this.add(DOT, x, y, Math.cos(aa) * s, Math.sin(aa) * s, rand(0.3, 0.8), rand(2, 5), pick(BLOOD), 3.5);
+    }
+    for (let i = 0; i < 3; i++) {
+      const aa = a + rand(-0.9, 0.9);
+      const s = rand(80, 240);
+      this.add(CHUNK, x, y, Math.cos(aa) * s, Math.sin(aa) * s, rand(0.8, 1.4), rand(3, 6), pick(BLOOD), 4);
+    }
+  }
+
+  // Tripas que salen volando (n tramos, power: qué tan lejos) con sangre; quedan un rato en el suelo.
+  guts(x, y, n = 8, power = 1) {
+    for (let i = 0; i < n; i++) {
+      const a = rand(0, TAU);
+      const s = rand(110, 420) * power;
+      this.add(GUT, x, y, Math.cos(a) * s, Math.sin(a) * s, rand(4.5, 6.5), rand(3.5, 5.5), pick(GUT_COLORS), 3);
+    }
+    for (let i = 0; i < 10 + n * 3; i++) {
+      const a = rand(0, TAU);
+      const s = rand(60, 520) * power;
+      this.add(DOT, x, y, Math.cos(a) * s, Math.sin(a) * s, rand(0.4, 1), rand(2, 6), pick(BLOOD), 3);
+    }
+  }
+
   // estela de humo y chispas del cohete
   rocketTrail(x, y, dx, dy) {
     this.add(
@@ -946,6 +977,31 @@ export class Particles {
           ctx.fillRect(-q.size / 2, -q.size / 3, q.size * 0.4, q.size * 0.66);
           ctx.restore();
           break;
+        case GUT: {
+          // tramo de intestino ondulado, con borde oscuro y brillo húmedo; gira mientras vuela
+          ctx.globalAlpha = Math.min(1, t * 5);
+          ctx.save();
+          ctx.translate(q.x, q.y);
+          ctx.rotate(q.rot);
+          const L = q.size * 6;
+          const w = q.size;
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+          ctx.beginPath();
+          ctx.moveTo(-L / 2, 0);
+          for (let i = 1; i <= 6; i++) ctx.lineTo(-L / 2 + (L * i) / 6, Math.sin(i * 1.9 + q.size * 3) * w * 0.9);
+          ctx.strokeStyle = '#5e161b';
+          ctx.lineWidth = w + 2;
+          ctx.stroke();
+          ctx.strokeStyle = q.color;
+          ctx.lineWidth = w;
+          ctx.stroke();
+          ctx.strokeStyle = 'rgba(255,215,215,0.35)';
+          ctx.lineWidth = w * 0.3;
+          ctx.stroke();
+          ctx.restore();
+          break;
+        }
         case SHOCK:
           ctx.globalAlpha = t * 0.55;
           ctx.strokeStyle = `rgb(${q.color})`;

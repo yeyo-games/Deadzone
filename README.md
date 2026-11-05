@@ -131,7 +131,9 @@ mundial y estadísticas» abajo).
 El juego se guarda solo en el navegador cada pocos segundos, **también a mitad de ronda** (con los
 zombis que siguen vivos), y al cerrar o minimizar la página. Al volver a abrir el sitio aparece
 **Continuar** y sigues donde estabas. **Si mueres, pierdes la partida** y la siguiente empieza desde la
-oleada 1 (tu récord en la clasificación se conserva). *Nueva partida* también borra el progreso.
+oleada 1 (tu récord en la clasificación se conserva). Antes de la pantalla final ves cómo los zombis de
+alrededor se te echan encima, te devoran a mordidas y te destripan, con tus intestinos volando por todos
+lados. *Nueva partida* también borra el progreso.
 El guardado vive en el navegador de cada dispositivo (y en cada sitio web por separado).
 
 ### Dinero y tienda

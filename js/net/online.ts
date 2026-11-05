@@ -19,6 +19,7 @@ import {
 import { ServerClock, applyMove, BODY } from './netcode.ts';
 import { IN_RUN, IN_FIRE, IN_RELOAD, IN_USE } from './protocol.ts';
 import { lookCode } from '../render/sprites.js';
+import { startDeath, updateDeath } from '../render/death.js';
 import { UPGRADES } from '../sim/upgrades.ts';
 import { Abilities } from '../sim/abilities.ts';
 import { applyCombo } from '../sim/combo.ts';
@@ -595,6 +596,7 @@ export class Online {
     const inp = g.input;
     const p = g.player;
     const live = g.state === 'play';
+    updateDeath(g, dt);
     if (live) {
       if (inp.consume('pause')) {
         // Esc en el modo construir sólo lo cierra
@@ -738,6 +740,7 @@ export class Online {
       g.sfx.moneyLost();
     }
     if (p.alive && !alive) {
+      startDeath(g, p.x, p.y);
       g.camera.shake(0.6);
       g.input.reset();
       // el servidor no manda la causa: sólo se distingue la quemadura de ácido

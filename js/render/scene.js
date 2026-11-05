@@ -61,6 +61,12 @@ export function render(game) {
   if (game.building && game.state === 'play' && p.alive && game.inv[game.buildSel] > 0)
     drawGhost(ctx, game.structures, game, game.buildSel, game.time, game.buildTarget());
   drawStickyZones(ctx, game.structures, game.time);
+  // muerto: el cuerpo queda en el suelo, debajo de los zombis que se lo comen
+  if (playing && !p.alive && !p.inRobot) {
+    ctx.globalAlpha = 0.7;
+    drawSurvivor(ctx, p, game.time);
+    ctx.globalAlpha = 1;
+  }
   drawHorde(ctx, game.horde.list, v, base, 'small');
   drawFires(ctx, game.structures, v, game.time);
   drawStuck(ctx, game.structures, game.time);
@@ -69,7 +75,7 @@ export function render(game) {
   if (playing) {
     if (!p.alive) ctx.globalAlpha = 0.55;
     if (p.inRobot) drawRobot(ctx, game.robot, p, game.time);
-    else drawSurvivor(ctx, p, game.time);
+    else if (p.alive) drawSurvivor(ctx, p, game.time);
     ctx.globalAlpha = 1;
     drawPeers(ctx, game);
     drawMannedHeavy(ctx, game.structures);

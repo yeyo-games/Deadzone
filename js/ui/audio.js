@@ -437,6 +437,14 @@ export class Sfx {
     this.tone({ freq: fat ? 90 : 300, to: fat ? 50 : 140, dur: 0.18, gain: 0.6 });
   }
 
+  // Mordida húmeda (te están devorando): crujido corto y chapoteo.
+  chomp() {
+    if (!this.ok('chomp', 0.08, true)) return;
+    this.burst({ dur: 0.07, freq: rand(1800, 2600), gain: 0.5, type: 'bandpass', q: 3 });
+    this.burst({ dur: 0.18, freq: rand(500, 800), sweep: 200, gain: 0.6, q: 1.5, delay: 0.03 });
+    this.tone({ freq: rand(120, 160), to: 60, dur: 0.12, gain: 0.4, delay: 0.02 });
+  }
+
   // Reventón brutal del gordo: chapoteo grave y salpicaduras.
   gore() {
     if (!this.ok('gore', 0.1, true)) return;

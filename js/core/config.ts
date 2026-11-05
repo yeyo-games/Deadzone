@@ -486,6 +486,11 @@ function bossZombies() {
 // Atasco: si caminando casi no se movió en stuck s, o estando a más de farD px no se te acercó en far s
 // (sin contar mientras muerde una barricada), da un salto colosal hasta junto a ti por encima de lo que
 // haya; nunca cae dentro de una base ni pegado a ella.
+// Muerte del jugador (render/death.js): la escena dura time s antes de la pantalla final; los zombis que
+// lo tienen encima lo muerden cada bite s (entre los dos) y a los burst s lo destripan. feast: cuánto más
+// rápido corren a comérselo los que están a menos de feastR px.
+export const DEATH = { time: 3.4, bite: [0.16, 0.36], burst: 1.1, feast: 1.6, feastR: 420 };
+
 export const BOSS = {
   every: 5,
   perPlayer: 0.6,
@@ -1556,7 +1561,9 @@ export const BOUNTY = {
 // spawnTime: toda la oleada aparece en estos s (en ráfagas cada burst s), salvo que se llegue al tope de vivos
 // view: media caja (px) que se da por vista de los demás jugadores (cubre celular vertical y pantalla ancha);
 // nadie aparece dentro de la vista de ningún jugador vivo
-// offscreen: multiplicador de velocidad de un zombi que ningún jugador ve (llegan antes, sin rezagados)
+// offscreen: multiplicador de velocidad de un zombi que ningún jugador ve (llegan antes, sin rezagados);
+// el impulso se apaga poco a poco en los últimos offRamp px antes de entrar en la vista, así no frenan de
+// golpe al aparecer en pantalla
 // lost: px desde el jugador más cercano a partir de los que un zombi fuera de vista se da por perdido
 // baseGap: ningún zombi aparece dentro de una base cerrada ni a menos de estos px de algo construido
 export const WAVES = {
@@ -1568,6 +1575,7 @@ export const WAVES = {
   burst: 0.4,
   view: [680, 520],
   offscreen: 1.8,
+  offRamp: 360,
   lost: 1100,
   baseGap: 140,
 };
