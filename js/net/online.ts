@@ -477,6 +477,8 @@ export class Online {
     g.analitica.terminar(fin);
     g.mode = new Solo(g, true);
     g.remote.stop();
+    // los zombis que llegaban del servidor no se simulan aquí (no traen táctica ni ruta): fuera
+    g.horde.list = [];
     this.up = null;
     g.setAcid(0);
     g.$('net-diag').hidden = true;
