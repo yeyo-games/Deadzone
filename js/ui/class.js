@@ -22,7 +22,9 @@ export function showClass(game, freshWorld) {
     wrap.appendChild(b);
   });
   game.classReadyAt = performance.now() + 250;
-  setTimeout(() => wrap.classList.add('ready'), 250);
+  // si la pantalla se abrió hace poco, el aviso de la vez anterior la marcaría lista antes de tiempo
+  clearTimeout(game.classReadyTimer);
+  game.classReadyTimer = setTimeout(() => wrap.classList.add('ready'), 250);
 }
 
 export function chooseClass(game, id) {
