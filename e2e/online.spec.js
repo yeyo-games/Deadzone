@@ -55,7 +55,8 @@ test('dos jugadores en la misma sala en línea', async ({ browser }) => {
 
 // El amigo entra con el enlace de invitación (?sala=CÓDIGO) que muestra la sala, sin escribir el código.
 test('2 jugadores: el segundo entra por el enlace de invitación y empiezan', async ({ browser }) => {
-  test.setTimeout(120_000);
+  // en WebKit headless (y más en CI) el juego va lento: tarda cerca de 2 min
+  test.setTimeout(240_000);
   const url = `/index.html?servidor=${encodeURIComponent(SERVER_URL)}`;
   const a = await (await browser.newContext()).newPage();
   const b = await (await browser.newContext()).newPage();
