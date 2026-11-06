@@ -16,6 +16,8 @@ import { openLevelUp, chooseUpgrade } from './ui/levelup.js';
 import { drawLookPreview } from './ui/look.js';
 import { bossView } from './render/bosses.js';
 import { updateDeath } from './render/death.js';
+import { updateTuto } from './ui/tutorial.js';
+import { updateManual, closeManual } from './ui/manual.js';
 
 /** @typedef {import('./core/types').GameHost} GameHost */
 
@@ -79,6 +81,7 @@ export function updatePlay(game, dt) {
     if (game.input.consume('turret')) return openTurret(game);
     game.robot.update(dt, p, game);
     if (game.input.consume('nextRound')) Act.startNextRound(game);
+    updateTuto(game, dt);
   }
   game.structures.update(dt, game);
   game.flowT -= dt;
@@ -88,10 +91,11 @@ export function updatePlay(game, dt) {
   }
   // un campo de flanqueo por fotograma (repartido): los zombis rodean por rutas reales
   if (p.alive) game.world.updateAnchors(p.x, p.y);
-  game.director.update(dt, game);
+  // durante el entrenamiento la primera oleada espera
+  if (!game.tuto) game.director.update(dt, game);
   game.ops.update(dt, game);
   // zombi dorado: de vez en cuando durante una ronda, nunca dos a la vez
-  if (game.director.state === 'active' && p.alive) {
+  if (game.director.state === 'active' && p.alive && !game.tuto) {
     game.goldenT = Rules.goldenTick(game, game.goldenT, dt, game.toast);
   }
   game.horde.update(dt, game);
@@ -128,7 +132,7 @@ export function updatePlay(game, dt) {
   // en grupo las mejoras se eligen entre oleadas (el juego no se pausa para el otro)
   if (game.pendingLevels > 0 && (!game.mode.inGroup() || game.director.state === 'waiting')) openLevelUp(game);
   else if (game.shopPending) openShop(game);
-  else {
+  else if (!game.tuto) {
     game.saveT = (game.saveT || 0) + dt;
     if (game.saveT > (game.director.state === 'active' ? 4 : 2)) saveProgress(game);
   }
@@ -187,6 +191,17 @@ export const STATES = {
     },
   },
   online: { screen: 'screen-online' },
+  // el manual del menú (el libro encadenado): la escena del menú sigue de fondo
+  manual: {
+    screen: 'screen-manual',
+    music: true,
+    exit: (game) => closeManual(game),
+    update: (game, dt) => {
+      // primero el manual (Esc lo cierra; updateMenu se come la tecla)
+      updateManual(game, dt);
+      if (game.state === 'manual') updateMenu(game, dt);
+    },
+  },
   class: {
     screen: 'screen-class',
     music: true,

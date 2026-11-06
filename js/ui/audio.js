@@ -500,6 +500,48 @@ export class Sfx {
     this.burst({ dur: 0.06, freq: 3200, gain: 0.15, type: 'bandpass', q: 6, delay: 0.02 });
   }
 
+  /* ---------- manual del menú ---------- */
+
+  // Cadenas que se tensan y tintinean.
+  chainRattle() {
+    if (!this.ok('chainRattle', 0.3, true)) return;
+    for (let i = 0; i < 7; i++) {
+      const d = i * 0.07 + Math.random() * 0.03;
+      this.tone({ freq: 2400 + Math.random() * 1600, to: 1800, dur: 0.07, gain: 0.08, type: 'triangle', delay: d });
+      this.burst({ dur: 0.05, freq: 4200, type: 'highpass', gain: 0.1, delay: d });
+    }
+  }
+
+  // El candado salta y los eslabones caen.
+  chainBreak() {
+    if (!this.ok('chainBreak', 0.3, true)) return;
+    this.burst({ dur: 0.18, freq: 1800, type: 'bandpass', q: 2, gain: 0.4 });
+    this.tone({ freq: 900, to: 420, dur: 0.25, gain: 0.18, type: 'square' });
+    for (let i = 0; i < 9; i++) {
+      const d = 0.08 + i * 0.06 + Math.random() * 0.05;
+      this.tone({ freq: 1600 + Math.random() * 2400, to: 1200, dur: 0.06, gain: 0.06, type: 'triangle', delay: d });
+    }
+  }
+
+  // Una pasada de trapo que levanta polvo.
+  dustWipe() {
+    if (!this.ok('dustWipe', 0.12, true)) return;
+    this.burst({ dur: 0.22, freq: 900, sweep: 3200, type: 'bandpass', q: 0.8, gain: 0.16, attack: 0.04 });
+  }
+
+  // La tapa que cruje al abrirse.
+  bookOpen() {
+    if (!this.ok('bookOpen', 0.5, true)) return;
+    this.tone({ freq: 110, to: 70, dur: 0.6, gain: 0.12, type: 'sawtooth', attack: 0.08 });
+    this.burst({ dur: 0.7, freq: 500, sweep: 220, type: 'lowpass', gain: 0.22, attack: 0.1 });
+  }
+
+  // Una hoja que pasa.
+  pageFlip() {
+    if (!this.ok('pageFlip', 0.08, true)) return;
+    this.burst({ dur: 0.2, freq: 2600, sweep: 900, type: 'bandpass', q: 0.7, gain: 0.18, attack: 0.03 });
+  }
+
   /* ---------- demonio rojo ---------- */
 
   // Chillido agudo y rasposo al saltar hacia ti.

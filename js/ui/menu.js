@@ -5,6 +5,7 @@ import { on } from './dom.js';
 import { showClass } from './class.js';
 import { refreshHall } from './board.js';
 import { fitLook } from './look.js';
+import { beginTuto, tutoDone } from './tutorial.js';
 
 export function setupMenu(game) {
   game.resetRun();
@@ -53,6 +54,8 @@ export function start(game, freshWorld) {
   game.input.reset();
   game.input.setRun(false);
   game.setState('play');
+  // la primera partida (o si se pidió repetirlo) empieza con el entrenamiento
+  if (game.forceTuto || !tutoDone(game)) beginTuto(game);
   game.updateHud(true);
 }
 

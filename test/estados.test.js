@@ -7,6 +7,7 @@ import { pause, resume, setState, STATES, stepState } from '../js/states.js';
 
 const ESTADOS = [
   'menu',
+  'manual',
   'play',
   'pause',
   'levelup',
@@ -60,7 +61,7 @@ test('cada pantalla pertenece a un solo estado', () => {
     .map((s) => s.screen)
     .filter(Boolean);
   assert.equal(new Set(ids).size, ids.length);
-  assert.equal(ids.length, 10);
+  assert.equal(ids.length, 11);
 });
 
 test('setState enseña solo la pantalla del estado y pone su clase', () => {
@@ -76,11 +77,11 @@ test('setState enseña solo la pantalla del estado y pone su clase', () => {
   for (const el of Object.values(g.pantallas)) assert.equal(el.hidden, true);
 });
 
-test('la música se pausa salvo en menú, partida, personaje y clase', () => {
+test('la música se pausa salvo en menú, manual, partida, personaje y clase', () => {
   const g = juego();
   for (const e of ESTADOS) {
     setState(g, e);
-    assert.equal(g.music.pausada, !['menu', 'play', 'look', 'class'].includes(e), e);
+    assert.equal(g.music.pausada, !['menu', 'manual', 'play', 'look', 'class'].includes(e), e);
   }
 });
 

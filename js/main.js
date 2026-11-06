@@ -45,6 +45,8 @@ import { Input } from './ui/input.js';
 import { Sfx } from './ui/audio.js';
 import { bindDev, toggleDev, updateDev } from './ui/dev.js';
 import { bindOps, updateOpsHud } from './ui/ops.js';
+import { bindTuto, clearTuto } from './ui/tutorial.js';
+import { bindManual } from './ui/manual.js';
 import { cleanLook } from './render/sprites.js';
 
 // pantallas en las que se ve lo de las operaciones (ui/ops.js)
@@ -274,6 +276,7 @@ class Game {
     this.structures.clear();
     this.deathT = 0;
     this.feast = null;
+    clearTuto(this);
     this.goldenT = GOLDEN.firstAfter;
     this.stepT = 0;
     this.music.reset();
@@ -300,6 +303,8 @@ class Game {
     bindLobby(this);
     bindDev(this);
     bindOps(this);
+    bindTuto(this);
+    bindManual(this);
   }
 
   /* ---------- bucle ---------- */

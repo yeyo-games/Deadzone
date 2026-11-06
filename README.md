@@ -10,6 +10,17 @@ siguiente no empieza hasta que pulses **Iniciar siguiente ronda**, así que pued
 nivel el juego se pausa y eliges una de tres mejoras aleatorias. Correr gasta estamina: úsala para salir
 de un cerco, no para pasear.
 
+**Entrenamiento obligatorio.** La primera partida de cada dispositivo empieza con unas prácticas guiadas
+(moverse, correr, disparar, recargar, construir y lanzar una granada) y la oleada 1 no llega hasta
+terminarlas; tampoco se puede jugar en línea antes. Quien ya había jugado (tiene récord o partida guardada) no
+lo repite a la fuerza. Desde el menú se puede repetir con **Repetir el entrenamiento**.
+
+**Manual de supervivencia.** En el menú hay un libro viejo encadenado: al tocarlo revientan las cadenas, se
+le sacude el polvo y se abre con las hojas pasando solas. Trae una página por zombi y por jefe con su dibujo
+animado, desde qué oleada sale, su vida, velocidad y daño, y sus debilidades. Las hojas se pasan con los
+botones, tocando la página, deslizando el dedo o con las flechas; en un celular en vertical el libro se abre
+hacia arriba.
+
 | Zombi   | Vida | Velocidad     | Notas                                                         |
 |---------|------|---------------|---------------------------------------------------------------|
 | Normal  | 42   | media (el doble que antes) | Llega en hordas enormes (cientos por oleada). Si le das y no muere, se frena, se desangra y avanza arrastrándose dejando un rastro de sangre |

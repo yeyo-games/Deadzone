@@ -15,7 +15,7 @@
   <link rel="apple-touch-icon" href="icons/icon-180.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Teko:wght@500;600;700&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Special+Elite&family=Teko:wght@500;600;700&display=swap">
   <link rel="stylesheet" href="css/style.css">
   <script type="module" src="js/main.js"></script>
 </head>
@@ -89,6 +89,16 @@
       <div id="op-use" hidden><kbd>H</kbd><span id="op-use-t"></span></div>
       <div id="op-radio" aria-live="polite"><svg viewBox="0 0 24 24"><rect x="4" y="9" width="16" height="11" rx="2"/><path d="M8 9l9-5M8 14h3M14 14.5h3"/></svg><span id="op-radio-t"></span></div>
       <div id="toast"></div>
+      <!-- entrenamiento obligatorio de la primera partida (ui/tutorial.js) -->
+      <div id="tuto" hidden>
+        <div class="tuto-card" id="tuto-card">
+          <small id="tuto-n"></small>
+          <b id="tuto-t"></b>
+          <p id="tuto-d"></p>
+          <div class="tuto-bar" id="tuto-bar"><i id="tuto-fill"></i></div>
+          <button class="btn primary" id="tuto-ok" type="button" hidden></button>
+        </div>
+      </div>
       <div id="banner"><b id="banner-title"></b><span id="banner-sub"></span></div>
     </div>
 
@@ -221,6 +231,10 @@
           <button class="btn primary" id="btn-continue" hidden>Continuar</button>
           <button class="btn primary" id="btn-start">Jugar</button>
           <button class="btn coop-btn" id="btn-online">En línea · 2 a 4</button>
+        </div>
+        <div class="menu-extra">
+          <button class="btn manual-btn" id="btn-manual" type="button"><span class="mb-ic" aria-hidden="true"></span>Manual de supervivencia</button>
+          <button class="link-btn" id="btn-tuto" type="button">Repetir el entrenamiento</button>
         </div>
         <p class="best" id="acct-best"></p>
         <div class="controls-help">
@@ -387,6 +401,42 @@
           <button class="btn ghost" id="btn-look-reset" type="button">Original</button>
         </div>
         <button class="btn primary" id="btn-look-done" type="button">Listo</button>
+      </div>
+    </section>
+
+    <!-- manual del menú (ui/manual.js): libro encadenado; al tocarlo caen las cadenas, se desempolva y se abre -->
+    <section class="screen" id="screen-manual" hidden>
+      <div class="manual" id="manual">
+        <div class="tome" id="tome">
+          <div class="tome-book" id="tome-book">
+            <div class="tome-page tome-left" id="pg-left"></div>
+            <div class="tome-page tome-right" id="pg-right"></div>
+            <div class="tome-leaf" id="tome-leaf" hidden>
+              <div class="tome-page leaf-front" id="leaf-front"></div>
+              <div class="tome-page leaf-back" id="leaf-back"></div>
+            </div>
+            <div class="tome-cover" id="tome-cover">
+              <div class="cover-front">
+                <div class="cover-art">
+                  <span class="cover-kicker">Zona de cuarentena 9</span>
+                  <b class="cover-title">Manual de<br>supervivencia</b>
+                  <span class="cover-skull" aria-hidden="true"></span>
+                  <span class="cover-sub">Todo lo que sabemos de ellos</span>
+                </div>
+                <canvas class="cover-dust" id="cover-dust"></canvas>
+              </div>
+              <div class="cover-back"></div>
+            </div>
+          </div>
+          <canvas class="tome-fx" id="tome-fx"></canvas>
+        </div>
+        <p class="tome-hint" id="tome-hint">Toca el libro para romper las cadenas</p>
+        <div class="tome-nav" id="tome-nav" hidden>
+          <button class="btn" id="tome-prev" type="button" aria-label="Página anterior">‹ Anterior</button>
+          <span id="tome-pn"></span>
+          <button class="btn" id="tome-next" type="button" aria-label="Página siguiente">Siguiente ›</button>
+        </div>
+        <button class="btn ghost tome-back" id="btn-manual-back" type="button">Volver al menú</button>
       </div>
     </section>
 

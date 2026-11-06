@@ -2,8 +2,17 @@
 import { expect } from '@playwright/test';
 
 // Abre el juego y falla si hay errores de consola o de página. `listo`: lo que debe verse al terminar
-// (el menú; con un enlace de invitación, la pantalla en línea).
-export async function abrir(page, ruta = '/index.html', listo = '#btn-start') {
+// (el menú; con un enlace de invitación, la pantalla en línea). `tuto`: sin marcar el entrenamiento como hecho
+// (si no, la primera partida empezaría con él).
+export async function abrir(page, ruta = '/index.html', listo = '#btn-start', { tuto = false } = {}) {
+  if (!tuto)
+    await page.addInitScript(() => {
+      try {
+        localStorage.setItem('dz-tuto', 'true');
+      } catch {
+        /* sin almacenamiento */
+      }
+    });
   const errores = [];
   page.on('pageerror', (e) => errores.push(`pageerror: ${e.message}`));
   page.on('console', (m) => {

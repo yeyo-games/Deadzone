@@ -3,6 +3,8 @@ import { fmtTime } from '../core/util.ts';
 import { CLASSES } from '../sim/abilities.ts';
 import { validName, explainOnline } from '../net/online.ts';
 import { on } from './dom.js';
+import { tutoDone } from './tutorial.js';
+import { showClass } from './class.js';
 
 export function showOnline(game, keepStatus) {
   game.sfx.unlock();
@@ -190,7 +192,14 @@ export function toggleDiag(game) {
 
 // Botones de la sala en línea y el panel de diagnóstico de red.
 export function bindLobby(game) {
-  on(game, 'btn-online', () => showOnline(game));
+  on(game, 'btn-online', () => {
+    // antes de jugar en línea hay que hacer el entrenamiento (una sola vez)
+    if (!tutoDone(game)) {
+      game.toast('Primero completa el entrenamiento');
+      return showClass(game, false);
+    }
+    showOnline(game);
+  });
   on(game, 'btn-ol-create', () => onlineCreate(game));
   on(game, 'btn-ol-back', () => {
     game.online.leave();
