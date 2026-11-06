@@ -263,7 +263,7 @@ export class Ops {
     }
     const op = this.op;
     if (!op) {
-      for (const q of who) q.p.useWas = !!q.p.use;
+      this.planUse(game, who);
       return;
     }
     const ctx = this.ctx(game);
@@ -273,7 +273,7 @@ export class Ops {
       // a media transición (pantalla a oscuras): se quita lo de la operación y se vuelve
       if (!op.cleaned && op.outT <= OPS.outT / 2) this.cleanup(ctx);
       if (op.outT <= 0) this.finish(game);
-      for (const q of who) q.p.useWas = !!q.p.use;
+      this.planUse(game, who);
       return;
     }
     if (op.state === 'active') op.t += dt;
@@ -290,6 +290,15 @@ export class Ops {
     if (this.group && op.ret.length) {
       const here = who.filter((q) => !q.away);
       op.ret = op.ret.filter((id) => here.some((q) => q.id === id));
+    }
+  }
+
+  // Sin operación en curso, H sólo sirve para las piezas de plano (señuelo, reparador): al apretarla.
+  planUse(game: GameHost, who: Who[]) {
+    for (const q of who) {
+      const p = q.p;
+      if (!q.away && p.alive && p.use && !p.useWas) usePlanBlock(this, game, q);
+      p.useWas = !!p.use;
     }
   }
 

@@ -376,3 +376,42 @@ test('guardar y continuar: una operación pagada no vuelve a pagarse', () => {
   assert.ok(third.plans.repair, 'el plano se conserva');
   assert.ok(third.nextId > op.id, 'la siguiente tiene otro identificador');
 });
+
+test('el reparador de campo funciona con H fuera de una operación', () => {
+  const sim = cleared(team(1));
+  assert.equal(sim.ops.op, null, 'sin operación');
+  const p = sim.slots.get('j0')!.p;
+  const rep: any = {
+    kind: 'repair',
+    x: p.x - 20,
+    y: p.y + 30,
+    w: 40,
+    h: 40,
+    hp: 100,
+    max: 100,
+    hitT: 0,
+    up: 0,
+    layer: 0,
+  };
+  const wall: any = {
+    kind: 'wall',
+    x: p.x + 60,
+    y: p.y - 10,
+    w: 20,
+    h: 20,
+    hp: 50,
+    max: 400,
+    hitT: 0,
+    calm: 99,
+    layer: 0,
+  };
+  sim.structures.blocks.push(rep, wall);
+  const at = { x: p.x, y: p.y - 2 };
+  run(sim, 1);
+  run(sim, 1, { j0: at });
+  assert.equal(wall.hp, 50 + 400 * OPS.plans.repair.heal, 'reparó la pared');
+  assert.equal(rep.up & 3, 1, 'gastó una carga');
+  // mantenerla apretada no gasta otra carga
+  run(sim, 5, { j0: at });
+  assert.equal(rep.up & 3, 1);
+});
