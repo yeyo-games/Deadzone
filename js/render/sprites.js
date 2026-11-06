@@ -1334,6 +1334,7 @@ const GUN_LEN = {
   bazooka: 48,
   rshotgun: 38,
   mbazooka: 52,
+  mlmg: 50,
 };
 
 /** @type {Record<string, GunDraw>} */
@@ -1399,6 +1400,73 @@ const GUNS = {
     g.fillRect(r * 0.15 + 28, -1.5, 9, 3);
     g.fillStyle = '#c9a54a';
     g.fillRect(r * 0.15 + 9, 10, 8, 2);
+  },
+  // ametralladora mejorada (como en el boceto): caja de balas con dos filas de cartuchos a la vista,
+  // cuerpo grande con ventanilla, asa larga al costado, cañón con aletas y empuñadura rayada
+  mlmg: (g, r, p) => {
+    const x = r * 0.1;
+    const full = !p || !p.weapon || p.weapon.mag > 0;
+    // culata
+    g.fillStyle = '#1e2022';
+    g.fillRect(x - 2, -3, 8, 6);
+    // cuerpo
+    g.fillStyle = '#2a2d30';
+    g.fillRect(x + 5, -5, 25, 10);
+    g.fillStyle = '#41464b';
+    g.fillRect(x + 5, -5, 25, 2);
+    // ventanilla con sus rayas
+    g.fillStyle = '#121416';
+    g.fillRect(x + 9, -2.2, 8, 4.4);
+    g.strokeStyle = '#5c646b';
+    g.lineWidth = 0.6;
+    g.beginPath();
+    for (const lx of [11, 13, 15]) {
+      g.moveTo(x + lx, -2);
+      g.lineTo(x + lx, 2);
+    }
+    g.stroke();
+    // caja de 500 balas con dos filas de cartuchos
+    g.fillStyle = '#3d4434';
+    g.fillRect(x + 12, -14, 16, 9);
+    g.fillStyle = '#2a2f24';
+    g.fillRect(x + 19.6, -14, 0.8, 9);
+    if (full) {
+      g.fillStyle = '#c9a54a';
+      for (const cx of [14.6, 17.6, 22.4, 25.4])
+        for (const cy of [-12, -9.5, -7]) {
+          g.beginPath();
+          g.arc(x + cx, cy, 0.95, 0, Math.PI * 2);
+          g.fill();
+        }
+    }
+    // asa larga al costado
+    g.fillStyle = '#1b1d1f';
+    g.fillRect(x + 13, 5, 13, 3.4);
+    g.fillRect(x + 13, 5, 1.6, 1.4);
+    // empuñadura rayada
+    g.fillStyle = '#141516';
+    g.beginPath();
+    g.moveTo(x + 6, 5);
+    g.lineTo(x + 11, 5);
+    g.lineTo(x + 9, 11);
+    g.lineTo(x + 5, 10);
+    g.closePath();
+    g.fill();
+    g.strokeStyle = '#4a4f54';
+    g.lineWidth = 0.5;
+    g.beginPath();
+    for (let i = 0; i < 4; i++) {
+      g.moveTo(x + 6 + i * 1.3, 6);
+      g.lineTo(x + 5.4 + i * 1.3, 9.6);
+    }
+    g.stroke();
+    // cañón con aletas de enfriamiento
+    g.fillStyle = '#26292c';
+    g.fillRect(x + 30, -3, 15, 6);
+    g.fillStyle = '#121416';
+    for (let i = 0; i < 6; i++) g.fillRect(x + 31.5 + i * 2.3, -3.4, 0.9, 6.8);
+    g.fillStyle = '#1b1c1e';
+    g.fillRect(x + 45, -1.6, 5, 3.2);
   },
   // escopeta reforzada: culata, cañón que se ensancha hacia la boca, placas atornilladas y la boca
   // negra y ancha (como en el boceto)

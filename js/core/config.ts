@@ -222,6 +222,33 @@ export const WEAPONS = {
     ammoPrice: 41,
     desc: 'Cargador de 100 balas que atraviesan 2 zombis: fuego sin pausa, recarga lenta.',
   },
+  // Ametralladora mejorada: la mejora de la ametralladora (upgradeOf). Escupe 30 balas por segundo
+  // (2,5 veces la normal) desde una caja de 500 balas; después recarga. Mismo daño y perforación.
+  mlmg: {
+    id: 'mlmg',
+    name: 'Ametralladora mejorada',
+    damage: 30,
+    rate: 30,
+    mag: 500,
+    reserve: 500,
+    reserveMax: Infinity,
+    pickup: 150,
+    reload: 4,
+    spread: 0.09,
+    bloom: 0.006,
+    pellets: 1,
+    speed: 1250,
+    range: 650,
+    knock: 40,
+    kick: 10,
+    shake: 0.012,
+    pierce: 2,
+    len: 30,
+    upgradeOf: 'lmg',
+    price: 20000,
+    ammoPrice: 200,
+    desc: 'Mejora de la ametralladora: 30 balas por segundo y una caja de 500 balas antes de recargar. Reemplaza a tu ametralladora.',
+  },
   // Escopeta reforzada: cañón ancho blindado con placas atornilladas. Cada disparo lanza 10 balas
   // explosivas; cada una pega `damage` y estalla en lo que toca como un cohete de bazuca (blastP, el
   // mismo daño que ROCKET.power, en un radio blastR más corto): una sola puede quitarle la mitad de la
@@ -345,6 +372,7 @@ export const WEAPON_ORDER = [
   'bazooka',
   'rshotgun',
   'mbazooka',
+  'mlmg',
 ];
 
 // Cohete de la bazuca. La granada tiene radio 140 y 330 de daño: el cohete abarca el doble de área.
@@ -2305,6 +2333,7 @@ export const GUN_REACH = {
   bazooka: 51,
   rshotgun: 34,
   mbazooka: 56,
+  mlmg: 44,
 };
 
 // Etapas de recarga sincronizadas con el progreso de la animación (0..1).
@@ -2361,6 +2390,14 @@ export const RELOAD_STEPS = {
     [0.45, 'rocketIn'],
     [0.7, 'rocketSeat'],
     [0.92, 'boltClose'],
+  ],
+  // abre la tapa, saca la caja vacía, mete la de 500 balas, cierra y monta
+  mlmg: [
+    [0.08, 'coverOpen'],
+    [0.3, 'magOut'],
+    [0.58, 'drumIn'],
+    [0.76, 'coverClose'],
+    [0.9, 'bolt'],
   ],
   // abre la recámara, cambia el cargador de cohetes y la cierra
   mbazooka: [

@@ -20,7 +20,7 @@ test('cuesta $30 000, carga 6 cohetes y cada uno hace 10 veces el daño', () => 
   assert.equal(M.mag, 6);
   assert.equal(M.rocketK, 10);
   assert.equal(M.upgradeOf, 'bazooka');
-  assert.equal(WEAPON_ORDER.at(-1), 'mbazooka', 'la red manda el arma por su lugar: va al final');
+  assert.equal(WEAPON_ORDER.indexOf('mbazooka'), 10, 'la red manda el arma por su lugar: no se mueve');
 });
 
 test('sólo se compra con la bazuca, la reemplaza con sus cohetes y no se recompra la bazuca', () => {

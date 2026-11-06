@@ -14,6 +14,7 @@ const SHOTS = {
   autoshotgun: { crack: 2900, body: 820, thump: 105, tail: 0.3, gain: 0.85, dur: 0.18 },
   sniper: { crack: 6200, body: 900, thump: 80, tail: 0.65, gain: 1, dur: 0.26 },
   lmg: { crack: 4400, body: 1250, thump: 125, tail: 0.14, gain: 0.55, dur: 0.09 },
+  mlmg: { crack: 4800, body: 1300, thump: 120, tail: 0.1, gain: 0.42, dur: 0.07 },
   bazooka: { crack: 1500, body: 420, thump: 60, tail: 0.9, gain: 1, dur: 0.45 },
   rshotgun: { crack: 2200, body: 560, thump: 70, tail: 0.6, gain: 1, dur: 0.32 },
   mbazooka: { crack: 1300, body: 360, thump: 50, tail: 1, gain: 1, dur: 0.5 },

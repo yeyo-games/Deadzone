@@ -293,6 +293,7 @@ la mitad de su precio:
 | Francotirador | $4500 | 300 | 5 (atraviesa 6) | 190 (1320 en fila) |
 | Bazuca antitanque | $6000 | cohete en área | 1 (recarga 4 s) | revienta grupos y blindados |
 | Bazuca mejorada | $30 000 | cohete en área con **10 veces** el daño | 6 (recarga 4,5 s) | la mejora de la bazuca: sólo se compra si la tienes y la reemplaza quedándose con sus cohetes (la bazuca ya no se vuelve a comprar). Cohete más grande |
+| Ametralladora mejorada | $20 000 | 30 | 500 (atraviesa 2, recarga 4 s) | 900 (2700 en fila): 30 balas por segundo. La mejora de la ametralladora: sólo se compra si la tienes y la reemplaza quedándose con sus balas |
 | Escopeta reforzada | $18 000 | 10 balas explosivas (450 + estallido de 660 cada una, como un cohete de bazuca) | 2 (recarga 3 s) | una sola bala le quita casi la mitad de la vida a un super blindado; retroceso brutal que te avienta hacia atrás. Con 10 armas, la décima va en la tecla 0 |
 
 El **lanzallamas** escupe 18 llamaradas por segundo que llegan a unos 250 px: queman a todos los zombis

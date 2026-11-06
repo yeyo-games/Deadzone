@@ -94,6 +94,7 @@ const GUN_TIP: Record<string, number> = {
   bazooka: 46,
   rshotgun: 36,
   mbazooka: 50,
+  mlmg: 48,
 };
 
 export class Player {
@@ -621,7 +622,10 @@ export class Player {
       return;
     }
     w.mag--;
-    this.fireCd = 1 / (d.rate * this.stats.rateMult);
+    // las armas de más de 20 tiros por segundo guardan el sobrante del enfriamiento: si no, al ir
+    // cuadro por cuadro dispararían menos de lo que dicen (30 por segundo a 60 cuadros)
+    const cd = 1 / (d.rate * this.stats.rateMult);
+    this.fireCd = cd < 0.05 ? Math.max(this.fireCd, -cd) + cd : cd;
     const spread = d.spread + this.bloom + (this.running ? 0.05 : 0);
     let ca = Math.cos(this.angle);
     let sa = Math.sin(this.angle);
