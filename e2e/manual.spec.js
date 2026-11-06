@@ -70,20 +70,54 @@ test('el manual: se rompen las cadenas, se abre y se pasan las hojas', async ({ 
   await expect(page.locator('#tome-nav')).toBeHidden();
   await page.locator('#tome').click();
   // la apertura dura unos 5 s de juego (en WebKit headless el reloj va lento)
-  await expect(page.locator('#tome')).toHaveClass(/open/, { timeout: 40000 });
-  await expect(page.locator('#tome-nav')).toBeVisible({ timeout: 40000 });
+  await expect(page.locator('#tome')).toHaveClass(/open/, { timeout: 60000 });
+  await expect(page.locator('#tome-nav')).toBeVisible({ timeout: 60000 });
   await expect(page.locator('#tome-pn')).toHaveText(/^1 \//);
   await page.locator('#tome-next').click();
   await expect(page.locator('#tome-pn')).toHaveText(/^2 \//);
-  await expect(page.locator('#pg-left h3')).toHaveText('Caminante');
+  // una sola página por toque: la siguiente es la del caminante, completa
+  await expect(page.locator('#pg-right h3')).toHaveText('Caminante');
   await expect(page.locator('#pg-right')).toContainText('Debilidades');
   // del índice al demonio rojo
   await page.locator('#tome-prev').click();
   await expect(page.locator('#tome-pn')).toHaveText(/^1 \//);
   await page.locator('#pg-right [data-go]', { hasText: 'Demonio rojo' }).click();
-  await expect(page.locator('#pg-left h3')).toHaveText('Demonio rojo');
+  await expect(page.locator('#pg-right h3')).toHaveText('Demonio rojo');
   await expect(page.locator('#pg-right')).toContainText('fuego');
   await page.keyboard.press('Escape');
   await esperarEstado(page, 'menu');
+  expect(errores).toEqual([]);
+});
+
+test('repetir el entrenamiento no borra la partida guardada', async ({ page }) => {
+  test.setTimeout(120_000);
+  const errores = await abrir(page);
+  // una partida guardada cualquiera de esta cuenta
+  const key = await page.evaluate(() => {
+    const k = window.__deadzone.accounts.saveKey();
+    localStorage.setItem(k, JSON.stringify({ guardada: true }));
+    return k;
+  });
+  await page.locator('#btn-tuto').click();
+  await expect(page.locator('#class-cards.ready')).toBeVisible();
+  await page.locator('#class-cards .card').first().click();
+  await esperarEstado(page, 'play');
+  await expect(page.locator('#tuto')).toBeVisible();
+  expect(await page.evaluate(() => window.__deadzone.mode.savesProgress())).toBe(false);
+  expect(await page.evaluate((k) => localStorage.getItem(k), key)).toContain('guardada');
+  // en la práctica no se muere
+  await page.evaluate(() => {
+    window.__deadzone.player.hp = 1;
+  });
+  await expect.poll(() => page.evaluate(() => window.__deadzone.player.hp)).toBeGreaterThan(1);
+  // al terminarla vuelve al menú y la partida sigue ahí
+  await page.evaluate(() => {
+    const g = window.__deadzone;
+    g.tuto.i = 6;
+    g.tuto.s = { ok: true };
+  });
+  await esperarEstado(page, 'menu');
+  expect(await page.evaluate((k) => localStorage.getItem(k), key)).toContain('guardada');
+  await expect(page.locator('#btn-continue')).toBeVisible();
   expect(errores).toEqual([]);
 });

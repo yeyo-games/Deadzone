@@ -130,6 +130,8 @@ export function updatePlay(game, dt) {
     return;
   }
   // en grupo las mejoras se eligen entre oleadas (el juego no se pausa para el otro)
+  // durante el entrenamiento las mejoras esperan a que termine (no lo interrumpen)
+  if (game.tuto) return;
   if (game.pendingLevels > 0 && (!game.mode.inGroup() || game.director.state === 'waiting')) openLevelUp(game);
   else if (game.shopPending) openShop(game);
   else if (!game.tuto) {

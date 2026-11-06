@@ -13,13 +13,13 @@ de un cerco, no para pasear.
 **Entrenamiento obligatorio.** La primera partida de cada dispositivo empieza con unas prácticas guiadas
 (moverse, correr, disparar, recargar, construir y lanzar una granada) y la oleada 1 no llega hasta
 terminarlas; tampoco se puede jugar en línea antes. Quien ya había jugado (tiene récord o partida guardada) no
-lo repite a la fuerza. Desde el menú se puede repetir con **Repetir el entrenamiento**.
+lo repite a la fuerza. Desde el menú se puede repetir con **Repetir el entrenamiento**: es sólo práctica
+(no toca tu partida guardada, no se puede morir y al terminar vuelve al menú).
 
 **Manual de supervivencia.** En el menú hay un libro viejo encadenado: al tocarlo revientan las cadenas, se
 le sacude el polvo y se abre con las hojas pasando solas. Trae una página por zombi y por jefe con su dibujo
-animado, desde qué oleada sale, su vida, velocidad y daño, y sus debilidades. Las hojas se pasan con los
-botones, tocando la página, deslizando el dedo o con las flechas; en un celular en vertical el libro se abre
-hacia arriba.
+animado, desde qué oleada sale, su vida, velocidad y daño, y sus debilidades. Se ve una página a la vez y se
+pasa de una en una con los botones, tocando la página, deslizando el dedo o con las flechas.
 
 | Zombi   | Vida | Velocidad     | Notas                                                         |
 |---------|------|---------------|---------------------------------------------------------------|

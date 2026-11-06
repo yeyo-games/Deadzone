@@ -6,6 +6,7 @@ import { showClass } from './class.js';
 import { refreshHall } from './board.js';
 import { fitLook } from './look.js';
 import { beginTuto, tutoDone } from './tutorial.js';
+import { Solo } from '../net/mode.ts';
 
 export function setupMenu(game) {
   game.resetRun();
@@ -44,18 +45,24 @@ export function setupMenu(game) {
 
 export function start(game, freshWorld) {
   game.sfx.unlock();
+  // repetir el entrenamiento es sólo práctica: no toca la partida guardada
+  const practice = !!game.forceTuto;
   // una partida nueva sustituye al progreso guardado
-  storage.remove(game.accounts.saveKey());
-  storage.remove(game.accounts.checkKey());
+  if (!practice) {
+    storage.remove(game.accounts.saveKey());
+    storage.remove(game.accounts.checkKey());
+  }
   if (freshWorld) game.newWorld();
   game.resetRun();
+  // la práctica no se guarda ni cuenta para récords (como una partida separada)
+  if (practice) game.mode = new Solo(game, true);
   game.player.cls = game.classPick;
   game.analitica.iniciar('solo');
   game.input.reset();
   game.input.setRun(false);
   game.setState('play');
   // la primera partida (o si se pidió repetirlo) empieza con el entrenamiento
-  if (game.forceTuto || !tutoDone(game)) beginTuto(game);
+  if (practice || !tutoDone(game)) beginTuto(game, practice);
   game.updateHud(true);
 }
 

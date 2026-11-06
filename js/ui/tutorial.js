@@ -1,12 +1,23 @@
 // Entrenamiento obligatorio: la primera partida de este dispositivo empieza con unas prácticas guiadas
 // (moverse, correr, disparar, recargar, construir y lanzar una granada) y la primera oleada no llega
 // hasta terminarlas. Quien ya jugó antes (tiene récord o partida guardada) no lo repite a la fuerza;
-// desde el menú se puede repetir. Mientras dura no se guarda la partida (ver updatePlay en states.js).
+// desde el menú se puede repetir como práctica: no toca la partida guardada, no se muere y al terminar
+// vuelve al menú. Mientras dura no se guarda la partida ni se abren las mejoras (ver updatePlay).
+// Si un zombi de práctica se queda atorado lejos, el paso no se traba: a los STUCK s se retira.
 import { rand, storage, TAU } from '../core/util.ts';
 import { tryFullscreen } from './menu.js';
 import { showClass } from './class.js';
 
 const KEY = 'dz-tuto';
+// s que se esperan a los zombis de práctica que no llegan (atorados): luego se retiran
+const STUCK = 20;
+
+// ¿Ya cayeron los zombis de práctica? (a los STUCK s, los que quedan lejos se retiran)
+function cleared(game, s, t) {
+  const p = game.player;
+  if (t > STUCK) for (const z of s.list) if (!z.dead && Math.hypot(z.x - p.x, z.y - p.y) > 160) z.dead = true;
+  return s.list.every((z) => z.dead);
+}
 
 /** ¿Ya hizo el entrenamiento (o ya había jugado antes de que existiera)? */
 export function tutoDone(game) {
@@ -66,7 +77,7 @@ const STEPS = [
       s.list = spawnAround(game, 3, 'normal');
       s.n = s.list.length;
     },
-    done: (_game, s) => s.list.every((z) => z.dead),
+    done: (game, s, _dt, t) => cleared(game, s, t),
     prog: (_game, s) => s.list.filter((z) => z.dead).length / s.n,
   },
   {
@@ -106,15 +117,16 @@ const STEPS = [
       s.list = spawnAround(game, 5, 'normal', true);
       s.thrown = false;
     },
-    done: (game, s) => {
+    done: (game, s, _dt, t) => {
       if (game.inv.grenade < s.g) s.thrown = true;
-      return s.thrown && s.list.every((z) => z.dead);
+      return s.thrown && cleared(game, s, t);
     },
   },
   {
     t: '¡A sobrevivir!',
     d: 'Cada oleada trae más zombis y algunos nuevos. Entre oleadas abre la <b>tienda</b> y, al subir de nivel, elige una <b>mejora</b>. En el <b>Manual</b> del menú están todos los zombis y sus debilidades.',
     button: 'Empezar la oleada 1',
+    practice: 'Volver al menú',
     start: () => {},
     done: (_game, s) => !!s.ok,
   },
@@ -142,8 +154,8 @@ function spawnAround(game, n, type, group = false) {
 }
 
 /** Empieza el entrenamiento (lo llama start() en menu.js cuando toca). */
-export function beginTuto(game) {
-  game.tuto = { i: -1, s: {}, t: 0 };
+export function beginTuto(game, practice = false) {
+  game.tuto = { i: -1, s: {}, t: 0, practice };
   next(game);
 }
 
@@ -163,13 +175,16 @@ function next(game) {
 
 function finish(game) {
   storage.set(KEY, true);
+  const practice = game.tuto.practice;
   game.tuto = null;
   game.forceTuto = false;
   glow(game, null);
   game.$('tuto').hidden = true;
   game.toast('Entrenamiento completado');
+  // la práctica vuelve al menú, donde sigue tu partida guardada
+  if (practice) return game.setupMenu();
   // la primera oleada llega enseguida
-  game.director.timer = Math.min(game.director.timer, 3);
+  game.director.timer = 0;
 }
 
 function glow(game, id) {
@@ -187,7 +202,7 @@ function render(game) {
   game.$('tuto-d').innerHTML = touch && st.touch ? st.touch : st.d;
   const btn = game.$('tuto-ok');
   btn.hidden = !st.button;
-  btn.textContent = st.button || '';
+  btn.textContent = (tu.practice && st.practice) || st.button || '';
   game.$('tuto-bar').hidden = !st.prog;
   game.$('tuto-card').classList.remove('tuto-pop');
   void game.$('tuto-card').offsetWidth;
@@ -201,6 +216,8 @@ export function updateTuto(game, dt) {
   if (!tu || !game.player.alive) return;
   const st = STEPS[tu.i];
   tu.t += dt;
+  // en la práctica no se muere (no hay partida que perder)
+  if (tu.practice) game.player.hp = game.player.stats.maxHp;
   if (st.prog) game.$('tuto-fill').style.width = `${Math.round(Math.min(1, st.prog(game, tu.s)) * 100)}%`;
   // el texto cambia si cambia el modo de entrada (ratón ↔ toque)
   const mode = game.input.mode;
@@ -208,7 +225,7 @@ export function updateTuto(game, dt) {
     tu.mode = mode;
     render(game);
   }
-  if (st.done(game, tu.s, dt)) {
+  if (st.done(game, tu.s, dt, tu.t)) {
     // una pausa breve para que se vea que lo logró
     tu.wait = (tu.wait || 0) + dt;
     game.$('tuto-card').classList.add('tuto-ok');

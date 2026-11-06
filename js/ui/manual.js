@@ -1,8 +1,8 @@
 // Manual de supervivencia (menú): un libro viejo con cadenas y candado. Al tocarlo el candado tiembla,
 // las cadenas revientan y caen, se le sacude el polvo a la tapa y el libro se abre con las hojas
 // pasando solas. Dentro, una página por zombi y por jefe: su dibujo animado, de qué oleada sale, su
-// vida, velocidad y daño, cómo es y sus debilidades. Las hojas se pasan con los botones, tocando la
-// página, deslizando el dedo o con las flechas. En pantallas verticales el libro se abre hacia arriba.
+// vida, velocidad y daño, cómo es y sus debilidades. Se ve una página a la vez y se pasa de una en una
+// con los botones, tocando la página, deslizando el dedo o con las flechas.
 import { BOSS, BOSS_ORDER, BOSSES, DEMON, ROCK, ZOMBIES } from '../core/config.ts';
 import { rand, TAU } from '../core/util.ts';
 import { zombieSprites } from '../render/sprites.js';
@@ -134,84 +134,94 @@ function portrait(type, boss) {
 const list = (cls, title, items) =>
   `<h4 class="${cls}">${title}</h4><ul class="${cls}">${items.map((s) => `<li>${esc(s)}</li>`).join('')}</ul>`;
 
-/** Los pliegos del libro: cada uno con su página izquierda y derecha (HTML). */
-function buildSpreads() {
-  const spreads = [];
+// Una página: dos partes (a: quién es; b: qué hacer). En una página ancha van lado a lado; en una alta,
+// una debajo de otra.
+const pg = (a, b) => ({ a, b });
+
+/** Las páginas del libro, en orden (una por toque). */
+function buildPages() {
+  const pages = [];
   const index = [];
-  spreads.push({ left: '', right: '' });
+  pages.push(null);
   for (const c of COMMON) {
     const z = ZOMBIES[c.type];
-    index.push({ name: c.name, i: spreads.length });
-    spreads.push({
-      left:
+    index.push({ name: c.name, i: pages.length });
+    pages.push(
+      pg(
         `<p class="pg-kicker">${c.from ? `Desde la oleada ${c.from}` : 'Raro · en cualquier ronda'}</p>` +
-        `<h3>${esc(c.name)}</h3>${portrait(c.type, false)}` +
-        bar('Vida', Math.log(z.hp / 20) / Math.log(4200 / 20), num(z.hp)) +
-        bar('Velocidad', z.speed / LIST_SPEED, z.speed >= LIST_SPEED ? 'la mayor' : '') +
-        bar('Daño', z.damage / LIST_DMG, c.type === 'golden' ? 'no ataca' : num(z.damage)),
-      right: `<p class="pg-look">${esc(c.look)}</p>${list('pg-weak', 'Debilidades', c.weak)}${list('pg-warn', 'Cuidado', c.warn)}`,
-    });
+          `<h3>${esc(c.name)}</h3>${portrait(c.type, false)}` +
+          `<div class="pg-stats">${bar('Vida', Math.log(z.hp / 20) / Math.log(4200 / 20), num(z.hp))}${bar(
+            'Velocidad',
+            z.speed / LIST_SPEED,
+            z.speed >= LIST_SPEED ? 'la mayor' : '',
+          )}${bar('Daño', z.damage / LIST_DMG, c.type === 'golden' ? 'no ataca' : num(z.damage))}</div>`,
+        `<p class="pg-look">${esc(c.look)}</p>${list('pg-weak', 'Debilidades', c.weak)}${list('pg-warn', 'Cuidado', c.warn)}`,
+      ),
+    );
   }
-  const bossAt = spreads.length;
+  const bossAt = pages.length;
   index.push({ name: 'Los jefes', i: bossAt, boss: true });
-  spreads.push({
-    left: `<h3 class="pg-big">Los jefes</h3><p class="pg-look">Cada ${BOSS.every} oleadas llega uno, con menos horda a su alrededor. Cada uno tiene su punto débil: apréndetelo antes de que llegue.</p><div class="pg-seal" aria-hidden="true"></div>`,
-    right: `<ol class="pg-bosses">${BOSS_ORDER.map(
-      (t, k) =>
-        `<li><button type="button" data-go="${bossAt + 1 + k}"><span>${esc(BOSSES[t].name)}</span><em>oleada ${(k + 1) * BOSS.every}</em></button></li>`,
-    ).join('')}</ol>`,
-  });
+  pages.push(
+    pg(
+      `<h3 class="pg-big">Los jefes</h3><p class="pg-look">Cada ${BOSS.every} oleadas llega uno, con menos horda a su alrededor. Cada uno tiene su punto débil: apréndetelo antes de que llegue.</p><div class="pg-seal" aria-hidden="true"></div>`,
+      `<ol class="pg-bosses">${BOSS_ORDER.map(
+        (t, k) =>
+          `<li><button type="button" data-go="${bossAt + 1 + k}"><span>${esc(BOSSES[t].name)}</span><em>oleada ${(k + 1) * BOSS.every}</em></button></li>`,
+      ).join('')}</ol>`,
+    ),
+  );
   BOSS_ORDER.forEach((t, k) => {
     const b = BOSSES[t];
     const z = ZOMBIES[t];
-    spreads.push({
-      left:
+    pages.push(
+      pg(
         `<p class="pg-kicker">Jefe ${k + 1} · oleada ${(k + 1) * BOSS.every}</p>` +
-        `<h3>${esc(b.name)}</h3>${portrait(t, true)}` +
-        `<div class="pg-boss-n"><span>Vida <b>${num(z.hp * BOSS.hp)}</b></span><span>Premio <b>$${num(b.reward)}</b></span></div>`,
-      right: `${list('pg-weak', 'Punto débil', [b.tip])}${list(
-        'pg-warn',
-        'Sus ataques',
-        b.atk.map((a) => a.name),
-      )}`,
-    });
+          `<h3>${esc(b.name)}</h3>${portrait(t, true)}` +
+          `<div class="pg-stats pg-boss-n"><span>Vida <b>${num(z.hp * BOSS.hp)}</b></span><span>Premio <b>$${num(b.reward)}</b></span></div>`,
+        `${list('pg-weak', 'Punto débil', [b.tip])}${list(
+          'pg-warn',
+          'Sus ataques',
+          b.atk.map((a) => a.name),
+        )}`,
+      ),
+    );
   });
-  spreads.push({
-    left: `<h3 class="pg-big">Últimas notas</h3><ul class="pg-notes"><li>Las barricadas compran tiempo: ponlas donde la horda se amontona.</li><li>El fuego se contagia de zombi en zombi.</li><li>Los explosivos sirven contra todo lo blindado.</li><li>Entre oleadas, la tienda; al subir de nivel, una mejora.</li></ul>`,
-    right:
+  pages.push(
+    pg(
+      '<h3 class="pg-big">Últimas notas</h3><ul class="pg-notes"><li>Las barricadas compran tiempo: ponlas donde la horda se amontona.</li><li>El fuego se contagia de zombi en zombi.</li><li>Los explosivos sirven contra todo lo blindado.</li><li>Entre oleadas, la tienda; al subir de nivel, una mejora.</li></ul>',
       '<p class="pg-end">Si encontraste este libro, el que lo escribió ya no está.<br><br>Que te sirva más que a él.</p>',
-  });
-  spreads[0] = {
-    left: '<p class="pg-kicker">Día 47</p><h3 class="pg-big">A quien encuentre este libro</h3><p class="pg-look">Aquí apunté todo lo que aprendimos de ellos: de dónde salen, cuánto aguantan y cómo se les mata. Léelo antes de salir.</p><p class="pg-sign">— el último de la Zona 9</p>',
-    right: `<h4 class="pg-idx-t">Índice</h4><ol class="pg-index">${index
+    ),
+  );
+  pages[0] = pg(
+    '<p class="pg-kicker">Día 47</p><h3 class="pg-big">A quien encuentre este libro</h3><p class="pg-look">Aquí apunté todo lo que aprendimos de ellos: de dónde salen, cuánto aguantan y cómo se les mata. Léelo antes de salir.</p><p class="pg-sign">— el último de la Zona 9</p>',
+    `<h4 class="pg-idx-t">Índice</h4><ol class="pg-index">${index
       .map(
         (e) =>
           `<li${e.boss ? ' class="pg-idx-boss"' : ''}><button type="button" data-go="${e.i}">${esc(e.name)}</button></li>`,
       )
       .join('')}</ol>`,
-  };
-  return spreads;
+  );
+  return pages;
 }
 
 /* ---------- estado ---------- */
 
 /** @type {any} */
 let M = null;
-let SPREADS = null;
+let PAGES = null;
 
-function page(i, side) {
-  const s = SPREADS[i];
-  if (!s) return '';
-  const n = i * 2 + (side === 'right' ? 2 : 1);
-  const cls = s[side].includes('pg-photo') ? 'pg-in pg-side' : 'pg-in';
-  return `<div class="${cls}">${s[side]}</div><span class="pg-num">${n}</span>`;
+function page(i) {
+  const p = PAGES[i];
+  if (!p) return '';
+  const side = p.a.includes('pg-photo') ? ' pg-side' : '';
+  return `<div class="pg-in"><div class="pg-a${side}">${p.a}</div><div class="pg-b">${p.b}</div></div><span class="pg-num">${i + 1}</span>`;
 }
 
 const blankPage = () => '<div class="pg-in pg-blank"></div>';
 
 /** Abre el manual (cerrado, con sus cadenas). */
 export function openManual(game) {
-  SPREADS ||= buildSpreads();
+  PAGES ||= buildPages();
   M = { phase: 'locked', t: 0, i: 0, busy: false, links: [], dust: [], token: (M?.token || 0) + 1 };
   const $ = game.$;
   const tome = $('tome');
@@ -220,8 +230,7 @@ export function openManual(game) {
   $('tome-nav').hidden = true;
   $('tome-hint').hidden = false;
   $('tome-hint').textContent = 'Toca el libro para romper las cadenas';
-  $('pg-left').innerHTML = page(0, 'left');
-  $('pg-right').innerHTML = page(0, 'right');
+  $('pg-right').innerHTML = page(0);
   game.setState('manual');
   layout(game);
   paintDust(game);
@@ -232,33 +241,27 @@ export function closeManual(_game) {
   M = null;
 }
 
-// Tamaño del libro según la pantalla (horizontal: dos páginas lado a lado; vertical: una sobre otra).
+// Tamaño del libro según la pantalla: una sola página, más ancha o más alta según quepa. Ancha: sus dos
+// partes lado a lado; alta: una debajo de otra.
 function layout(game) {
   const W = window.innerWidth;
   const H = window.innerHeight;
-  const vert = W < H && W < 700;
-  let bw;
-  let bh;
-  if (vert) {
-    // cada página: ancho / alto = 0.95
-    bw = Math.min(W - 24, (H - 150) * 0.475, 560);
-    bh = bw / 0.475;
-  } else {
-    // cada página: ancho / alto = 0.72
-    bw = Math.min(W - 130, (H - 96) * 1.44, 1040);
-    bh = bw / 1.44;
-  }
+  const tall = W < H;
+  const aw = W - (tall ? 24 : 150);
+  const ah = H - (tall ? 150 : 90);
+  const k = Math.max(0.62, Math.min(1.6, aw / ah));
+  const pw = Math.min(aw, ah * k, 1000);
+  const ph = pw / k;
   const tome = game.$('tome');
-  tome.classList.toggle('vert', vert);
-  tome.style.width = `${Math.round(bw)}px`;
-  tome.style.height = `${Math.round(bh)}px`;
-  const pw = vert ? bw : bw / 2;
-  tome.style.setProperty('--fs', `${Math.max(9, Math.min(17, pw * (vert ? 0.034 : 0.043))).toFixed(1)}px`);
-  // sin la transición del libro al acomodarse (sólo al abrirse)
-  tome.classList.add('still');
-  void tome.offsetWidth;
-  tome.classList.remove('still');
-  M.vert = vert;
+  tome.classList.toggle('wide', k >= 0.95);
+  game.$('manual').classList.toggle('tall', tall);
+  tome.style.width = `${Math.round(pw)}px`;
+  tome.style.height = `${Math.round(ph)}px`;
+  tome.style.setProperty('--ph', `${Math.round(ph)}px`);
+  tome.style.setProperty(
+    '--fs',
+    `${Math.max(9, Math.min(17, Math.sqrt(pw * ph) * (tall ? 0.03 : 0.026))).toFixed(1)}px`,
+  );
   M.size = `${W}x${H}`;
 }
 
@@ -460,7 +463,7 @@ export function updateManual(game, _dt) {
   if (!M) return;
   // la animación va con el reloj real (no con el del juego, que se frena si el equipo va lento)
   const now = performance.now();
-  const dt = M.last ? Math.min(0.1, (now - M.last) / 1000) : 0;
+  const dt = M.last ? Math.min(0.5, (now - M.last) / 1000) : 0;
   M.last = now;
   if (game.input.consume('pause')) return game.setupMenu();
   if (`${window.innerWidth}x${window.innerHeight}` !== M.size) {
@@ -608,56 +611,52 @@ function setPhase(game, ph) {
 
 function syncNav(game) {
   game.$('tome-prev').disabled = M.i <= 0;
-  game.$('tome-next').disabled = M.i >= SPREADS.length - 1;
-  game.$('tome-pn').textContent = `${M.i + 1} / ${SPREADS.length}`;
+  game.$('tome-next').disabled = M.i >= PAGES.length - 1;
+  game.$('tome-pn').textContent = `${M.i + 1} / ${PAGES.length}`;
 }
 
 /**
- * Pasa la hoja hasta el pliego `to` (blank: hoja en blanco que pasa sola al abrir, sin cambiar de pliego).
- * Hacia adelante la hoja derecha gira sobre el lomo hasta la izquierda; hacia atrás, al revés.
+ * Pasa a la página `to` (blank: hoja en blanco que pasa sola al abrir, sin cambiar de página).
+ * Hacia adelante la página gira sobre el lomo (a la izquierda) y deja ver la siguiente; hacia atrás la
+ * anterior vuelve girando sobre la actual.
  */
 function flip(game, to, dur = 0.62, blank = false) {
   if (!M || M.busy) return;
   const i = M.i;
   const fwd = blank || to > i;
-  if (!blank && (to === i || to < 0 || to >= SPREADS.length)) return;
+  if (!blank && (to === i || to < 0 || to >= PAGES.length)) return;
   M.busy = true;
   const $ = game.$;
   const leaf = $('tome-leaf');
   const front = $('leaf-front');
   const back = $('leaf-back');
-  // translateZ: la hoja siempre por encima de las páginas que tapa
-  const turned = M.vert ? 'translateZ(2px) rotateX(180deg)' : 'translateZ(2px) rotateY(-180deg)';
-  const flat = M.vert ? 'translateZ(2px) rotateX(0deg)' : 'translateZ(2px) rotateY(0deg)';
+  // translateZ: la hoja siempre por encima de la página que tapa
+  const turned = 'translateZ(2px) rotateY(-180deg)';
+  const flat = 'translateZ(2px) rotateY(0deg)';
   leaf.style.transition = 'none';
+  back.innerHTML = blankPage();
   if (fwd) {
-    front.innerHTML = blank ? blankPage() : page(i, 'right');
-    back.innerHTML = blank ? blankPage() : page(to, 'left');
-    if (!blank) $('pg-right').innerHTML = page(to, 'right');
+    front.innerHTML = blank ? blankPage() : page(i);
+    if (!blank) $('pg-right').innerHTML = page(to);
     leaf.style.transform = flat;
   } else {
-    front.innerHTML = page(to, 'right');
-    back.innerHTML = page(i, 'left');
-    $('pg-left').innerHTML = page(to, 'left');
+    front.innerHTML = page(to);
     leaf.style.transform = turned;
   }
+  leaf.classList.remove('turning', 'fwd', 'back');
   leaf.hidden = false;
   void leaf.offsetWidth;
+  leaf.style.setProperty('--dur', `${dur}s`);
+  leaf.classList.add('turning', fwd ? 'fwd' : 'back');
   leaf.style.transition = `transform ${dur}s cubic-bezier(.42,.08,.3,1)`;
   leaf.style.transform = fwd ? turned : flat;
-  leaf.classList.remove('turning');
-  void leaf.offsetWidth;
-  leaf.style.setProperty('--dur', `${dur}s`);
-  leaf.classList.add('turning');
   game.sfx.pageFlip?.();
   const tk = M.token;
   setTimeout(() => {
     if (!M || M.token !== tk) return;
-    if (fwd) {
-      if (!blank) $('pg-left').innerHTML = page(to, 'left');
-    } else $('pg-right').innerHTML = page(to, 'right');
+    if (!fwd) $('pg-right').innerHTML = page(to);
     leaf.hidden = true;
-    leaf.classList.remove('turning');
+    leaf.classList.remove('turning', 'fwd', 'back');
     if (!blank) M.i = to;
     M.busy = false;
     if (M.phase === 'open') syncNav(game);
@@ -688,12 +687,10 @@ export function bindManual(game) {
     // del índice: ir a esa página
     const go = /** @type {HTMLElement} */ (e.target).closest?.('[data-go]');
     if (go) return flip(game, Number(go.getAttribute('data-go')));
-    const along = M.vert ? dy : dx;
-    if (Math.abs(along) > 40) return flip(game, M.i + (along < 0 ? 1 : -1));
-    // tocar la página derecha (o la de abajo) avanza; la otra regresa
+    if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) return flip(game, M.i + (dx < 0 ? 1 : -1));
+    // tocar la mitad derecha avanza una página; la izquierda regresa una
     const r = tome.getBoundingClientRect();
-    const second = M.vert ? e.clientY > r.top + r.height / 2 : e.clientX > r.left + r.width / 2;
-    flip(game, M.i + (second ? 1 : -1));
+    flip(game, M.i + (e.clientX > r.left + r.width / 2 ? 1 : -1));
   });
   window.addEventListener('keydown', (e) => {
     if (!M || game.state !== 'manual') return;
