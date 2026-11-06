@@ -7,6 +7,8 @@
 //   resolve victoria, fallo o retirada: transición breve, se limpia lo de la operación y se vuelve
 //           al lugar donde se aceptó, al descanso de antes de la siguiente oleada
 // Cada tipo vive en sim/ops/<tipo>.ts; aquí lo común. Los planos ganados están en sim/plans.ts.
+// Al completarla se cobra la recompensa más sus bonos (rápida, nadie cayó, objetivo intacto y bajas), por
+// la ruleta del botín y por la racha de operaciones seguidas; el informe se ve unos segundos (OPS.bonus).
 import { OP_PLAN, OPS, ROBOT, ZOMBIES } from '../core/config.ts';
 import { rand, TAU } from '../core/util.ts';
 import type { GameHost, Vec } from '../core/types.d.ts';
@@ -67,6 +69,67 @@ export function opReward(kind: OpKind, w: number) {
   return Math.round((r.base + r.perWave * Math.max(0, w - OPS.from)) * (r.mult[kind] ?? 1));
 }
 
+/** Nombre del bono de objetivo intacto de cada operación. */
+export const CLEAN_LABEL: Record<OpKind, string> = {
+  convoy: 'Camión intacto',
+  nest: 'Escape limpio',
+  supply: 'Entrega perfecta',
+};
+
+/** Lo que pide ese bono (para la radio). */
+const CLEAN_BRIEF: Record<OpKind, string> = {
+  convoy: `que el camión no baje del ${Math.round(OPS.bonus.truck * 100)} %`,
+  nest: 'que nadie quede dentro de la explosión',
+  supply: 'no dejar caer ningún cargamento',
+};
+
+/** Multiplicador de la racha de operaciones completadas seguidas (1 = la primera). */
+export const streakMult = (n: number) => Math.min(OPS.streak.max, 1 + OPS.streak.step * Math.max(0, n - 1));
+
+/** Ruleta del botín: un multiplicador al azar (r en [0, 1)). */
+export function rollMult(r = Math.random()) {
+  let acc = 0;
+  for (const [m, p] of OPS.roll) {
+    acc += p;
+    if (r < acc) return m;
+  }
+  return OPS.roll[0][0];
+}
+
+/** Zombis de la operación eliminados hasta ahora (los que salieron menos los que siguen vivos). */
+export function opKills(game: GameHost, op: Op) {
+  let alive = 0;
+  for (const z of game.horde.list) if (!z.dead && z.op === op.id) alive++;
+  return Math.max(0, op.total - op.budget - alive);
+}
+
+/** ¿Sigue intacto su objetivo? (el camión del convoy se mira por su vida) */
+export function opClean(op: Op) {
+  if (op.dirty) return false;
+  if (op.kind === 'convoy' && op.d) return op.d.hp >= op.d.max * OPS.bonus.truck;
+  return true;
+}
+
+/**
+ * Lo que se cobra al completarla: recompensa, bonos logrados y bajas, por la ruleta y la racha.
+ * Devuelve las líneas del informe ([texto, dinero]) y el total.
+ */
+export function opPayout(op: Op, kills: number, roll: number, streak: number) {
+  const B = OPS.bonus;
+  const base = op.reward;
+  const ln: [string, number][] = [['Recompensa', base]];
+  const par = B.par[op.kind] ?? 100;
+  if (op.t <= par) ln.push([`Rápida (menos de ${fmtPar(par)})`, Math.round(base * B.fast)]);
+  if (!op.down) ln.push(['Nadie cayó', Math.round(base * B.safe)]);
+  if (opClean(op)) ln.push([CLEAN_LABEL[op.kind], Math.round(base * B.clean)]);
+  if (kills > 0) ln.push([`Bajas × ${kills}`, kills * (B.kill + B.killWave * Math.max(0, op.wave - OPS.from))]);
+  const sub = ln.reduce((a, [, n]) => a + n, 0);
+  const sk = streakMult(streak);
+  return { ln, sub, roll, sk, total: Math.round(sub * roll * sk) };
+}
+
+const fmtPar = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+
 /** ¿Tras superar la oleada w llega una oferta por radio? */
 export const offersAt = (w: number) => w >= OPS.from && (w - OPS.from) % OPS.every === 0;
 
@@ -97,7 +160,14 @@ export class Ops {
   /** señuelo activo (sim/plans.ts) */
   declare lure: { b: any; goal: Goal; t: number; scan: number } | null;
   declare who: Who[];
-  declare cache: { t: number; v: any } | null;
+  /** la partida (la guarda whoNow; la usa la vista para contar las bajas) */
+  declare game: GameHost | null;
+  declare cache: { t: string; v: any } | null;
+  /** operaciones completadas seguidas (la racha sube la paga) */
+  declare streak: number;
+  /** el informe de la última operación completada y los segundos que le quedan a la vista */
+  declare report: any;
+  declare reportT: number;
   constructor(group = false) {
     this.group = group;
     this.leader = '';
@@ -115,7 +185,11 @@ export class Ops {
     this.radioN = 0;
     this.lure = null;
     this.who = [];
+    this.game = null;
     this.cache = null;
+    this.streak = 0;
+    this.report = null;
+    this.reportT = 0;
   }
 
   /** ¿Hay una oferta u operación que impide empezar la siguiente oleada? */
@@ -247,6 +321,7 @@ export class Ops {
 
   /** Quienes juegan (los da quien simula: game.opsWho). */
   whoNow(game: GameHost): Who[] {
+    this.game = game;
     this.who = game.opsWho ? game.opsWho() : [];
     return this.who;
   }
@@ -254,6 +329,7 @@ export class Ops {
   update(dt: number, game: GameHost) {
     const who = this.whoNow(game);
     this.cache = null;
+    if (this.reportT > 0 && (this.reportT -= dt) <= 0) this.report = null;
     updatePlans(this, game, dt, who);
     if (this.offer && this.group) {
       this.offer.t -= dt;
@@ -276,7 +352,11 @@ export class Ops {
       this.planUse(game, who);
       return;
     }
-    if (op.state === 'active') op.t += dt;
+    if (op.state === 'active') {
+      op.t += dt;
+      // sin bono de «nadie cayó»
+      if (who.some((q) => !q.away && !q.p.alive)) op.down = true;
+    }
     // guardias: al acercarse alguien a la zona
     if (!op.guards && who.some((q) => !q.away && q.p.alive && Math.hypot(q.p.x - op.x, q.p.y - op.y) < OPS.arrive)) {
       op.guards = true;
@@ -373,6 +453,10 @@ export class Ops {
     if (op.state !== 'prep') return;
     op.state = 'active';
     op.t = 0;
+    const par = OPS.bonus.par[op.kind] ?? 100;
+    this.say(
+      `Bonos: termínala en menos de ${fmtPar(par)}, que nadie caiga y ${CLEAN_BRIEF[op.kind]}. Cada baja también paga`,
+    );
     if (!op.guards) {
       op.guards = true;
       this.guards(ctx);
@@ -426,16 +510,27 @@ export class Ops {
         op.paid = true;
         this.paid.push(op.id);
         if (this.paid.length > 40) this.paid.shift();
-        g.opsPay?.(op.reward);
+        this.streak++;
+        const pay = opPayout(op, opKills(g, op), rollMult(), this.streak);
+        op.got = pay.total;
+        g.opsPay?.(pay.total);
         const plan = OP_PLAN[op.kind];
         if (plan && !this.hasPlan(plan)) {
           (this.plans as Record<string, boolean>)[plan] = true;
           op.plan = plan;
         }
+        this.report = { id: op.id, k: op.kind, ln: pay.ln, m: pay.roll, s: this.streak, sk: pay.sk, tot: pay.total };
+        this.reportT = OPS.reportT;
       }
-      this.say(`${OP_INFO[op.kind].short}: ¡operación completada! +$${op.reward}${op.plan ? ' y un plano nuevo' : ''}`);
-    } else if (result === 'fail') this.say(`${OP_INFO[op.kind].short}: objetivo fallido. ${why}`);
-    else this.say(`${OP_INFO[op.kind].short}: retirada. Volved a la base`);
+      this.say(
+        `${OP_INFO[op.kind].short}: ¡operación completada! +$${(op.got ?? op.reward).toLocaleString('es-MX')}${op.plan ? ' y un plano nuevo' : ''}`,
+      );
+    } else {
+      // fallar o retirarse corta la racha
+      this.streak = 0;
+      if (result === 'fail') this.say(`${OP_INFO[op.kind].short}: objetivo fallido. ${why}`);
+      else this.say(`${OP_INFO[op.kind].short}: retirada. Volved a la base`);
+    }
   }
 
   /** Retirada pedida por id (en grupo hace falta más de la mitad de los presentes). */
@@ -591,11 +686,13 @@ export class Ops {
 
   /** Estado para pintar y para la foto (el mismo en solitario y en línea). */
   view() {
-    if (this.cache && this.cache.t === this.radioN * 1e6 + (this.op ? this.op.t + this.op.outT : 0))
-      return this.cache.v;
+    const key = `${this.radioN}|${this.op ? this.op.t + this.op.outT : ''}|${this.report ? this.report.id : ''}`;
+    if (this.cache && this.cache.t === key) return this.cache.v;
     const idx = (id: string | null) => (id ? (this.who.find((q) => q.id === id)?.idx ?? -1) : -1);
     const v: any = { pl: (this.plans.decoy ? 1 : 0) | (this.plans.fire ? 2 : 0) | (this.plans.repair ? 4 : 0) };
     if (this.radioMsg) v.rd = this.radioMsg;
+    if (this.report) v.rp = this.report;
+    if (this.streak) v.sk = this.streak;
     const o = this.offer;
     if (o) {
       const votes: number[] = [];
@@ -623,8 +720,15 @@ export class Ops {
         t: Math.round(op.t * 10) / 10,
         res: op.result,
         ot: Math.round(op.outT * 100) / 100,
-        rw: op.reward,
+        rw: op.got ?? op.reward,
         pn: op.plan,
+        // bonos en curso: segundos meta, alguien cayó, objetivo intacto y bajas
+        bn: [
+          OPS.bonus.par[op.kind] ?? 100,
+          op.down ? 1 : 0,
+          opClean(op) ? 1 : 0,
+          this.game ? opKills(this.game, op) : 0,
+        ],
         rv: [op.ret.length, this.who.filter((q) => !q.away).length],
         en: op.open.map((i) => [op.entries[i].x, op.entries[i].y]),
         sp: def
@@ -645,7 +749,7 @@ export class Ops {
           c.robot ? 1 : 0,
         ]);
     }
-    this.cache = { t: this.radioN * 1e6 + (op ? op.t + op.outT : 0), v };
+    this.cache = { t: key, v };
     return v;
   }
 
@@ -668,6 +772,7 @@ export class Ops {
           zones: this.zones,
           paid: this.paid,
           nextId: this.nextId,
+          streak: this.streak,
         },
         skip,
       ),
@@ -684,6 +789,7 @@ export class Ops {
     if (Array.isArray(d.zones)) this.zones = d.zones.filter((z: any) => Number.isFinite(z?.x)).slice(-3);
     if (Array.isArray(d.paid)) this.paid = d.paid.filter(Number.isInteger);
     this.nextId = Math.max(1, d.nextId | 0, ...this.paid.map((i) => i + 1));
+    this.streak = Math.max(0, d.streak | 0);
     if (d.offer && OP_ORDER.includes(d.offer.kinds?.[0]) && OP_ORDER.includes(d.offer.kinds?.[1]))
       this.offer = { kinds: d.offer.kinds, wave: d.offer.wave | 0, t: OPS.voteT, votes: {} };
     const op = d.op;

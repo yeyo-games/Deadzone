@@ -172,7 +172,11 @@ export const Supply: OpDef & {
       s.by = null;
     }
     if (voluntary) ctx.game.toast?.('Cargamento en el suelo');
-    else ctx.say('Suministros: ¡un cargamento quedó en el suelo!');
+    else {
+      // sin bono de entrega perfecta
+      ctx.op.dirty = true;
+      ctx.say('Suministros: ¡un cargamento quedó en el suelo!');
+    }
   },
 
   update(ctx: OpCtx, dt: number) {

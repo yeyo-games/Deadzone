@@ -2332,6 +2332,13 @@ export const CAR_COLORS = ['#7d2f2a', '#c75f43', '#3f566b', '#6b6d68', '#b8b1a0'
 //   parte del presupuesto que son guardias · pace: segundos en los que saldría todo el presupuesto a ritmo
 //   normal · burst: como mucho por segundo · reward: dinero (base + perWave por oleada pasada la 20, por
 //   el multiplicador de cada una) para cada participante
+//   bonus: al completarla se suma una parte de esa recompensa por cada bono logrado: fast (en menos de
+//   par s desde el primer uso del objetivo), safe (nadie cayó), clean (objetivo intacto: el camión con al
+//   menos `truck` de su vida, nadie dentro de la explosión del nido, ningún cargamento al suelo sin
+//   querer); y kill + killWave por oleada pasada la 20 por cada zombi de la operación eliminado
+//   roll: ruleta del botín al final: [multiplicador, probabilidad] · streak: cada operación completada
+//   seguida sube el total `step` (hasta `max` veces); fallar o retirarse la corta · reportT: s que se ve
+//   el informe de la misión
 export const OPS = {
   from: 20,
   every: 5,
@@ -2347,7 +2354,24 @@ export const OPS = {
   guards: { convoy: 0.08, nest: 0.12, supply: 0.14 } as Record<string, number>,
   pace: 150,
   burst: 30,
-  reward: { base: 2000, perWave: 150, mult: { convoy: 1, nest: 1.25, supply: 1.15 } as Record<string, number> },
+  reward: { base: 8000, perWave: 800, mult: { convoy: 1, nest: 1.25, supply: 1.15 } as Record<string, number> },
+  bonus: {
+    fast: 0.3,
+    par: { convoy: 100, nest: 70, supply: 120 } as Record<string, number>,
+    safe: 0.2,
+    clean: 0.25,
+    truck: 0.7,
+    kill: 40,
+    killWave: 4,
+  },
+  roll: [
+    [1, 0.55],
+    [1.5, 0.27],
+    [2, 0.14],
+    [4, 0.04],
+  ],
+  streak: { step: 0.25, max: 2 },
+  reportT: 9,
   // Convoy: camión de w×h con vida hp; cada golpe le quita como mucho maxHit de su vida (así los
   // multiplicadores contra muros no lo revientan de una vez). partT: segundos de H en cada componente ·
   // unlockT: segundos de desbloqueo (en fases de `phase` s) mientras alguien esté a `near` px · truck: parte

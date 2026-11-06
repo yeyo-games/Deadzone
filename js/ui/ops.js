@@ -3,7 +3,7 @@
 // aviso de la tecla H, la retirada (manteniendo el botón), los mensajes de radio, el fundido del regreso y
 // sus sonidos. Todo sale de lo que se ve (opsView): igual en solitario y en línea.
 import { OPS, ROBOT } from '../core/config.ts';
-import { fadeOf, OP_INFO, OP_LABELS, opsView } from '../sim/ops.ts';
+import { CLEAN_LABEL, fadeOf, OP_INFO, OP_LABELS, opsView, streakMult } from '../sim/ops.ts';
 
 const PLAN_NAMES = { decoy: 'señuelo sonoro', fire: 'munición incendiaria', repair: 'reparador de campo' };
 
@@ -113,6 +113,11 @@ function goalText(game, v) {
 }
 
 export function bindOps(game) {
+  // tocar el informe de la misión lo cierra
+  game.$('op-report').addEventListener('click', () => {
+    game.reportClosed = game.reportId;
+    game.$('op-report').hidden = true;
+  });
   game.$('op-offer').addEventListener('click', (e) => {
     const b = e.target.closest('[data-op]');
     if (!b || game.state !== 'play') return;
@@ -163,6 +168,7 @@ export function updateOpsHud(game, dt) {
   root.classList.toggle('op-on', !!op);
   root.classList.toggle('op-offer', !!of);
   sounds(game, v);
+  updateReport(game);
   // oferta por radio
   const osig = of ? `${of.k.join()}|${of.t}|${of.v.join()}|${of.n}` : '';
   if (game.cache.opOffer !== osig) {
@@ -186,7 +192,9 @@ export function updateOpsHud(game, dt) {
           return `<button type="button" class="op-card${mine === i ? ' on' : ''}" data-op="${i}">
             <b>${inf.name}</b><span class="op-goal">${inf.goal}</span>
             <span class="op-threat">⚠ ${inf.threat}</span>
-            <span class="op-rw">$${of.rw[i].toLocaleString('es-MX')}${group ? ' para cada uno' : ''}</span>
+            <span class="op-rw">$${of.rw[i].toLocaleString('es-MX')}${group ? ' para cada uno' : ''}<i>+ bonos, bajas y ruleta del botín</i></span>${
+              v.sk ? `<span class="op-streak">Racha de ${v.sk}: la siguiente paga ×${streakMult(v.sk + 1)}</span>` : ''
+            }
             <small>${inf.plan} (la primera vez)</small>${group ? `<em>${votes[i]} voto${votes[i] === 1 ? '' : 's'}</em>` : ''}
           </button>`;
         })
@@ -204,6 +212,7 @@ export function updateOpsHud(game, dt) {
     $('op-goal').textContent = goalText(game, v);
     const np = nextPoint(game, v);
     const p = game.player;
+    bonusHud(game, op);
     $('op-dist').textContent =
       np && p ? `${np.exit ? 'Salida' : 'Objetivo'}: ${fmtM(Math.hypot(np.x - p.x, np.y - p.y))}` : '';
     // estado del objeto importante
@@ -272,9 +281,93 @@ export function updateOpsHud(game, dt) {
       op.res === 'win' ? 'Operación completada' : op.res === 'fail' ? 'Operación fallida' : 'Retirada';
     $('op-fade-s').textContent =
       op.res === 'win'
-        ? `+$${op.rw.toLocaleString('es-MX')}${op.pn ? ` · Plano nuevo: ${PLAN_NAMES[op.pn]}` : ''}`
+        ? `+$${op.rw.toLocaleString('es-MX')} con bonos${op.pn ? ` · Plano nuevo: ${PLAN_NAMES[op.pn]}` : ''}`
         : 'Sin recompensa. Volvéis al descanso: la siguiente oleada sigue esperando';
   }
+}
+
+// Los bonos mientras dura: tiempo contra la meta, nadie caído, objetivo intacto y bajas.
+function bonusHud(game, op) {
+  const bn = op.bn;
+  const el = game.$('op-bonus');
+  if (!bn) {
+    el.textContent = '';
+    return;
+  }
+  const t = op.s === 'active' ? op.t : 0;
+  const fast = t <= bn[0];
+  const mm = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+  const sig = `${Math.floor(t)}|${bn.join()}`;
+  if (game.cache.opBonus === sig) return;
+  game.cache.opBonus = sig;
+  const it = (ok, txt) => `<span class="${ok ? 'ok' : 'no'}">${ok ? '✓' : '✗'} ${txt}</span>`;
+  el.innerHTML =
+    it(fast, `${mm(t)} / ${mm(bn[0])}`) +
+    it(!bn[1], 'Nadie cayó') +
+    it(!!bn[2], CLEAN_LABEL[op.k]) +
+    `<span class="kl">☠ ${bn[3]}</span>`;
+}
+
+// Informe de la misión completada: las líneas aparecen una a una, la ruleta gira y se detiene en su
+// multiplicador, y el total cuenta hacia arriba. Se cierra solo (o al tocarlo).
+const ROLL_SPIN = [1, 1.5, 2, 4];
+export function updateReport(game) {
+  const $ = game.$;
+  const v = game.state === 'menu' ? null : opsView(game);
+  const rp = v && v.rp;
+  const box = $('op-report');
+  if (!rp || game.reportClosed === rp.id) {
+    if (!box.hidden) box.hidden = true;
+    return;
+  }
+  const now = performance.now() / 1000;
+  if (game.reportId !== rp.id) {
+    game.reportId = rp.id;
+    game.reportAt = now;
+    game.reportStage = 0;
+    box.hidden = false;
+    $('opr-t').textContent = OP_INFO[rp.k].name;
+    $('opr-ln').innerHTML = rp.ln
+      .map(
+        ([t, n], i) =>
+          `<li style="animation-delay:${(0.15 + i * 0.25).toFixed(2)}s"><span>${t}</span><b>+$${n.toLocaleString('es-MX')}</b></li>`,
+      )
+      .join('');
+    $('opr-streak').textContent = rp.s > 1 ? `Racha de ${rp.s} misiones seguidas · ×${rp.sk}` : '';
+    $('opr-card').classList.remove('jackpot', 'landed');
+  }
+  const t = now - game.reportAt;
+  const spinAt = 0.3 + rp.ln.length * 0.25;
+  const landAt = spinAt + 1.3;
+  const rollEl = $('opr-roll');
+  if (t < spinAt) rollEl.textContent = '×?';
+  else if (t < landAt) {
+    // gira cada vez más despacio
+    const k = (t - spinAt) / (landAt - spinAt);
+    const step = Math.floor(((t - spinAt) * 14) / (0.4 + k * 2));
+    rollEl.textContent = `×${ROLL_SPIN[step % ROLL_SPIN.length]}`;
+    if (game.reportStage === 0) {
+      game.reportStage = 1;
+      game.sfx.combo?.(1);
+    }
+  } else {
+    rollEl.textContent = rp.m >= 4 ? `¡JACKPOT! ×${rp.m}` : `×${rp.m}`;
+    if (game.reportStage < 2) {
+      game.reportStage = 2;
+      $('opr-card').classList.add('landed');
+      if (rp.m >= 4) {
+        $('opr-card').classList.add('jackpot');
+        game.sfx.explosion?.();
+        game.camera.shake(0.5);
+      }
+      game.sfx.gold?.();
+    }
+  }
+  // el total sube hasta la cifra final después de la ruleta
+  const sub = rp.ln.reduce((a, [, n]) => a + n, 0);
+  const k = Math.max(0, Math.min(1, (t - landAt) / 1.1));
+  const shown = t < landAt ? sub : Math.round(sub + (rp.tot - sub) * (1 - (1 - k) ** 3));
+  $('opr-tot').textContent = `$${shown.toLocaleString('es-MX')}`;
 }
 
 // Sonidos por cambios en lo que se ve (en línea no hay otra forma de saberlo): componente o carga

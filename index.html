@@ -79,11 +79,23 @@
       <!-- operación de alto riesgo en curso (ui/ops.js) -->
       <div id="op-hud" hidden>
         <div class="op-top"><b id="op-title"></b><span id="op-goal"></span></div>
+        <div class="op-bonus" id="op-bonus"></div>
         <div class="op-row">
           <span id="op-dist"></span>
           <div class="op-bar" id="op-bar" hidden><i id="op-bar-fill"></i><span id="op-bar-lbl"></span></div>
           <button class="op-btn" id="btn-op-shop" type="button">Tienda</button>
           <button class="op-btn op-ret" id="btn-op-ret" type="button" title="Mantén pulsado para retirarte">Retirada<span id="op-ret-n"></span></button>
+        </div>
+      </div>
+      <!-- informe de la misión completada: bonos, ruleta del botín, racha y total (ui/ops.js) -->
+      <div id="op-report" hidden>
+        <div class="opr-card" id="opr-card">
+          <small>Informe de la misión</small>
+          <b id="opr-t"></b>
+          <ul id="opr-ln"></ul>
+          <div class="opr-roll"><span>Ruleta del botín</span><b id="opr-roll">×1</b></div>
+          <div class="opr-streak" id="opr-streak"></div>
+          <div class="opr-tot"><span>Total</span><b id="opr-tot">$0</b></div>
         </div>
       </div>
       <div id="op-use" hidden><kbd>H</kbd><span id="op-use-t"></span></div>

@@ -92,6 +92,11 @@ export interface Op {
   radio: [number, string];
   /** quién pidió la retirada (en grupo hace falta la mayoría) */
   ret: string[];
+  /** bonos: alguien cayó durante la operación · el objetivo no quedó intacto (ver OPS.bonus) */
+  down?: boolean;
+  dirty?: boolean;
+  /** lo que se cobró al completarla (recompensa, bonos, ruleta y racha) */
+  got?: number;
 }
 
 /** Lo que tiene cada tipo de operación. */

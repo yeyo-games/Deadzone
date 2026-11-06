@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { ServerSim } from '../src/sim/ServerSim.ts';
 import { IN_USE } from '../../js/net/protocol.ts';
 import { OPS, BOSS } from '../../js/core/config.ts';
-import { Ops, opReward, offersAt, viewForbids } from '../../js/sim/ops.ts';
+import { Ops, opPayout, opReward, offersAt, rollMult, streakMult, viewForbids } from '../../js/sim/ops.ts';
 import { bossFor } from '../../js/sim/bosses.ts';
 import { Player } from '../../js/sim/player.ts';
 
@@ -80,9 +80,9 @@ test('la radio ofrece operaciones tras la oleada 20, 25, 30… y no antes', () =
     v.of.rw,
     o.kinds.map((k) => opReward(k, 20)),
   );
-  assert.equal(opReward('convoy', 20), 2000);
-  assert.equal(opReward('nest', 25), Math.round((2000 + 750) * 1.25));
-  assert.equal(opReward('supply', 30), Math.round((2000 + 1500) * 1.15));
+  assert.equal(opReward('convoy', 20), 8000);
+  assert.equal(opReward('nest', 25), Math.round((8000 + 4000) * 1.25));
+  assert.equal(opReward('supply', 30), Math.round((8000 + 8000) * 1.15));
 });
 
 test('prioriza la operación que no se completó hace poco', () => {
@@ -414,4 +414,62 @@ test('el reparador de campo funciona con H fuera de una operación', () => {
   // mantenerla apretada no gasta otra carga
   run(sim, 5, { j0: at });
   assert.equal(rep.up & 3, 1);
+});
+
+test('la paga de una misión: bonos logrados, bajas, ruleta del botín y racha', () => {
+  const B = OPS.bonus;
+  const op: any = {
+    kind: 'convoy',
+    wave: 25,
+    reward: 10000,
+    t: 60,
+    down: false,
+    dirty: false,
+    d: { hp: 3000, max: 3200 },
+  };
+  const all = opPayout(op, 20, 1, 1);
+  const kill = 20 * (B.kill + B.killWave * 5);
+  assert.deepEqual(
+    all.ln.map(([, n]) => n),
+    [10000, 10000 * B.fast, 10000 * B.safe, 10000 * B.clean, kill],
+  );
+  assert.equal(all.total, 10000 * (1 + B.fast + B.safe + B.clean) + kill);
+  // sin ningún bono: lenta, alguien cayó y el camión muy dañado
+  const none = opPayout({ ...op, t: 999, down: true, d: { hp: 100, max: 3200 } }, 0, 1, 1);
+  assert.equal(none.total, 10000);
+  // la ruleta y la racha multiplican todo
+  assert.equal(opPayout(op, 20, 2, 3).total, Math.round(all.sub * 2 * streakMult(3)));
+  assert.equal(streakMult(1), 1);
+  assert.ok(streakMult(3) > streakMult(2));
+  assert.equal(streakMult(99), OPS.streak.max);
+  // la ruleta: cada multiplicador en su franja de probabilidad, y el jackpot es raro
+  assert.equal(rollMult(0), 1);
+  assert.equal(rollMult(0.999), 4);
+  const n = 20000;
+  let jack = 0;
+  for (let i = 0; i < n; i++) if (rollMult() === 4) jack++;
+  assert.ok(jack / n > 0.02 && jack / n < 0.07, `jackpot ${jack / n}`);
+});
+
+test('completarla paga mucho más que antes, deja el informe a la vista y suma la racha; fallar la corta', () => {
+  const sim = cleared(team(1));
+  accept(sim, 'nest');
+  const op = sim.ops.op!;
+  const s = sim.slots.get('j0')!;
+  const m0 = s.money;
+  op.state = 'active';
+  sim.ops.resolve(sim.ops.ctx(sim.game), 'win');
+  assert.ok(s.money - m0 >= op.reward, `cobró ${s.money - m0}`);
+  assert.ok(op.reward >= 8000);
+  assert.equal(sim.ops.streak, 1);
+  const v = sim.ops.view();
+  assert.ok(v.rp && v.rp.tot === s.money - m0, 'el informe dice lo que cobró');
+  assert.ok(v.rp.ln.length >= 2, 'recompensa y bonos');
+  // el informe se apaga solo
+  run(sim, sec(OPS.reportT + 0.5));
+  assert.equal(sim.ops.view().rp, undefined);
+  // una fallida corta la racha
+  sim.ops.op = { ...op, id: op.id + 1, state: 'active', paid: false } as any;
+  sim.ops.resolve(sim.ops.ctx(sim.game), 'fail', 'prueba');
+  assert.equal(sim.ops.streak, 0);
 });

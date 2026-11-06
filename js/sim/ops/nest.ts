@@ -157,6 +157,8 @@ export const Nest: OpDef & { guards(ctx: OpCtx, n: number): void } = {
     for (const q of ctx.who) {
       const p = q.p;
       if (q.away || !p.alive || Math.hypot(p.x - op.x, p.y - op.y) > N.R) continue;
+      // sin bono de escape limpio
+      op.dirty = true;
       p.lastHit = 'nest';
       p.hurt(p.stats.maxHp * N.blast, g);
     }

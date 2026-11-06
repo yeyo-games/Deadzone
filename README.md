@@ -99,8 +99,15 @@ prepararte; nada corre hasta que usas el objetivo por primera vez. Los puntos se
   15% (en el robot no) pero puedes disparar. Mantén H medio segundo para soltarlo. Cada entrega trae una
   respuesta anunciada junto al punto de entrega.
 
-Recompensa: $2 000 + $150 por cada oleada pasada la 20 (convoy ×1, nido ×1,25, suministros ×1,15) y, la
-primera vez en la partida, un **plano**: el **señuelo sonoro** (convoy; pieza de $500 que se activa con H y
+Recompensa: $8 000 + $800 por cada oleada pasada la 20 (convoy ×1, nido ×1,25, suministros ×1,15), más sus
+**bonos**, que se ven arriba mientras dura: **Rápida** (+30 % si la terminas antes del tiempo meta: 1:40 el
+convoy, 1:10 el nido, 2:00 los suministros), **Nadie cayó** (+20 %), objetivo intacto (+25 %: **Camión
+intacto** si no baja del 70 %, **Escape limpio** si nadie queda en la explosión, **Entrega perfecta** si no
+se cae ningún cargamento) y **bajas** ($40 + $4 por oleada pasada la 20 por cada zombi de la operación).
+Luego gira la **ruleta del botín** (×1, ×1,5, ×2 o, rara vez, **¡JACKPOT! ×4**) y la **racha** de
+operaciones completadas seguidas sube el total un 25 % por cada una (hasta ×2; fallar o retirarse la corta).
+Al volver se ve el **informe de la misión** con todo lo ganado. La primera vez en la partida también da un
+**plano**: el **señuelo sonoro** (convoy; pieza de $500 que se activa con H y
 atrae 8 s a los zombis normales cercanos), la **munición incendiaria** de la torreta pesada (nido; $3 000 en
 su taller, 20% menos de daño pero quema, y eliges balas normales o incendiarias) y el **reparador de campo**
 (suministros; pieza de $1 000 con 3 cargas: con H repara un 25% a una estructura o robot cercano que lleve
