@@ -14,6 +14,7 @@ export const SHORT = {
   sniper: 'Fra',
   lmg: 'Amet',
   bazooka: 'Baz',
+  rshotgun: 'EscR',
 };
 // Un ícono por pieza de construcción o lanzable del inventario.
 export const ITEM_ICONS = {

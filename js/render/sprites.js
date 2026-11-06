@@ -1332,6 +1332,7 @@ const GUN_LEN = {
   sniper: 47,
   lmg: 42,
   bazooka: 48,
+  rshotgun: 38,
 };
 
 /** @type {Record<string, GunDraw>} */
@@ -1397,6 +1398,48 @@ const GUNS = {
     g.fillRect(r * 0.15 + 28, -1.5, 9, 3);
     g.fillStyle = '#c9a54a';
     g.fillRect(r * 0.15 + 9, 10, 8, 2);
+  },
+  // escopeta reforzada: culata, cañón que se ensancha hacia la boca, placas atornilladas y la boca
+  // negra y ancha (como en el boceto)
+  rshotgun: (g, r) => {
+    const x = r * 0.1;
+    g.fillStyle = '#4a3220';
+    g.fillRect(x, -3, 8, 6);
+    g.fillStyle = '#2c2e30';
+    g.beginPath();
+    g.moveTo(x + 7, -3.4);
+    g.lineTo(x + 30, -6.6);
+    g.lineTo(x + 30, 6.6);
+    g.lineTo(x + 7, 3.4);
+    g.closePath();
+    g.fill();
+    g.fillStyle = '#4b4f52';
+    g.beginPath();
+    g.moveTo(x + 7, -3.4);
+    g.lineTo(x + 30, -6.6);
+    g.lineTo(x + 30, -4.4);
+    g.lineTo(x + 7, -1.6);
+    g.closePath();
+    g.fill();
+    // placas atornilladas
+    g.fillStyle = '#6a6e66';
+    g.fillRect(x + 11, -3.6, 5, 3);
+    g.fillRect(x + 19, -4.8, 5, 3.4);
+    g.fillRect(x + 15, 1.2, 5, 3);
+    g.fillStyle = '#141612';
+    for (const [bx, by] of [
+      [x + 12, -2.8],
+      [x + 15, -1.4],
+      [x + 20, -4],
+      [x + 23, -2],
+      [x + 16, 2],
+      [x + 19, 3.6],
+    ])
+      g.fillRect(bx, by, 0.9, 0.9);
+    g.fillStyle = '#141612';
+    g.fillRect(x + 30, -7.2, 4, 14.4);
+    g.fillStyle = '#c9542a';
+    g.fillRect(x + 33, -5, 1.2, 10);
   },
   // tubo verde oliva al hombro, con mira, empuñadura y la ojiva asomando cuando está cargada
   bazooka: (g, r, p) => {

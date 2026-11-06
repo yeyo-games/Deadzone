@@ -222,6 +222,37 @@ export const WEAPONS = {
     ammoPrice: 41,
     desc: 'Cargador de 100 balas que atraviesan 2 zombis: fuego sin pausa, recarga lenta.',
   },
+  // Escopeta reforzada: cañón ancho blindado con placas atornilladas. Cada disparo lanza 10 balas
+  // explosivas; cada una pega `damage` y estalla en lo que toca como un cohete de bazuca (blastP, el
+  // mismo daño que ROCKET.power, en un radio blastR más corto): una sola puede quitarle la mitad de la
+  // vida a un super blindado. Retroceso brutal (kick: cuánto te empuja hacia atrás) y 3 s de recarga.
+  rshotgun: {
+    id: 'rshotgun',
+    name: 'Escopeta reforzada',
+    damage: 450,
+    rate: 1.1,
+    mag: 2,
+    reserve: 8,
+    reserveMax: Infinity,
+    pickup: 2,
+    reload: 3,
+    spread: 0.3,
+    bloom: 0.12,
+    pellets: 10,
+    speed: 900,
+    range: 380,
+    knock: 220,
+    kick: 560,
+    shake: 1,
+    pierce: 0,
+    len: 22,
+    blast: true,
+    blastR: 110,
+    blastP: 660,
+    price: 18000,
+    ammoPrice: 150,
+    desc: '10 balas explosivas por disparo, cada una con el daño de un cohete de bazuca. Retroceso brutal y 3 s de recarga.',
+  },
   // Lanza cohetes (ver ROCKET): explota al impactar; tarda 4 s en recargar.
   bazooka: {
     id: 'bazooka',
@@ -272,7 +303,19 @@ export const WEAPONS = {
     len: 30,
   },
 };
-export const WEAPON_ORDER = ['pistol', 'smg', 'shotgun', 'flamer', 'ar', 'autoshotgun', 'sniper', 'lmg', 'bazooka'];
+// (la red manda el arma por su lugar en esta lista: las nuevas van al final)
+export const WEAPON_ORDER = [
+  'pistol',
+  'smg',
+  'shotgun',
+  'flamer',
+  'ar',
+  'autoshotgun',
+  'sniper',
+  'lmg',
+  'bazooka',
+  'rshotgun',
+];
 
 // Cohete de la bazuca. La granada tiene radio 140 y 330 de daño: el cohete abarca el doble de área.
 // Contra un gordo se queda clavado en su panza (stick s), brilla en verde (glow s) y estalla más fuerte;
@@ -2230,6 +2273,7 @@ export const GUN_REACH = {
   sniper: 46,
   lmg: 37,
   bazooka: 51,
+  rshotgun: 34,
 };
 
 // Etapas de recarga sincronizadas con el progreso de la animación (0..1).
@@ -2286,6 +2330,14 @@ export const RELOAD_STEPS = {
     [0.45, 'rocketIn'],
     [0.7, 'rocketSeat'],
     [0.92, 'boltClose'],
+  ],
+  // se quiebra, saca las dos vainas, mete dos cartuchos explosivos y la cierra de golpe
+  rshotgun: [
+    [0.1, 'coverOpen'],
+    [0.3, 'magOut'],
+    [0.55, 'shell'],
+    [0.72, 'shell'],
+    [0.92, 'coverClose'],
   ],
 };
 

@@ -15,6 +15,7 @@ const SHOTS = {
   sniper: { crack: 6200, body: 900, thump: 80, tail: 0.65, gain: 1, dur: 0.26 },
   lmg: { crack: 4400, body: 1250, thump: 125, tail: 0.14, gain: 0.55, dur: 0.09 },
   bazooka: { crack: 1500, body: 420, thump: 60, tail: 0.9, gain: 1, dur: 0.45 },
+  rshotgun: { crack: 2200, body: 560, thump: 70, tail: 0.6, gain: 1, dur: 0.32 },
   heavy: { crack: 3400, body: 760, thump: 70, tail: 0.32, gain: 0.8, dur: 0.15 },
 };
 
@@ -137,9 +138,11 @@ export class Sfx {
     this.burst({ dur: P.dur, freq: P.body * v, sweep: P.body * 0.35, gain: gv * 0.8, type: 'bandpass', q: 0.9 });
     this.tone({ freq: P.thump * v, to: P.thump * 0.35, dur: P.dur * 1.2, gain: gv * 0.9 });
     this.burst({ dur: P.tail, freq: 900 * v, sweep: 120, gain: gv * 0.35, attack: 0.01 });
-    if (kind === 'shotgun' || kind === 'autoshotgun') {
+    if (kind === 'shotgun' || kind === 'autoshotgun' || kind === 'rshotgun') {
       this.tone({ freq: 60 * v, to: 30, dur: 0.3, gain: gv * 0.6 });
     }
+    // escopeta reforzada: un estampido que retumba
+    if (kind === 'rshotgun') this.tone({ freq: 45 * v, to: 22, dur: 0.6, gain: gv * 0.8, delay: 0.02 });
     if (kind === 'sniper') this.burst({ dur: 0.9, freq: 400, sweep: 60, gain: 0.28, attack: 0.05, delay: 0.05 });
     // bazuca: silbido del cohete al salir
     if (kind === 'bazooka')

@@ -70,8 +70,9 @@ export class Input {
       if (e.code === 'Escape' || e.code === 'KeyP') this.pressed.pause = true;
       // modo desarrollador: la tecla a la izquierda del 1 (º en teclado español, ` en el inglés)
       if (e.code === 'Backquote') this.pressed.dev = true;
-      const m = /^Digit([1-9])$/.exec(e.code);
-      if (m) this.pressed.slot = Number(m[1]);
+      // 1-9 y 0 (la décima arma)
+      const m = /^Digit([0-9])$/.exec(e.code);
+      if (m) this.pressed.slot = Number(m[1]) || 10;
       if (['KeyW', 'KeyA', 'KeyS', 'KeyD'].includes(e.code)) this.setMode('mouse');
     });
     this.on(window, 'keyup', (e) => this.keys.delete(e.code));

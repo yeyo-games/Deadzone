@@ -57,7 +57,12 @@ export interface WeaponDef extends Weapon {
   pierce: number;
   len: number;
   rocket?: boolean;
+  /** balas explosivas: estallan en lo que tocan con radio blastR y daño blastP */
   blast?: boolean;
+  blastR?: number;
+  blastP?: number;
+  /** cuánto empuja hacia atrás cada disparo (si no, la mitad de knock) */
+  kick?: number;
 }
 
 /** Torreta pesada montada: la pieza de build.ts con el retroceso y el cañón que alterna. */
@@ -83,6 +88,7 @@ const GUN_TIP: Record<string, number> = {
   sniper: 46,
   lmg: 41,
   bazooka: 46,
+  rshotgun: 36,
 };
 
 export class Player {
@@ -633,14 +639,17 @@ export class Player {
         shot,
         hits: null,
         rocket: !!d.rocket,
+        ...(d.blast ? { blast: true, blastR: d.blastR, blastP: (d.blastP ?? 0) * this.stats.dmgMult } : {}),
       });
     }
     this.shotsFired++;
     this.bloom = Math.min(0.22, this.bloom + d.bloom);
     this.recoil = 1;
     this.flashT = 0.05;
-    this.kx -= ca * d.knock * 0.5;
-    this.ky -= sa * d.knock * 0.5;
+    // retroceso: te empuja hacia atrás (la escopeta reforzada, brutal)
+    const kick = d.kick ?? d.knock * 0.5;
+    this.kx -= ca * kick;
+    this.ky -= sa * kick;
     // la cámara sólo se mueve con los disparos propios
     if (this === game.player) {
       game.camera.shake(d.shake);
