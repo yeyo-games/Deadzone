@@ -63,6 +63,10 @@ export interface WeaponDef extends Weapon {
   blastP?: number;
   /** cuánto empuja hacia atrás cada disparo (si no, la mitad de knock) */
   kick?: number;
+  /** cohetes: veces el daño del cohete normal (bazuca mejorada) */
+  rocketK?: number;
+  /** es la mejora de esa arma: pide tenerla y la reemplaza */
+  upgradeOf?: string;
 }
 
 /** Torreta pesada montada: la pieza de build.ts con el retroceso y el cañón que alterna. */
@@ -89,6 +93,7 @@ const GUN_TIP: Record<string, number> = {
   lmg: 41,
   bazooka: 46,
   rshotgun: 36,
+  mbazooka: 50,
 };
 
 export class Player {
@@ -259,6 +264,30 @@ export class Player {
   }
   has(id: string) {
     return this.weapons.some((w) => w.id === id);
+  }
+  /** ¿La tiene, o tiene su mejora? (la bazuca ya mejorada no se vuelve a comprar) */
+  owns(id: string) {
+    return this.has(id) || this.weapons.some((w) => w.def.upgradeOf === id);
+  }
+  /** ¿Se puede comprar? (una mejora pide tener el arma de antes) */
+  canBuy(id: string) {
+    const d = weaponDef(id);
+    if (!d || !d.price || this.owns(id)) return false;
+    return !d.upgradeOf || this.has(d.upgradeOf);
+  }
+  /** La compra (sin cobrar): una mejora reemplaza al arma de antes y se queda con su munición. */
+  buy(id: string) {
+    if (!this.canBuy(id)) return false;
+    const up = weaponDef(id).upgradeOf;
+    const old = up ? this.weapons.find((w) => w.id === up) : null;
+    this.unlock(id);
+    if (old) {
+      const w = this.weapons.find((x) => x.id === id)!;
+      if (w.reserve !== Infinity) w.reserve += old.mag + (old.reserve === Infinity ? 0 : old.reserve);
+      this.removeWeapon(old.id);
+      this.select(this.weapons.indexOf(w));
+    }
+    return true;
   }
 
   unlock(id: string) {
@@ -639,6 +668,7 @@ export class Player {
         shot,
         hits: null,
         rocket: !!d.rocket,
+        ...(d.rocketK ? { rocketK: d.rocketK } : {}),
         ...(d.blast ? { blast: true, blastR: d.blastR, blastP: (d.blastP ?? 0) * this.stats.dmgMult } : {}),
       });
     }

@@ -127,6 +127,8 @@ export interface Stuck {
   glow: number;
   ang?: number;
   beeped?: boolean;
+  /** veces el daño del cohete normal (bazuca mejorada) */
+  k?: number;
 }
 export interface Fire {
   id: number;
@@ -862,6 +864,8 @@ export class Structures {
       t: 0,
       stick: fat ? ROCKET.fatStick : ROCKET.heavyStick,
       glow: fat ? ROCKET.fatGlow : 0,
+      // veces el daño del cohete normal (bazuca mejorada)
+      k: b.rocketK || 1,
     });
     game.sfx.rocketStick(fat);
     game.particles.impact(x, y, -b.dx, -b.dy);
@@ -900,7 +904,7 @@ export class Structures {
           game.decals.splat(cx + Math.cos(a) * d, cy + Math.sin(a) * d, rand(8, 18));
         }
         game.sfx.gore();
-        this.explode(game, { x: cx, y: cy, owner: r.owner }, ROCKET.fatRadius, ROCKET.fatPower, 1.5);
+        this.explode(game, { x: cx, y: cy, owner: r.owner }, ROCKET.fatRadius, ROCKET.fatPower * (r.k || 1), 1.5);
         game.camera.shake(0.9, cx, cy);
       } else {
         // super blindado: lo revienta de un solo tiro
@@ -910,7 +914,7 @@ export class Structures {
           z.lastDy = Math.sin(r.ang || 0) * 3;
           game.killZombie(z);
         }
-        this.explode(game, r, ROCKET.radius, ROCKET.power, 1);
+        this.explode(game, r, ROCKET.radius, ROCKET.power * (r.k || 1), 1);
       }
     }
   }

@@ -16,6 +16,7 @@ const SHOTS = {
   lmg: { crack: 4400, body: 1250, thump: 125, tail: 0.14, gain: 0.55, dur: 0.09 },
   bazooka: { crack: 1500, body: 420, thump: 60, tail: 0.9, gain: 1, dur: 0.45 },
   rshotgun: { crack: 2200, body: 560, thump: 70, tail: 0.6, gain: 1, dur: 0.32 },
+  mbazooka: { crack: 1300, body: 360, thump: 50, tail: 1, gain: 1, dur: 0.5 },
   heavy: { crack: 3400, body: 760, thump: 70, tail: 0.32, gain: 0.8, dur: 0.15 },
 };
 
@@ -145,7 +146,7 @@ export class Sfx {
     if (kind === 'rshotgun') this.tone({ freq: 45 * v, to: 22, dur: 0.6, gain: gv * 0.8, delay: 0.02 });
     if (kind === 'sniper') this.burst({ dur: 0.9, freq: 400, sweep: 60, gain: 0.28, attack: 0.05, delay: 0.05 });
     // bazuca: silbido del cohete al salir
-    if (kind === 'bazooka')
+    if (kind === 'bazooka' || kind === 'mbazooka')
       this.burst({ dur: 1.1, freq: 900, sweep: 3200, gain: 0.35, type: 'bandpass', q: 1.5, attack: 0.03, delay: 0.04 });
   }
 

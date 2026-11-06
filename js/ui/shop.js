@@ -51,10 +51,22 @@ export function renderShop(game) {
     .map((id) => {
       const d = WEAPONS[id];
       const owned = p.has(id);
+      // la mejora pide el arma de antes; el arma ya mejorada no se vuelve a comprar
+      const need =
+        d.upgradeOf && !p.has(d.upgradeOf) && !owned ? WEAPONS[d.upgradeOf].name.split(' ')[0].toLowerCase() : '';
+      const done = !owned && p.owns(id);
       return `<div class="shop-item${owned ? ' owned' : ''}">
       <canvas class="shop-ic" data-gun="${id}" width="96" height="96"></canvas>
       <div class="shop-txt"><b>${d.name}</b><span>${d.desc}</span><small>${d.rocket ? 'Daño en área' : `Daño ${d.damage}${d.pellets > 1 ? `×${d.pellets}` : ''}`} · ${d.rate} disp/s · cargador ${d.mag}</small></div>
-      ${owned ? `<button class="btn buy sell" data-sell="${id}">Vender $${Math.round(d.price * SELL_RATE)}</button>` : buyBtn(`data-gun-buy="${id}"`, d.price, `$${d.price}`)}
+      ${
+        owned
+          ? `<button class="btn buy sell" data-sell="${id}">Vender $${Math.round(d.price * SELL_RATE)}</button>`
+          : done
+            ? '<button class="btn buy" disabled>Mejorada</button>'
+            : need
+              ? `<button class="btn buy poor need" disabled>Primero la ${need}</button>`
+              : buyBtn(`data-gun-buy="${id}"`, d.price, `$${d.price}`)
+      }
     </div>`;
     });
   // munición sin límite para cada arma que tengas
@@ -154,11 +166,12 @@ export function robotShopItem(game) {
 export function buyWeapon(game, id) {
   const d = WEAPONS[id];
   const p = game.player;
-  if (!d || !d.price || p.has(id) || game.money < d.price) return;
+  if (!d || !p.canBuy(id) || game.money < d.price) return;
   game.analitica.compra('arma', id, d.price);
   if (game.mode.viaServer()) return game.online.buy('gun', id);
   game.money -= d.price;
-  p.unlock(id);
+  // una mejora reemplaza al arma de antes
+  p.buy(id);
   game.sfx.buy();
   game.toast(`${d.name} comprada`);
   renderShop(game);

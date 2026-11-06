@@ -2118,3 +2118,6 @@ h4.pg-warn { color: #a3291b; }
   #opr-ln li { font-size: 13px; }
   #opr-tot { font-size: 26px; }
 }
+
+/* botón de una mejora que pide el arma de antes (bazuca mejorada) */
+.btn.buy.need { max-width: 120px; font-size: 15px; line-height: 1.05; white-space: normal; text-align: center; }

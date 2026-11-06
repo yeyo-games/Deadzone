@@ -65,6 +65,8 @@ export interface Bullet {
   trail: number;
   owner?: string | null;
   rocket?: boolean;
+  /** cohete: veces el daño del cohete normal (bazuca mejorada) */
+  rocketK?: number;
   blast?: boolean;
   blastR?: number;
   blastP?: number;
@@ -192,7 +194,7 @@ export interface GameHost {
   onRobotHit(dmg: number, p: any): void;
   applyAcid(p: any): void;
   rocketHit(z: Zombie, x: number, y: number, b: Bullet): void;
-  rocketBlast(x: number, y: number, owner?: string | null): void;
+  rocketBlast(x: number, y: number, owner?: string | null, k?: number): void;
   heavyBlast(x: number, y: number, owner?: string | null, R?: number, power?: number): void;
   /** El jugador que pagó lo que puso `owner` (sus balas usa el piloto automático de la torreta pesada). */
   ownerOf?(owner: string | null): Player | null;

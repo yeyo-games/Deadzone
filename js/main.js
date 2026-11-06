@@ -154,7 +154,7 @@ class Game {
   hitZombie = (z, b, hx, hy) => Ev.hitZombie(this, z, b, hx, hy);
   killZombie = (z) => Ev.killZombie(this, z);
   rocketHit = (z, x, y, b) => Ev.rocketHit(this, z, x, y, b);
-  rocketBlast = (x, y, owner) => Ev.rocketBlast(this, x, y, owner);
+  rocketBlast = (x, y, owner, k) => Ev.rocketBlast(this, x, y, owner, k);
   heavyBlast = (x, y, owner, R, power) => Ev.heavyBlast(this, x, y, owner, R, power);
   ownerOf = () => this.player;
   onSuperPunch = (z, x, y) => Ev.onSuperPunch(this, z, x, y);

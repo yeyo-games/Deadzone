@@ -1333,6 +1333,7 @@ const GUN_LEN = {
   lmg: 42,
   bazooka: 48,
   rshotgun: 38,
+  mbazooka: 52,
 };
 
 /** @type {Record<string, GunDraw>} */
@@ -1440,6 +1441,70 @@ const GUNS = {
     g.fillRect(x + 30, -7.2, 4, 14.4);
     g.fillStyle = '#c9542a';
     g.fillRect(x + 33, -5, 1.2, 10);
+  },
+  // bazuca mejorada (como en el boceto): tubo de acero que se ensancha en la boca, cargador de cohetes
+  // atrás, mira sobre un soporte rayado, ventanilla al costado, empuñadura y el cohete de punta redonda
+  mbazooka: (g, r, p) => {
+    const loaded = !p || !p.weapon || p.weapon.mag > 0;
+    const x = r * -0.35;
+    // cargador atrás
+    g.fillStyle = '#23272a';
+    g.fillRect(x - 6, -7, 7, 14);
+    g.fillStyle = '#3b4146';
+    g.fillRect(x - 6, -7, 7, 2.5);
+    // tubo con la boca ensanchada
+    g.fillStyle = '#2f3438';
+    g.beginPath();
+    g.moveTo(x, -4.6);
+    g.lineTo(x + 38, -4.6);
+    g.lineTo(x + 46, -7.6);
+    g.lineTo(x + 46, 7.6);
+    g.lineTo(x + 38, 4.6);
+    g.lineTo(x, 4.6);
+    g.closePath();
+    g.fill();
+    g.fillStyle = '#4a5157';
+    g.fillRect(x, -4.6, 38, 2.2);
+    g.fillStyle = '#141612';
+    g.fillRect(x + 44.5, -7.6, 1.8, 15.2);
+    // ventanilla al costado
+    g.fillStyle = '#1b1e20';
+    g.fillRect(x + 10, -1.6, 14, 4);
+    g.fillStyle = '#c9542a';
+    g.fillRect(x + 15, -1.6, 1.2, 4);
+    // mira sobre su soporte rayado
+    g.fillStyle = '#1b1e20';
+    g.beginPath();
+    g.moveTo(x + 6, -4.6);
+    g.lineTo(x + 9, -8);
+    g.lineTo(x + 22, -8);
+    g.lineTo(x + 26, -4.6);
+    g.closePath();
+    g.fill();
+    g.strokeStyle = '#4a5157';
+    g.lineWidth = 0.7;
+    g.beginPath();
+    for (let i = 0; i < 5; i++) {
+      g.moveTo(x + 9 + i * 3.4, -4.8);
+      g.lineTo(x + 11 + i * 3.4, -7.8);
+    }
+    g.stroke();
+    g.fillStyle = '#2f3438';
+    g.fillRect(x + 2, -12.5, 20, 4.6);
+    g.fillStyle = '#5c7a8a';
+    g.fillRect(x + 20, -11.8, 1.8, 3.2);
+    // empuñadura
+    g.fillStyle = '#1b1e20';
+    g.fillRect(x + 2, 4.6, 4, 8);
+    // el cohete de punta redonda asomando cuando está cargada
+    if (loaded) {
+      g.fillStyle = '#5a5e52';
+      g.fillRect(x + 46, -3.4, 4, 6.8);
+      g.fillStyle = '#1b1c1e';
+      g.beginPath();
+      g.arc(x + 50, 0, 3.4, -Math.PI / 2, Math.PI / 2);
+      g.fill();
+    }
   },
   // tubo verde oliva al hombro, con mira, empuñadura y la ojiva asomando cuando está cargada
   bazooka: (g, r, p) => {

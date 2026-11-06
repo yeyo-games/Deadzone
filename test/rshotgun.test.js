@@ -45,8 +45,9 @@ test('es la escopeta reforzada de $18 000: 10 balas, recarga de 3 s y el daño d
   assert.equal(R.pellets, 10);
   assert.equal(R.reload, 3);
   assert.equal(R.blastP, ROCKET.power, 'cada bala estalla como un cohete de bazuca');
-  // la red manda el arma por su lugar: va al final; y no sale en las cajas
-  assert.equal(WEAPON_ORDER.at(-1), 'rshotgun');
+  // la red manda el arma por su lugar: se agregó al final (después de la bazuca) y no se mueve;
+  // y no sale en las cajas
+  assert.equal(WEAPON_ORDER.indexOf('rshotgun'), 9);
   assert.ok(!CRATE_WEAPONS.includes('rshotgun'));
 });
 

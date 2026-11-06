@@ -9,7 +9,9 @@ export function drawBullets(ctx, list) {
       continue;
     }
     if (b.rocket) {
-      drawRocket(ctx, b.x, b.y, Math.atan2(b.dy, b.dx) + Math.sin((b.age || 0) * 31) * 0.12, true, b.improv);
+      // el de la bazuca mejorada es más grande
+      const big = (b.rocketK || 1) > 1 ? 1.5 : 1;
+      drawRocket(ctx, b.x, b.y, Math.atan2(b.dy, b.dx) + Math.sin((b.age || 0) * 31) * 0.12, true, b.improv, big);
       continue;
     }
     if (b.improv) {
@@ -152,10 +154,11 @@ function drawAtgm(ctx, b) {
 
 // Cohete de la bazuca (también se dibuja clavado en un zombi). flame = tobera encendida.
 // improv: el misil improvisado, un tubo oxidado con cinta y la punta pintada a mano.
-export function drawRocket(ctx, x, y, a, flame, improv = false) {
+export function drawRocket(ctx, x, y, a, flame, improv = false, scale = 1) {
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(a);
+  if (scale !== 1) ctx.scale(scale, scale);
   if (flame) {
     ctx.globalCompositeOperation = 'lighter';
     ctx.fillStyle = 'rgba(255,170,60,0.9)';

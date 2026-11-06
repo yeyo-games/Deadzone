@@ -237,9 +237,10 @@ export function acidStep(game: GameHost, p: Player, h: AcidState, dt: number, on
 /**
  * Explosión de un cohete (no la calcula quien solo mira: invitado o cliente en línea).
  */
-export function rocketBlast(game: GameHost, x: number, y: number, owner: string | null = null) {
+export function rocketBlast(game: GameHost, x: number, y: number, owner: string | null = null, k = 1) {
   if (!game.mode.authority()) return;
-  game.structures.explode(game, { x, y, owner }, ROCKET.radius, ROCKET.power, 1);
+  // k: veces el daño del cohete normal (bazuca mejorada)
+  game.structures.explode(game, { x, y, owner }, ROCKET.radius, ROCKET.power * k, 1);
 }
 
 /**
@@ -262,7 +263,7 @@ export function heavyBlast(
 export function rocketHit(game: GameHost, z: Zombie, x: number, y: number, b: Bullet) {
   if (!game.mode.authority()) return;
   if ((z.type === 'fat' || z.type === 'heavy') && !z.dead) game.structures.stickRocket(game, z, x, y, b);
-  else rocketBlast(game, x, y, b.owner);
+  else rocketBlast(game, x, y, b.owner, b.rocketK || 1);
 }
 
 /** Super golpe del blindado (al jugador o a una estructura). */

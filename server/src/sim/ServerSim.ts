@@ -265,7 +265,7 @@ export class ServerSim {
       onRobotHit: (dmg: number, p: any) => this.onRobotHit(dmg, p),
       applyAcid: (p: any) => this.applyAcid(p),
       rocketHit: (z: any, x: number, y: number, b: any) => Rules.rocketHit(g, z, x, y, b),
-      rocketBlast: (x: number, y: number, owner: string | null = null) => Rules.rocketBlast(g, x, y, owner),
+      rocketBlast: (x: number, y: number, owner: string | null = null, k = 1) => Rules.rocketBlast(g, x, y, owner, k),
       heavyBlast: (x: number, y: number, owner: string | null = null, R?: number, power?: number) =>
         Rules.heavyBlast(g, x, y, owner, R, power),
       ownerOf: (id: string | null) => (id ? (this.slots.get(id)?.p ?? null) : null),
@@ -464,9 +464,10 @@ export class ServerSim {
     if (!d) return false;
     const p = s.p;
     if (k === 'gun') {
-      if (!d.price || p.has(wid) || s.money < d.price) return false;
+      // una mejora (bazuca mejorada) pide tener el arma de antes y la reemplaza
+      if (!p.canBuy(wid) || s.money < d.price) return false;
       s.money -= d.price;
-      p.unlock(wid);
+      p.buy(wid);
       s.toasts.push(`${d.name} comprada`);
     } else if (k === 'sell') {
       if (!d.price || !p.removeWeapon(wid)) return false;

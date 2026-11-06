@@ -205,7 +205,7 @@ export class Bullets {
         b.exploded = true;
         game.structures.improvBlast(game, b.x - b.dx * 4, b.y - b.dy * 4, b.owner);
       } else if (b.rocket && !b.exploded && (wall || b.life <= 0))
-        game.rocketBlast(b.x - b.dx * 4, b.y - b.dy * 4, b.owner);
+        game.rocketBlast(b.x - b.dx * 4, b.y - b.dy * 4, b.owner, b.rocketK || 1);
       else if (b.blast && wall) game.heavyBlast(b.x - b.dx * 4, b.y - b.dy * 4, b.owner, b.blastR, b.blastP);
       else if (wall && !b.flame) game.particles.impact(b.x, b.y, b.dx, b.dy);
       if (dead || b.life <= 0) {

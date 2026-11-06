@@ -253,6 +253,35 @@ export const WEAPONS = {
     ammoPrice: 150,
     desc: '10 balas explosivas por disparo, cada una con el daño de un cohete de bazuca. Retroceso brutal y 3 s de recarga.',
   },
+  // Bazuca mejorada: la mejora de la bazuca (upgradeOf: sólo se compra si la tienes, y la reemplaza
+  // quedándose con sus cohetes). Cargador de 6 cohetes y cada uno hace rocketK veces el daño del cohete
+  // normal (al estallar y al clavarse en gordos y blindados).
+  mbazooka: {
+    id: 'mbazooka',
+    name: 'Bazuca mejorada',
+    damage: 0,
+    rate: 1.4,
+    mag: 6,
+    reserve: 12,
+    reserveMax: Infinity,
+    pickup: 2,
+    reload: 4.5,
+    spread: 0.01,
+    bloom: 0,
+    pellets: 1,
+    speed: 700,
+    range: 1000,
+    knock: 300,
+    shake: 0.6,
+    pierce: 0,
+    len: 34,
+    rocket: true,
+    rocketK: 10,
+    upgradeOf: 'bazooka',
+    price: 30000,
+    ammoPrice: 60,
+    desc: 'Mejora de la bazuca: cargador de 6 cohetes y cada uno hace 10 veces más daño. Reemplaza a tu bazuca.',
+  },
   // Lanza cohetes (ver ROCKET): explota al impactar; tarda 4 s en recargar.
   bazooka: {
     id: 'bazooka',
@@ -315,6 +344,7 @@ export const WEAPON_ORDER = [
   'lmg',
   'bazooka',
   'rshotgun',
+  'mbazooka',
 ];
 
 // Cohete de la bazuca. La granada tiene radio 140 y 330 de daño: el cohete abarca el doble de área.
@@ -2274,6 +2304,7 @@ export const GUN_REACH = {
   lmg: 37,
   bazooka: 51,
   rshotgun: 34,
+  mbazooka: 56,
 };
 
 // Etapas de recarga sincronizadas con el progreso de la animación (0..1).
@@ -2329,6 +2360,14 @@ export const RELOAD_STEPS = {
     [0.12, 'coverOpen'],
     [0.45, 'rocketIn'],
     [0.7, 'rocketSeat'],
+    [0.92, 'boltClose'],
+  ],
+  // abre la recámara, cambia el cargador de cohetes y la cierra
+  mbazooka: [
+    [0.1, 'coverOpen'],
+    [0.3, 'magOut'],
+    [0.6, 'rocketIn'],
+    [0.75, 'rocketSeat'],
     [0.92, 'boltClose'],
   ],
   // se quiebra, saca las dos vainas, mete dos cartuchos explosivos y la cierra de golpe
