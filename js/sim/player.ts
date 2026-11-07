@@ -13,10 +13,12 @@ import {
   GUN_REACH,
   RELOAD_STEPS,
   OPS,
+  PERKS,
 } from '../core/config.ts';
 import { clamp, rand, angleTo } from '../core/util.ts';
 import { flameBullet } from './bullets.ts';
 import { newCombo } from './combo.ts';
+import { extraShots, frenzyMult, lastStand, shotExtras } from './perks.ts';
 import { fireHeavy, heavyRate, milRange, milReload, milTurn } from './heavy.ts';
 import type { GameHost, Vec, Weapon, Zombie } from '../core/types.d.ts';
 import type { Block } from './build.ts';
@@ -42,6 +44,18 @@ export interface Stats {
   pierce: number;
   reloadMult: number;
   cdMult: number;
+  /** Mejoras con mecánicas (perks.ts): s de fuego por bala, rebotes (y si conservan el daño), vida por
+   * baja, dinero extra, cadencia con racha, balas extra, zombis que estallan, última oportunidad, infierno */
+  burn: number;
+  bounce: number;
+  bounceKeep: number;
+  vamp: number;
+  greed: number;
+  frenzy: number;
+  twin: number;
+  volatile: number;
+  lastStand: number;
+  inferno: number;
 }
 
 /** Ficha de un arma de config.ts (WEAPONS). */
@@ -154,6 +168,8 @@ export class Player {
   declare zoneAcc?: number;
   /** en línea: id de su ranura (para dar las bajas que hace volando) */
   declare sid?: string;
+  /** oleada en la que ya usó Última oportunidad (perks.ts) */
+  declare lastStandWave?: number;
   declare cls: string | null;
   declare abCd: number;
   declare boostT: number;
@@ -211,6 +227,16 @@ export class Player {
       pierce: 0,
       reloadMult: 1,
       cdMult: 1,
+      burn: 0,
+      bounce: 0,
+      bounceKeep: 0,
+      vamp: 0,
+      greed: 0,
+      frenzy: 0,
+      twin: 0,
+      volatile: 0,
+      lastStand: 0,
+      inferno: 0,
     };
     this.hp = this.stats.maxHp;
     this.stamina = this.stats.maxStamina;
@@ -357,6 +383,8 @@ export class Player {
     if (this === game.player) game.camera.shake(0.28);
     game.hurtFlash = Math.min(1, game.hurtFlash + 0.5);
     game.sfx.hurt();
+    // Última oportunidad (perks.ts): un golpe mortal por oleada te deja en pie
+    if (this.hp <= 0 && lastStand(game, this)) return;
     if (this.hp <= 0) {
       this.hp = 0;
       this.alive = false;
@@ -624,7 +652,7 @@ export class Player {
     w.mag--;
     // las armas de más de 20 tiros por segundo guardan el sobrante del enfriamiento: si no, al ir
     // cuadro por cuadro dispararían menos de lo que dicen (30 por segundo a 60 cuadros)
-    const cd = 1 / (d.rate * this.stats.rateMult);
+    const cd = 1 / (d.rate * this.stats.rateMult * frenzyMult(this));
     this.fireCd = cd < 0.05 ? Math.max(this.fireCd, -cd) + cd : cd;
     const spread = d.spread + this.bloom + (this.running ? 0.05 : 0);
     let ca = Math.cos(this.angle);
@@ -651,8 +679,17 @@ export class Player {
     const oy = blocked ? this.y : sy;
     const shot = { hit: false };
     const fired: number[] = [];
-    for (let i = 0; i < d.pellets; i++) {
-      const off = d.pellets > 1 ? (i / (d.pellets - 1) - 0.5) * 2 * spread + rand(-0.04, 0.04) : rand(-spread, spread);
+    // Doble cañón (perks.ts): balas de más, abiertas a uno y otro lado del disparo
+    const twin = extraShots(this, d);
+    const extras = shotExtras(this, d);
+    for (let i = 0; i < d.pellets + twin; i++) {
+      const j = i - d.pellets;
+      const off =
+        j >= 0
+          ? (j % 2 ? -1 : 1) * PERKS.twin * (1 + (j >> 1)) + rand(-spread, spread)
+          : d.pellets > 1
+            ? (i / (d.pellets - 1) - 0.5) * 2 * spread + rand(-0.04, 0.04)
+            : rand(-spread, spread);
       const a = aim + off;
       fired.push(a);
       if (d.flame) {
@@ -674,6 +711,7 @@ export class Player {
         rocket: !!d.rocket,
         ...(d.rocketK ? { rocketK: d.rocketK } : {}),
         ...(d.blast ? { blast: true, blastR: d.blastR, blastP: (d.blastP ?? 0) * this.stats.dmgMult } : {}),
+        ...extras,
       });
     }
     this.shotsFired++;

@@ -6,10 +6,10 @@ import { TAU, makeCanvas, mulberry32, rrange, rpick, roundRect, shade } from '..
 export const OUT = '#141612';
 
 /** @typedef {CanvasRenderingContext2D} Ctx */
-/** @typedef {'normal' | 'golden' | 'swat' | 'heavy' | 'sprinter' | 'fat' | 'bull' | 'rock' | 'demon' | 'giant'} ZType zombis comunes (los jefes van en bossart.js) */
+/** @typedef {'normal' | 'golden' | 'swat' | 'heavy' | 'sprinter' | 'fat' | 'bull' | 'rock' | 'demon' | 'giant' | 'spitter' | 'screamer' | 'digger' | 'jumper'} ZType zombis comunes (los jefes van en bossart.js) */
 /** @typedef {{ skin: string, pants: string, hair: string, seed: number }} PalBase */
 /** @typedef {PalBase & { shirt: string }} PalShirt */
-/** @typedef {{ normal: PalShirt, golden: PalShirt, sprinter: PalShirt, fat: PalShirt, swat: PalShirt & { vest: string, shield: string }, heavy: PalShirt & { plate: string, dark: string, camo: string }, bull: PalBase & { bone: string, vein: string }, rock: { stone: string, light: string, dark: string, moss: string, skin: string, eye: string, seed: number }, demon: { skin: string, dark: string, flesh: string, bone: string, mask: string, grain: string, eye: string, seed: number }, giant: PalShirt & { metal: string } }} PalOf paleta de cada tipo de zombi */
+/** @typedef {{ normal: PalShirt, golden: PalShirt, sprinter: PalShirt, fat: PalShirt, swat: PalShirt & { vest: string, shield: string }, heavy: PalShirt & { plate: string, dark: string, camo: string }, bull: PalBase & { bone: string, vein: string }, rock: { stone: string, light: string, dark: string, moss: string, skin: string, eye: string, seed: number }, demon: { skin: string, dark: string, flesh: string, bone: string, mask: string, grain: string, eye: string, seed: number }, giant: PalShirt & { metal: string }, spitter: PalShirt & { acid: string }, screamer: PalShirt & { mouth: string }, digger: PalShirt & { overall: string, helmet: string, dirt: string }, jumper: PalShirt }} PalOf paleta de cada tipo de zombi */
 /** @typedef {{ [K in ZType]: (g: Ctx, r: number, p: PalOf[K], ph: number) => void }} Drawers */
 /** @typedef {{ frames: HTMLCanvasElement[], flash: HTMLCanvasElement[], dead: HTMLCanvasElement, burnt: HTMLCanvasElement, size: number, half: number }} ZSet */
 /** @typedef {{ id: string, name: string, colors: string[] }} LookPart */
@@ -273,6 +273,39 @@ const DEMON_PALETTES = [
     eye: '#ff8a3a',
   },
 ];
+// Zombis con habilidades: escupidor (ácido verde), chillón (pálido, boca oscura), excavador (minero) y saltador.
+const SPITTER_PALETTES = [
+  { skin: '#a3ad86', shirt: '#56604a', pants: '#2f3440', hair: '#2b241d', acid: '#8fd03c' },
+  { skin: '#9aa47e', shirt: '#6a4a3a', pants: '#33302a', hair: '#1d1a17', acid: '#a8e04a' },
+];
+const SCREAMER_PALETTES = [
+  { skin: '#b6b2a8', shirt: '#4a3c4e', pants: '#2a2c30', hair: '#191514', mouth: '#2a0c12' },
+  { skin: '#aeb0a2', shirt: '#6a5a62', pants: '#33302a', hair: '#3a2a22', mouth: '#300a14' },
+];
+const DIGGER_PALETTES = [
+  {
+    skin: '#94a07c',
+    shirt: '#6e5a42',
+    pants: '#3a3226',
+    hair: '#1d1a17',
+    overall: '#4a5a70',
+    helmet: '#d8a830',
+    dirt: '#5a4632',
+  },
+  {
+    skin: '#8c9874',
+    shirt: '#5a4a3a',
+    pants: '#2f2a22',
+    hair: '#2b241d',
+    overall: '#6a5236',
+    helmet: '#c8c4b4',
+    dirt: '#4a3a2a',
+  },
+];
+const JUMPER_PALETTES = [
+  { skin: '#9fae88', shirt: '#7a6a3a', pants: '#2f3440', hair: '#1a1714' },
+  { skin: '#a6b090', shirt: '#3e5a5a', pants: '#3a3028', hair: '#2a1e16' },
+];
 const GIANT_PALETTES = [
   { skin: '#748262', shirt: '#3a3631', pants: '#28282a', hair: '#151311', metal: '#6d6f70' },
   { skin: '#6c7a5e', shirt: '#4a3a2c', pants: '#2b2622', hair: '#151311', metal: '#77736b' },
@@ -420,6 +453,225 @@ function drawSprinter(g, r, p, ph) {
   g.fillStyle = '#c84a32';
   g.fillRect(r * 0.86, -r * 0.16, r * 0.1, r * 0.08);
   g.fillRect(r * 0.86, r * 0.08, r * 0.1, r * 0.08);
+}
+
+// Escupidor: flaco y encorvado, con el buche hinchado de ácido verde que brilla y le chorrea por la boca.
+/** @param {Ctx} g @param {number} r @param {PalOf["spitter"]} p @param {number} ph */
+function drawSpitter(g, r, p, ph) {
+  softShadow(g, r * 1.2);
+  const s = Math.sin(ph);
+  const c = Math.cos(ph);
+  const stride = r * 0.45;
+  ell(g, s * stride - r * 0.1, -r * 0.3, r * 0.34, r * 0.2, 0, p.pants);
+  ell(g, -s * stride - r * 0.1, r * 0.3, r * 0.34, r * 0.2, 0, p.pants);
+  // brazos colgando hacia atrás
+  limb(g, -r * 0.05, -r * 0.55, -r * 0.55 + c * r * 0.1, -r * 0.75, r * 0.24, p.skin);
+  limb(g, -r * 0.05, r * 0.55, -r * 0.55 - c * r * 0.1, r * 0.75, r * 0.24, p.skin);
+  g.save();
+  g.rotate(s * 0.07);
+  ell(g, -r * 0.15, 0, r * 0.44, r * 0.72, 0, p.shirt);
+  rips(g, mulberry32(p.seed), -r * 0.15, 0, r * 0.44, r * 0.72, shade(p.shirt, 0.6), 5);
+  // manchas de ácido en la ropa
+  rips(g, mulberry32(p.seed + 5), -r * 0.05, 0, r * 0.4, r * 0.6, shade(p.acid, 0.8), 3);
+  g.restore();
+  // buche hinchado debajo de la cabeza
+  const sw = 1 + 0.06 * Math.sin(ph * 2);
+  circ(g, r * 0.42, 0, r * 0.48 * sw, p.acid, OUT, 1.4);
+  g.fillStyle = 'rgba(235,255,190,0.55)';
+  g.beginPath();
+  g.arc(r * 0.32, -r * 0.18, r * 0.14, 0, TAU);
+  g.fill();
+  g.strokeStyle = shade(p.acid, 0.55);
+  g.lineWidth = 1;
+  for (const k of [-0.22, 0.05, 0.28]) {
+    g.beginPath();
+    g.arc(r * 0.42, r * k, r * 0.3, -0.5, 0.5);
+    g.stroke();
+  }
+  // cabeza adelantada, calva, y la boca que gotea
+  circ(g, r * 0.78, s * r * 0.03, r * 0.32, p.skin);
+  g.fillStyle = p.hair;
+  g.beginPath();
+  g.arc(r * 0.72, s * r * 0.03, r * 0.26, Math.PI * 0.6, Math.PI * 1.4);
+  g.fill();
+  ell(g, r * 1.02, s * r * 0.03, r * 0.09, r * 0.14, 0, '#20140e', OUT, 0.8);
+  g.fillStyle = p.acid;
+  for (let i = 0; i < 3; i++) {
+    g.beginPath();
+    g.arc(r * (1.15 + i * 0.16), (i - 1) * r * 0.1 + s * r * 0.04, r * (0.08 - i * 0.015), 0, TAU);
+    g.fill();
+  }
+  g.fillStyle = '#d8f05a';
+  g.fillRect(r * 0.86, -r * 0.14, r * 0.08, r * 0.07);
+  g.fillRect(r * 0.86, r * 0.08, r * 0.08, r * 0.07);
+}
+
+// Chillón: flaco y pálido, con los brazos abiertos y la boca enorme, desencajada, siempre gritando.
+/** @param {Ctx} g @param {number} r @param {PalOf["screamer"]} p @param {number} ph */
+function drawScreamer(g, r, p, ph) {
+  softShadow(g, r * 1.25);
+  const s = Math.sin(ph);
+  const c = Math.cos(ph);
+  const stride = r * 0.42;
+  ell(g, s * stride, -r * 0.3, r * 0.34, r * 0.2, 0, p.pants);
+  ell(g, -s * stride, r * 0.3, r * 0.34, r * 0.2, 0, p.pants);
+  // brazos abiertos a los lados, temblando
+  const t = c * r * 0.08;
+  limb(g, 0, -r * 0.6, r * 0.35 + t, -r * 1.25, r * 0.22, p.skin);
+  limb(g, 0, r * 0.6, r * 0.35 - t, r * 1.25, r * 0.22, p.skin);
+  for (const sy of [-1, 1]) {
+    const hx = r * 0.4 + sy * t;
+    const hy = sy * r * 1.3;
+    circ(g, hx, hy, r * 0.15, shade(p.skin, 0.85), OUT, 1);
+    g.strokeStyle = OUT;
+    g.lineWidth = 1;
+    for (const a of [-0.5, 0, 0.5]) {
+      g.beginPath();
+      g.moveTo(hx, hy);
+      g.lineTo(hx + Math.cos(a) * r * 0.28, hy + sy * Math.sin(Math.abs(a) + 0.4) * r * 0.18);
+      g.stroke();
+    }
+  }
+  g.save();
+  g.rotate(s * 0.05);
+  ell(g, -r * 0.08, 0, r * 0.46, r * 0.8, 0, p.shirt);
+  rips(g, mulberry32(p.seed), -r * 0.08, 0, r * 0.46, r * 0.8, shade(p.shirt, 0.6), 6);
+  // costillas marcadas por los desgarrones
+  g.strokeStyle = shade(p.skin, 0.7);
+  g.lineWidth = 1;
+  for (const k of [-0.3, -0.1, 0.1, 0.3]) {
+    g.beginPath();
+    g.moveTo(-r * 0.25, r * k);
+    g.lineTo(r * 0.1, r * k * 1.1);
+    g.stroke();
+  }
+  g.restore();
+  // pelo largo y revuelto hacia atrás
+  g.strokeStyle = p.hair;
+  g.lineWidth = 1.6;
+  const rng = mulberry32(p.seed + 9);
+  for (let i = 0; i < 7; i++) {
+    const a = Math.PI * (0.7 + rng() * 0.6);
+    g.beginPath();
+    g.moveTo(r * 0.3, 0);
+    g.quadraticCurveTo(
+      r * 0.3 + Math.cos(a) * r * 0.5,
+      Math.sin(a) * r * 0.5,
+      r * 0.3 + Math.cos(a) * r * 0.85,
+      Math.sin(a) * r * 0.75,
+    );
+    g.stroke();
+  }
+  circ(g, r * 0.36, 0, r * 0.4, p.skin);
+  // la boca: un hueco oscuro y estirado con dientes
+  ell(g, r * 0.62, 0, r * 0.2, r * 0.26 + Math.abs(s) * r * 0.04, 0, p.mouth, OUT, 1);
+  g.fillStyle = '#e8e0c8';
+  for (const k of [-0.14, 0, 0.14]) g.fillRect(r * 0.5, r * k - r * 0.03, r * 0.06, r * 0.05);
+  g.fillStyle = '#f2d0f0';
+  g.fillRect(r * 0.4, -r * 0.24, r * 0.08, r * 0.07);
+  g.fillRect(r * 0.4, r * 0.17, r * 0.08, r * 0.07);
+}
+
+// Excavador: minero zombi cubierto de tierra, con casco y lámpara, y garras largas de tanto cavar.
+/** @param {Ctx} g @param {number} r @param {PalOf["digger"]} p @param {number} ph */
+function drawDigger(g, r, p, ph) {
+  softShadow(g, r * 1.3);
+  const s = Math.sin(ph);
+  const c = Math.cos(ph);
+  const stride = r * 0.4;
+  ell(g, s * stride, -r * 0.34, r * 0.38, r * 0.24, 0, p.pants);
+  ell(g, -s * stride, r * 0.34, r * 0.38, r * 0.24, 0, p.pants);
+  g.save();
+  g.rotate(s * 0.06);
+  // overol con tirantes
+  ell(g, -r * 0.1, 0, r * 0.56, r * 0.88, 0, p.shirt);
+  roundRect(g, -r * 0.42, -r * 0.5, r * 0.62, r * 1.0, r * 0.14);
+  g.fillStyle = p.overall;
+  g.fill();
+  g.lineWidth = 1.2;
+  g.strokeStyle = OUT;
+  g.stroke();
+  g.fillStyle = shade(p.overall, 1.3);
+  g.fillRect(-r * 0.05, -r * 0.62, r * 0.12, r * 0.24);
+  g.fillRect(-r * 0.05, r * 0.38, r * 0.12, r * 0.24);
+  rips(g, mulberry32(p.seed), -r * 0.1, 0, r * 0.55, r * 0.85, p.dirt, 9);
+  g.restore();
+  // brazos hacia delante con garras
+  const ax = c * r * 0.12;
+  for (const sy of [-1, 1]) {
+    const ex = r * 1.15 + sy * ax;
+    const ey = sy * r * 0.5;
+    limb(g, r * 0.05, sy * r * 0.6, ex, ey, r * 0.3, p.shirt);
+    circ(g, ex, ey, r * 0.18, shade(p.skin, 0.75), OUT, 1);
+    g.strokeStyle = '#d8d0b8';
+    g.lineWidth = 1.6;
+    for (const k of [-0.18, 0, 0.18]) {
+      g.beginPath();
+      g.moveTo(ex + r * 0.1, ey + r * k);
+      g.lineTo(ex + r * 0.42, ey + r * k * 1.4);
+      g.stroke();
+    }
+  }
+  // casco de minero con su lámpara encendida
+  circ(g, r * 0.22, s * r * 0.03, r * 0.44, p.helmet);
+  g.fillStyle = shade(p.helmet, 0.75);
+  g.beginPath();
+  g.arc(r * 0.2, s * r * 0.03, r * 0.3, 0, TAU);
+  g.fill();
+  g.fillStyle = p.helmet;
+  g.fillRect(-r * 0.05, -r * 0.05 + s * r * 0.03, r * 0.5, r * 0.1);
+  circ(g, r * 0.6, s * r * 0.03, r * 0.12, '#fff2b0', OUT, 1);
+  g.fillStyle = 'rgba(255,240,160,0.35)';
+  g.beginPath();
+  g.moveTo(r * 0.66, s * r * 0.03);
+  g.lineTo(r * 1.4, -r * 0.35);
+  g.lineTo(r * 1.4, r * 0.4);
+  g.closePath();
+  g.fill();
+}
+
+// Saltador: agazapado como una rana, con muslos enormes, brazos largos que tocan el suelo y la cabeza baja.
+/** @param {Ctx} g @param {number} r @param {PalOf["jumper"]} p @param {number} ph */
+function drawJumper(g, r, p, ph) {
+  softShadow(g, r * 1.35);
+  const s = Math.sin(ph);
+  const c = Math.cos(ph);
+  // piernas dobladas abiertas hacia atrás: muslo, rodilla y pie
+  for (const sy of [-1, 1]) {
+    const k = sy * s * r * 0.15;
+    const kx = -r * 0.2 + k;
+    const ky = sy * r * 1.0;
+    limb(g, -r * 0.3, sy * r * 0.35, kx, ky, r * 0.4, p.pants);
+    limb(g, kx, ky, -r * 0.9 + k, sy * r * 0.6, r * 0.26, p.skin);
+    ell(g, -r * 1.0 + k, sy * r * 0.6, r * 0.22, r * 0.14, 0, shade(p.skin, 0.8), OUT, 1);
+  }
+  g.save();
+  g.rotate(s * 0.05);
+  ell(g, -r * 0.05, 0, r * 0.5, r * 0.62, 0, p.shirt);
+  rips(g, mulberry32(p.seed), -r * 0.05, 0, r * 0.5, r * 0.62, shade(p.shirt, 0.6), 4);
+  // espalda huesuda: la columna marcada
+  g.fillStyle = shade(p.skin, 0.9);
+  for (let i = 0; i < 4; i++) {
+    g.beginPath();
+    g.arc(-r * 0.4 + i * r * 0.16, 0, r * 0.07, 0, TAU);
+    g.fill();
+  }
+  g.restore();
+  // brazos largos apoyados adelante
+  const ax = c * r * 0.15;
+  limb(g, r * 0.15, -r * 0.48, r * 1.2 + ax, -r * 0.62, r * 0.22, p.skin);
+  limb(g, r * 0.15, r * 0.48, r * 1.2 - ax, r * 0.62, r * 0.22, p.skin);
+  circ(g, r * 1.25 + ax, -r * 0.62, r * 0.15, shade(p.skin, 0.8), OUT, 1);
+  circ(g, r * 1.25 - ax, r * 0.62, r * 0.15, shade(p.skin, 0.8), OUT, 1);
+  // cabeza baja y adelantada
+  circ(g, r * 0.6, s * r * 0.04, r * 0.34, p.skin);
+  g.fillStyle = p.hair;
+  g.beginPath();
+  g.arc(r * 0.54, s * r * 0.04, r * 0.28, Math.PI * 0.55, Math.PI * 1.45);
+  g.fill();
+  g.fillStyle = '#ffb030';
+  g.fillRect(r * 0.82, -r * 0.15, r * 0.1, r * 0.08);
+  g.fillRect(r * 0.82, r * 0.08, r * 0.1, r * 0.08);
 }
 
 // Super blindado: cuerpo de gordo cubierto con armadura militar (arena y verde),
@@ -915,6 +1167,10 @@ const DRAWERS = {
   rock: drawRock,
   demon: drawDemon,
   giant: drawGiant,
+  spitter: drawSpitter,
+  screamer: drawScreamer,
+  digger: drawDigger,
+  jumper: drawJumper,
 };
 /** @type {{ [K in ZType]: Omit<PalOf[K], 'seed'>[] }} */
 const PALETTES = {
@@ -928,6 +1184,10 @@ const PALETTES = {
   rock: ROCK_PALETTES,
   demon: DEMON_PALETTES,
   giant: GIANT_PALETTES,
+  spitter: SPITTER_PALETTES,
+  screamer: SCREAMER_PALETTES,
+  digger: DIGGER_PALETTES,
+  jumper: JUMPER_PALETTES,
 };
 
 /**
@@ -1025,6 +1285,10 @@ export function zombieSprites() {
     rock: [],
     demon: [],
     giant: [],
+    spitter: [],
+    screamer: [],
+    digger: [],
+    jumper: [],
   };
   /** @type {Record<ZType, { r: number, frames: number, scale: number, pad: number }>} */
   const conf = {
@@ -1039,6 +1303,10 @@ export function zombieSprites() {
     rock: { r: 34, frames: 6, scale: 2.3, pad: 1.5 },
     // alto como un jefe: el dibujo es de radio 38 aunque su cuerpo (ZOMBIES.demon.radius) sea angosto
     demon: { r: 38, frames: 6, scale: 2.2, pad: 1.45 },
+    spitter: { r: 13, frames: 6, scale: 2.5, pad: 1.75 },
+    screamer: { r: 13, frames: 6, scale: 2.5, pad: 1.9 },
+    digger: { r: 14, frames: 6, scale: 2.5, pad: 1.8 },
+    jumper: { r: 12, frames: 6, scale: 2.6, pad: 1.9 },
   };
   for (const type of /** @type {ZType[]} */ (Object.keys(conf))) {
     const k = conf[type];

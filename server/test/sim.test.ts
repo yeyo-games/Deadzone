@@ -999,3 +999,32 @@ test('jefe en línea: llega en la oleada 5 con más vida por jugador, se ve en l
   assert.ok(a.money - ma >= BOSSES.supremo.reward);
   assert.equal(b.money - mb, BOSSES.supremo.reward, 'Beto cobra el premio aunque no lo mató');
 });
+
+test('premios en línea: el jefe deja un cofre legendario a cada uno y el dorado una rara a quien lo mata', () => {
+  const sim = new ServerSim(5, [
+    { id: 'a', idx: 1, name: 'Ana' },
+    { id: 'b', idx: 2, name: 'Beto' },
+  ]);
+  const a = sim.slots.get('a')!;
+  const b = sim.slots.get('b')!;
+  const boss = sim.horde.spawn('supremo', a.p.x + 300, a.p.y, 1, 1);
+  boss.lastOwner = 'a';
+  sim.killZombie(boss);
+  assert.deepEqual(a.bonus, ['boss']);
+  assert.deepEqual(b.bonus, ['boss'], 'el cofre es de todos');
+  sim.offerUpgrades();
+  const rar = (id: string) => UPGRADES.find((u) => u.id === id)?.rarity;
+  assert.ok(a.choices.length > 0 && a.choices.every((id) => rar(id) === 'legendaria'));
+  const up = sim.snapshot('a', 0)!.up as unknown[];
+  assert.equal(up[up.length - 1], '@boss', 'la foto dice de dónde sale la tanda');
+  const lv = a.pending;
+  assert.ok(sim.pick('a', 0, a.choiceN));
+  assert.deepEqual(a.bonus, [], 'el premio se cobra');
+  assert.equal(a.pending, lv, 'sin gastar un nivel');
+
+  const gold = sim.horde.spawn('golden', b.p.x + 300, b.p.y, 1, 1);
+  gold.lastOwner = 'b';
+  sim.killZombie(gold);
+  assert.deepEqual(b.bonus, ['boss', 'golden']);
+  assert.deepEqual(a.bonus, [], 'el dorado es de quien lo mata');
+});

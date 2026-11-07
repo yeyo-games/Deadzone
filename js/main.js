@@ -264,6 +264,8 @@ class Game {
     this.xp = 0;
     this.xpNeed = xpForLevel(1);
     this.pendingLevels = 0;
+    // tandas de premio por elegir: 'golden' (zombi dorado) o 'boss' (cofre del jefe), ver ui/levelup.js
+    this.bonusPicks = [];
     this.taken = {};
     this.money = 0;
     this.moneyEarned = 0;

@@ -3,7 +3,7 @@
 // pasando solas. Dentro, una página por zombi y por jefe: su dibujo animado, de qué oleada sale, su
 // vida, velocidad y daño, cómo es y sus debilidades. Se ve una página a la vez y se pasa de una en una
 // con los botones, tocando la página, deslizando el dedo o con las flechas.
-import { BOSS, BOSS_ORDER, BOSSES, DEMON, ROCK, ZOMBIES } from '../core/config.ts';
+import { BOSS, BOSS_ORDER, BOSSES, DEMON, ROCK, SPECIALS, ZOMBIES } from '../core/config.ts';
 import { rand, TAU } from '../core/util.ts';
 import { zombieSprites } from '../render/sprites.js';
 import { bossSprite } from '../render/bossart.js';
@@ -69,6 +69,17 @@ const COMMON = [
     warn: ['Su embestida te lanza y te quita 40 de vida'],
   },
   {
+    type: 'spitter',
+    name: 'Escupidor',
+    from: SPECIALS.spitter.from,
+    look: 'Flaco y encorvado, con el buche hinchado de ácido verde que le chorrea por la boca.',
+    weak: [
+      'Débil de cerca y con poca vida: ve por él',
+      'Se para y tiembla antes de escupir: muévete y el ácido cae donde estabas',
+    ],
+    warn: ['Escupe por encima de los muros', 'Deja un charco de ácido que quema unos segundos'],
+  },
+  {
     type: 'rock',
     name: 'Rocoso',
     from: ROCK.from,
@@ -95,6 +106,28 @@ const COMMON = [
     ],
   },
   {
+    type: 'screamer',
+    name: 'Chillón',
+    from: SPECIALS.screamer.from,
+    look: 'Pálido y en los huesos, con los brazos abiertos y una boca enorme siempre gritando.',
+    weak: ['Mátalo primero: casi no pega', 'Antes de gritar se queda quieto inflando el pecho'],
+    warn: ['Su grito hace correr más a todos los zombis de alrededor durante unos segundos'],
+  },
+  {
+    type: 'digger',
+    name: 'Excavador',
+    from: SPECIALS.digger.from,
+    look: 'Un minero zombi con casco y lámpara, cubierto de tierra y con garras de tanto cavar.',
+    weak: [
+      'El polvo que levanta bajo tierra te dice por dónde viene',
+      'Antes de salir la tierra se agrieta: apártate del anillo',
+    ],
+    warn: [
+      'Bajo tierra no le entran balas ni lo paran los muros',
+      'Sale cerca de ti, a veces dentro de tu fuerte, golpeando al salir',
+    ],
+  },
+  {
     type: 'heavy',
     name: 'Super blindado',
     from: 11,
@@ -107,11 +140,19 @@ const COMMON = [
     warn: ['Sus super golpes te quitan 30, te avientan y destrozan barricadas'],
   },
   {
+    type: 'jumper',
+    name: 'Saltador',
+    from: SPECIALS.jumper.from,
+    look: 'Agazapado como una rana, con muslos enormes y brazos largos que tocan el suelo.',
+    weak: ['Poca vida', 'No salta una barricada de dos capas: apila las piezas'],
+    warn: ['Brinca las barricadas de una sola capa', 'Los alambres de púas no lo frenan'],
+  },
+  {
     type: 'golden',
     name: 'Zombi dorado',
     from: 0,
     look: 'Raro: aparece de vez en cuando durante una ronda. No ataca, sólo huye.',
-    weak: ['No se defiende: persíguelo y dispárale', 'Si lo matas da entre $100 y $250'],
+    weak: ['No se defiende: persíguelo y dispárale', 'Si lo matas da entre $100 y $250 y una mejora rara a elegir'],
     warn: ['Desaparece a los 26 s si no lo alcanzas'],
   },
 ];
@@ -188,7 +229,7 @@ function buildPages() {
   });
   pages.push(
     pg(
-      '<h3 class="pg-big">Últimas notas</h3><ul class="pg-notes"><li>Las barricadas compran tiempo: ponlas donde la horda se amontona.</li><li>El fuego se contagia de zombi en zombi.</li><li>Los explosivos sirven contra todo lo blindado.</li><li>Entre oleadas, la tienda; al subir de nivel, una mejora.</li></ul>',
+      '<h3 class="pg-big">Últimas notas</h3><ul class="pg-notes"><li>Las barricadas compran tiempo: ponlas donde la horda se amontona.</li><li>El fuego se contagia de zombi en zombi.</li><li>Los explosivos sirven contra todo lo blindado.</li><li>Entre oleadas, la tienda; al subir de nivel, una mejora.</li><li>Cada jefe derrotado deja un cofre con mejoras legendarias.</li></ul>',
       '<p class="pg-end">Si encontraste este libro, el que lo escribió ya no está.<br><br>Que te sirva más que a él.</p>',
     ),
   );

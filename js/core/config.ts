@@ -547,6 +547,59 @@ export const ZOMBIES = {
     turn: 1.4,
     blocksBullets: true,
   },
+  // Zombis con habilidades (ver SPECIALS): escupidor, chillón, excavador y saltador.
+  // Escupidor: flaco y débil cuerpo a cuerpo; desde lejos te escupe ácido por encima de los muros.
+  spitter: {
+    hp: 42 * 2.5,
+    speed: 1,
+    radius: 13,
+    damage: 6,
+    attackRate: 0.8,
+    xp: 8,
+    mass: 1.1,
+    reach: 7,
+    frames: 6,
+    turn: 4,
+  },
+  // Chillón: no pega fuerte; grita y acelera a los zombis de alrededor.
+  screamer: {
+    hp: 42 * 3,
+    speed: 1.05,
+    radius: 13,
+    damage: 5,
+    attackRate: 0.8,
+    xp: 12,
+    mass: 1.2,
+    reach: 7,
+    frames: 6,
+    turn: 4,
+  },
+  // Excavador: se mete bajo tierra al aparecer y sale cerca de ti (a veces dentro de tus muros).
+  digger: {
+    hp: 42 * 4,
+    speed: 1,
+    radius: 14,
+    damage: 12,
+    attackRate: 1,
+    xp: 14,
+    mass: 1.6,
+    reach: 8,
+    frames: 6,
+    turn: 4,
+  },
+  // Saltador: ágil; brinca las barricadas de una sola capa y no lo frenan los alambres.
+  jumper: {
+    hp: 42 * 2,
+    speed: 1.25,
+    radius: 12,
+    damage: 8,
+    attackRate: 1.1,
+    xp: 8,
+    mass: 0.9,
+    reach: 7,
+    frames: 6,
+    turn: 7,
+  },
   // Jefes (BOSSES): bossZ arma su ficha (sim/bosses.ts lleva su cabeza; su barra va arriba de la pantalla).
   ...bossZombies(),
 };
@@ -1655,6 +1708,10 @@ export const BOUNTY = {
   bull: 7.5,
   rock: 10,
   demon: 10,
+  spitter: 2,
+  screamer: 3,
+  digger: 3,
+  jumper: 2,
   giant: 2.5,
   golden: 0,
   supremo: 100,
@@ -1746,6 +1803,33 @@ export const DEMON = {
   leap: { cd: [2.5, 5], min: 110, max: 420, up: 330, land: 6 },
   frenzy: { every: [2.5, 5], time: [0.9, 1.6], speed: 1.45, zig: 0.55 },
 };
+
+// Zombis con habilidades (sim/specials.ts). from / first / per: desde qué oleada salen, cuántos en la
+// primera y cuántos más por oleada (como los rocosos y demonios; en grupo se escalan igual).
+// spitter: alcance del escupitajo (px, min y max), preparación (s), espera entre escupitajos, vuelo (s),
+//   radio, daño y zona de ácido que deja (BOSS_ZONES)
+// screamer: a qué distancia de ti grita, preparación, espera, radio del grito, cuánto acelera y cuánto dura
+// digger: velocidad bajo tierra (× la suya), a qué distancia de ti sale, aviso antes de salir (s), máximo
+//   bajo tierra (s), radio y daño al salir
+// jumper: espera entre saltos, duración del salto (s), altura (px) y largo extra tras la barricada (px)
+export const SPECIALS = {
+  spitter: {
+    from: 4,
+    first: 2,
+    per: 1.2,
+    range: [170, 430],
+    windup: 0.55,
+    cd: [3.2, 4.8],
+    fly: 0.85,
+    r: 46,
+    hit: 10,
+    zone: 'toxic',
+  },
+  screamer: { from: 7, first: 1, per: 0.5, near: 480, windup: 0.7, cd: [6, 8], r: 260, boost: 1.4, time: 4 },
+  digger: { from: 9, first: 2, per: 0.7, speed: 1.35, emerge: 36, warn: 0.8, max: 14, r: 56, hit: 14 },
+  jumper: { from: 12, first: 3, per: 1, cd: 1.2, time: 0.55, up: 55, over: 34 },
+};
+export const SPECIAL_ORDER = ['spitter', 'screamer', 'digger', 'jumper'] as const;
 
 export const BULL = {
   sight: 430,
@@ -1843,6 +1927,45 @@ export const COMBO = {
   ],
 };
 
+// Rarezas de las mejoras (sim/upgrades.ts). Cada una se gana de una forma (UPGRADE_SOURCES): al subir
+// de nivel salen comunes y raras (las raras desde la oleada fromWave y con poco peso); al matar al zombi
+// dorado, una rara a elegir; al derrotar a un jefe, el cofre legendario: legendarias y, si ya tienes las
+// dos mejoras que combina, una sinergia. weight multiplica la probabilidad dentro de su tanda.
+export const RARITY: Record<string, { name: string; weight: number; fromWave: number }> = {
+  comun: { name: 'Mejora', weight: 1, fromWave: 1 },
+  rara: { name: 'Rara', weight: 0.25, fromWave: 3 },
+  legendaria: { name: 'Legendaria', weight: 1, fromWave: 1 },
+  sinergia: { name: 'Sinergia', weight: 1, fromWave: 1 },
+};
+
+// De dónde sale cada tanda de mejoras y qué rarezas trae (si no alcanza, se completa con la siguiente
+// lista: el cofre del jefe sin legendarias que dar ofrece raras, y luego comunes). title: lo que dice la
+// pantalla de elegir.
+export const UPGRADE_SOURCES: Record<string, { rarities: string[][]; title: string }> = {
+  level: { rarities: [['comun', 'rara']], title: '' },
+  golden: { rarities: [['rara'], ['comun']], title: 'Botín del zombi dorado' },
+  boss: { rarities: [['legendaria', 'sinergia'], ['rara'], ['comun']], title: 'Cofre legendario del jefe' },
+};
+
+// Mejoras con mecánicas (las raras, legendarias y sinergias de sim/upgrades.ts; las aplica sim/perks.ts).
+// burn: s de fuego que deja cada bala por nivel · bounce: alcance (px) y daño que conserva el rebote
+// vamp: vida por baja a balazos y nivel · greed: dinero extra por baja y nivel · frenzy: cadencia extra
+// con la racha activa (×1,5 o más) · twin: desvío (rad) de la bala extra · volatile: probabilidad de
+// que estalle el zombi que matas a balazos, radio y daño (por la vida de la oleada, director.hpMult)
+// lastStand: vida con la que te levantas (fracción), radio y daño de la onda · inferno: radio de la
+// explosión del que muere ardiendo, daño y s de fuego que pega a los de alrededor
+export const PERKS = {
+  burn: 1.5,
+  bounce: { range: 220, dmg: 0.6 },
+  vamp: 1,
+  greed: 0.2,
+  frenzy: 0.25,
+  twin: 0.07,
+  volatile: { chance: 0.3, radius: 70, power: 60 },
+  lastStand: { hp: 0.35, radius: 170, power: 260 },
+  inferno: { radius: 80, power: 30, burn: 2.5 },
+};
+
 // Rondas especiales: desde la oleada `from`, cada oleada tiene `chance` de serlo; nunca dos
 // seguidas ni un tipo que salió en las `gap` especiales anteriores. Cada tipo lleva su cartel
 // (name, desc), tag: su nombre corto en el contador de oleada, y pay: multiplicador del dinero
@@ -1926,6 +2049,10 @@ export const DROPS = {
   bull: { ammo: 0.4, med: 0.15 },
   rock: { ammo: 0.5, med: 0.2 },
   demon: { ammo: 0.5, med: 0.2 },
+  spitter: { ammo: 0.12, med: 0.04 },
+  screamer: { ammo: 0.15, med: 0.05 },
+  digger: { ammo: 0.15, med: 0.05 },
+  jumper: { ammo: 0.1, med: 0.04 },
   golden: { ammo: 0.5, med: 0.5 },
 };
 
@@ -2428,6 +2555,10 @@ export const ZOMBIE_VARIANTS = {
   bull: 3,
   rock: 2,
   demon: 2,
+  spitter: 2,
+  screamer: 2,
+  digger: 2,
+  jumper: 2,
   giant: 2,
   supremo: 1,
   aplastador: 1,

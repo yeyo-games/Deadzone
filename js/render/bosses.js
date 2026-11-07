@@ -4,6 +4,7 @@
 import { BOSS_ZONE_ORDER, BOSS_ZONES } from '../core/config.ts';
 import { TAU } from '../core/util.ts';
 import { bossFx, bossStatus, FX_CAST, FX_LINE, FX_LOB, FX_RING, FX_ZONE } from '../sim/bosses.ts';
+import { LOB_ACID } from '../sim/specials.ts';
 
 const EMPTY = { status: [], fx: [] };
 
@@ -125,7 +126,8 @@ export function drawBossGround(ctx, game, time) {
     const [k, x, y, r, a, t, dur, w] = f;
     const p = dur > 0 ? Math.min(1, t / dur) : 1;
     if (k === FX_RING) ring(ctx, x, y, r, p, time, '220,50,35');
-    else if (k === FX_LOB) ring(ctx, x, y, r, p, time, '235,140,40');
+    // dónde cae: naranja la piedra de un jefe, verde el escupitajo de ácido (a = LOB_ACID)
+    else if (k === FX_LOB) ring(ctx, x, y, r, p, time, a === LOB_ACID ? '140,210,80' : '235,140,40');
     else if (k === FX_LINE) band(ctx, x, y, r, a, w || 40, p, time);
     else if (k === FX_CAST) {
       // está llamando, gritando o preparando algo: un círculo morado que late
@@ -143,6 +145,36 @@ export function drawBossGround(ctx, game, time) {
       ctx.fill();
     }
   }
+}
+
+// Escupitajo de ácido en el aire (escupidor): una gota verde que brilla, con su sombra.
+function acidLob(ctx, gx, gy, k, t) {
+  const h = 4 * 70 * k * (1 - k);
+  ctx.fillStyle = `rgba(0,0,0,${0.15 + 0.2 * k})`;
+  ctx.beginPath();
+  ctx.ellipse(gx, gy, 7 + 5 * k, 5 + 3 * k, 0, 0, TAU);
+  ctx.fill();
+  ctx.save();
+  ctx.translate(gx, gy - h);
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.fillStyle = 'rgba(140,230,70,0.35)';
+  ctx.beginPath();
+  ctx.arc(0, 0, 14, 0, TAU);
+  ctx.fill();
+  ctx.globalCompositeOperation = 'source-over';
+  const wob = 1 + 0.12 * Math.sin(t * 20);
+  ctx.fillStyle = '#9ad84a';
+  ctx.strokeStyle = '#2a3a12';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 7 * wob, 7 / wob, t * 3, 0, TAU);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(230,255,190,0.8)';
+  ctx.beginPath();
+  ctx.arc(-2, -2, 2.2, 0, TAU);
+  ctx.fill();
+  ctx.restore();
 }
 
 // Encima de todo: lo que vuela (con su sombra), el polvo que tapa la vista y la piel endurecida.
@@ -164,10 +196,14 @@ export function drawBossAir(ctx, game, time) {
       continue;
     }
     if (f[0] !== FX_LOB) continue;
-    const [, x, y, , , t, dur, x0, y0] = f;
+    const [, x, y, , kind, t, dur, x0, y0] = f;
     const k = dur > 0 ? Math.min(1, t / dur) : 1;
     const gx = x0 + (x - x0) * k;
     const gy = y0 + (y - y0) * k;
+    if (kind === LOB_ACID) {
+      acidLob(ctx, gx, gy, k, time + x0);
+      continue;
+    }
     const h = 4 * 150 * k * (1 - k);
     ctx.fillStyle = `rgba(0,0,0,${0.2 + 0.25 * k})`;
     ctx.beginPath();

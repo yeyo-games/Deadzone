@@ -28,6 +28,10 @@ export interface Lob extends Hit {
   dur: number;
   r: number;
   by: Zombie;
+  /** 0 piedra · 1 escupitajo de ácido (LOB_ACID en specials.ts): cómo se dibuja y cómo cae */
+  kind?: number;
+  /** causa de muerte si te mata (si no, boss_lob) */
+  cause?: string;
 }
 /** Zona en el suelo: hace daño y frena a quien esté dentro desde arm s hasta life s. */
 export interface Zone {
@@ -1005,7 +1009,13 @@ export function updateBossWorld(h: Horde, dt: number, game: GameHost) {
     l.t += dt;
     if (l.t < l.dur) continue;
     h.lobs.splice(i, 1);
-    areaHit(game, h, l.by, l.x, l.y, l.r, l, 'boss_lob');
+    areaHit(game, h, l.by, l.x, l.y, l.r, l, l.cause || 'boss_lob');
+    if (l.kind) {
+      // escupitajo: salpica ácido, sin temblor ni piedras
+      game.particles.ring(l.x, l.y, l.r, '150,220,90');
+      game.sfx.sizzle();
+      continue;
+    }
     game.particles.debris(l.x, l.y, 24, 'rock');
     quake(game, l.x, l.y, l.r, l.zone ? BOSS_ZONES[l.zone].col : '200,170,120', 0.8);
   }
@@ -1055,7 +1065,7 @@ export function bossFx(h: Pick<Horde, 'list' | 'lobs' | 'zones'>) {
     const dur = z.tdur || 1;
     out.push([z.tk, z.tx, z.ty, z.tr, z.ta || 0, clamp(dur - Math.max(0, z.bt), 0, dur), dur, z.tw || 0, 0]);
   }
-  for (const l of h.lobs) out.push([FX_LOB, l.x, l.y, l.r, 0, l.t, l.dur, l.x0, l.y0]);
+  for (const l of h.lobs) out.push([FX_LOB, l.x, l.y, l.r, l.kind || 0, l.t, l.dur, l.x0, l.y0]);
   for (const zn of h.zones)
     out.push([FX_ZONE, zn.x, zn.y, zn.r, BOSS_ZONE_ORDER.indexOf(zn.kind), zn.t, zn.life, zn.arm, 0]);
   return out;

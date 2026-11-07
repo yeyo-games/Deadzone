@@ -1100,6 +1100,23 @@ kbd {
 .card .tg { font-size: 11px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--dim); }
 .card .key { font-size: 11px; color: var(--dim); letter-spacing: 0.1em; }
 .touch .card .key { display: none; }
+/* rarezas de las mejoras (RARITY en config.ts): rara azul, legendaria dorada con brillo, sinergia roja */
+.card.r-rara { --rc: #6f9fd8; border-top-color: var(--rc); }
+.card.r-legendaria { --rc: #e8b440; border-top-color: var(--rc); background: rgba(232, 180, 64, 0.08); }
+.card.r-sinergia { --rc: #e0603a; border-top-color: var(--rc); background: rgba(224, 96, 58, 0.09); }
+.card.r-rara .ic, .card.r-legendaria .ic, .card.r-sinergia .ic, .card.r-rara .tg, .card.r-legendaria .tg, .card.r-sinergia .tg { color: var(--rc); }
+.card.r-legendaria, .card.r-sinergia { position: relative; overflow: hidden; }
+.card.r-legendaria::after, .card.r-sinergia::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 35%, rgba(255, 240, 200, 0.16) 50%, transparent 65%);
+  transform: translateX(-100%);
+  animation: card-shine 2.4s ease-in-out 0.5s infinite;
+}
+@keyframes card-shine { 60%, 100% { transform: translateX(100%); } }
+@media (prefers-reduced-motion: reduce) { .card.r-legendaria::after, .card.r-sinergia::after { animation: none; } }
 .card.cls { border-top-color: var(--accent); }
 .card.cls .ic { color: var(--accent); }
 .card.cls.sel { background: rgba(217, 120, 58, 0.12); }

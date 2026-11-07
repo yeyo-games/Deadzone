@@ -20,7 +20,7 @@ import { ServerClock, applyMove, BODY } from './netcode.ts';
 import { IN_RUN, IN_FIRE, IN_RELOAD, IN_USE } from './protocol.ts';
 import { lookCode } from '../render/sprites.js';
 import { startDeath, updateDeath } from '../render/death.js';
-import { UPGRADES } from '../sim/upgrades.ts';
+import { isSource, UPGRADES, type UpgradeSource } from '../sim/upgrades.ts';
 import { Abilities } from '../sim/abilities.ts';
 import { applyCombo } from '../sim/combo.ts';
 import { OnlineClient, Solo } from './mode.ts';
@@ -125,6 +125,9 @@ const STAT_KEYS = [
   'pierce',
   'reloadMult',
   'cdMult',
+  // Frenesí y Doble cañón (perks.ts): cambian la cadencia y las balas que se predicen
+  'frenzy',
+  'twin',
 ];
 // códigos de cierre del servidor (server/src/rooms/DeadZoneRoom.ts)
 const KICKED = 4100;
@@ -169,7 +172,7 @@ export class Online {
   declare acc: number;
   declare lastQ: number;
   declare wantReload: boolean;
-  declare up: { n: number; ids: string[] } | null;
+  declare up: { n: number; ids: string[]; src: string } | null;
   declare upDone: number;
   declare lastDs: string;
   declare rdSig: string;
@@ -824,9 +827,14 @@ export class Online {
         p.rageT = Math.max(0, (Number(s.ab[2]) || 0) / 100);
       }
     }
+    // [tanda, ...ids, '@golden' | '@boss' si es un premio]
     const up =
       Array.isArray(s.up) && s.up.length > 1
-        ? { n: s.up[0] | 0, ids: s.up.slice(1).filter((id: string) => UPGRADES.some((u) => u.id === id)) }
+        ? {
+            n: s.up[0] | 0,
+            ids: s.up.slice(1).filter((id: string) => UPGRADES.some((u) => u.id === id)),
+            src: (s.up.find((id: unknown) => typeof id === 'string' && id[0] === '@') || '@level').slice(1),
+          }
         : null;
     this.up = up && up.ids.length ? up : null;
     // fin de oleada: tienda y mejoras; si empieza la siguiente con la tienda abierta, se cierra
@@ -858,6 +866,11 @@ export class Online {
   // Las mejoras que ofrece ahora el servidor (para la pantalla de subir de nivel).
   upChoices() {
     return this.up ? this.up.ids.map((id) => UPGRADES.find((u) => u.id === id)) : [];
+  }
+
+  // De dónde sale la tanda que ofrece el servidor: subir de nivel, el zombi dorado o el cofre del jefe.
+  upSource(): UpgradeSource {
+    return this.up && isSource(this.up.src) ? this.up.src : 'level';
   }
 
   pickUpgrade(i: number) {

@@ -22,6 +22,10 @@ const NAMES = {
   bull: 'Toro',
   rock: 'Rocoso',
   demon: 'Demonio rojo',
+  spitter: 'Escupidor',
+  screamer: 'Chillón',
+  digger: 'Excavador',
+  jumper: 'Saltador',
   giant: 'Gigante',
   golden: 'Dorado',
   ...Object.fromEntries(BOSS_ORDER.map((k) => [k, BOSSES[k].name])),
@@ -48,6 +52,12 @@ const countsText = (k) =>
     ['fat', k.fat],
     ['heavy', k.heavy],
     ['bull', k.bull],
+    ['rock', k.rock],
+    ['demon', k.demon],
+    ['spitter', k.spitter],
+    ['screamer', k.screamer],
+    ['digger', k.digger],
+    ['jumper', k.jumper],
   ]
     .filter(([, n]) => n > 0)
     .map(([t, n]) => `${NAMES[t].toLowerCase()} ${n}`)

@@ -1,6 +1,7 @@
-import { IMPROV, WEAPONS } from '../core/config.ts';
+import { IMPROV, PERKS, WEAPONS } from '../core/config.ts';
 import { rand, segCircleT } from '../core/util.ts';
 import type { Bullet, GameHost, Zombie } from '../core/types.d.ts';
+import { bounceTarget } from './perks.ts';
 
 const near: Zombie[] = [];
 // Parte de las balas rebota en la armadura del super blindado (sin hacer daño).
@@ -94,7 +95,7 @@ export class Bullets {
 
       let dead = wall;
       let endT = 1;
-      let bounce = null;
+      let bounce: { dx: number; dy: number; perk?: boolean } | null = null;
       // procesar impactos en orden a lo largo del segmento
       for (;;) {
         let best = null;
@@ -175,6 +176,14 @@ export class Bullets {
         game.hitZombie(best, b, hx, hy);
         // el gigante absorbe la bala: protege a los que vienen detrás
         if (best.def.blocksBullets || b.pierce <= 0) {
+          // Rebote (perks.ts): en vez de quedarse en el zombi, salta al más cercano
+          const to = best.def.blocksBullets ? null : bounceTarget(game, b, hx, hy);
+          if (to) {
+            bounce = { ...to, perk: true };
+            wall = false;
+            endT = bt;
+            break;
+          }
           dead = true;
           wall = false;
           endT = bt;
@@ -194,9 +203,17 @@ export class Bullets {
         b.x += b.dx * 3;
         b.y += b.dy * 3;
         b.trail = 0;
-        b.dmg *= 0.5;
-        b.pierce = 0;
-        b.life = Math.min(b.life, 240);
+        if (bounce.perk) {
+          // rebote de la mejora: busca al siguiente con lo que le quede de daño (todo, con la sinergia)
+          b.bounce--;
+          b.bounced = true;
+          if (!b.bounceKeep) b.dmg *= PERKS.bounce.dmg;
+          b.life = Math.max(b.life, PERKS.bounce.range + 40);
+        } else {
+          b.dmg *= 0.5;
+          b.pierce = 0;
+          b.life = Math.min(b.life, 240);
+        }
       }
       if (b.atgm && !b.exploded && (wall || b.life <= 0)) {
         b.exploded = true;

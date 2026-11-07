@@ -31,7 +31,7 @@ import {
   HEAVY,
   xpForLevel,
 } from '../../../js/core/config.ts';
-import { rollUpgrades, UPGRADES } from '../../../js/sim/upgrades.ts';
+import { rollUpgrades, UPGRADES, type UpgradeSource } from '../../../js/sim/upgrades.ts';
 import { Abilities, isClass } from '../../../js/sim/abilities.ts';
 import * as Rules from '../../../js/sim/rules.ts';
 import { heavyAuto, heavyPrice, toggleHeavyFire, upgradeHeavy } from '../../../js/sim/heavy.ts';
@@ -66,6 +66,9 @@ export const STAT_KEYS = [
   'pierce',
   'reloadMult',
   'cdMult',
+  // Frenesí y Doble cañón (perks.ts): cambian la cadencia y las balas que se predicen
+  'frenzy',
+  'twin',
 ];
 
 type Fx = { e: unknown[]; x?: number; y?: number; by: string | null };
@@ -99,6 +102,9 @@ export type Slot = {
   // mejoras ofrecidas ahora (ids) y su número de tanda, para no aplicar una elección vieja
   choices: string[];
   choiceN: number;
+  // premios por elegir ('golden': zombi dorado, 'boss': cofre del jefe) y de dónde sale la tanda ofrecida
+  bonus: UpgradeSource[];
+  choiceSrc: UpgradeSource;
   // barricadas, trampas y lanzables comprados (sin usar), su robot y el ácido que lo quema
   inv: Record<string, number>;
   robot: any;
@@ -183,6 +189,8 @@ export class ServerSim {
         taken: {},
         choices: [],
         choiceN: 0,
+        bonus: [],
+        choiceSrc: 'level',
         inv: Object.fromEntries(SHOP_ORDER.map((k: string) => [k, 0])),
         robot: new Robot(),
         acts: [],
@@ -403,11 +411,17 @@ export class ServerSim {
       golden: (_zb: any, reward: number) => {
         if (!by) return;
         by.money += reward;
-        by.toasts.push(`¡Zombi dorado! +$${reward}`);
+        by.toasts.push(`¡Zombi dorado! +${reward}`);
+        // y una mejora rara a elegir
+        by.bonus.push('golden');
       },
       // jefe derrotado: el premio es para cada jugador
+      // y para cada uno, el cofre legendario
       boss: (_zb: any, reward: number) => {
-        for (const s of this.slots.values()) s.money += reward;
+        for (const s of this.slots.values()) {
+          s.money += reward;
+          s.bonus.push('boss');
+        }
       },
       toast: (m: string) => this.toastAll(m),
     });
@@ -423,12 +437,17 @@ export class ServerSim {
   // oleada: el jugador la abre cuando quiere, porque la partida no se detiene por él).
   offerUpgrades() {
     for (const s of this.slots.values()) {
-      if (s.choices.length || s.pending <= 0 || !s.p.alive) continue;
-      const ups = rollUpgrades(s.p, s.level - s.pending + 1, s.taken);
+      if (s.choices.length || (s.pending <= 0 && !s.bonus.length) || !s.p.alive) continue;
+      // los premios (zombi dorado, cofre del jefe) van antes que los niveles
+      const source: UpgradeSource = s.bonus[0] || 'level';
+      const wave = this.game.director.wave;
+      const ups = rollUpgrades(s.p, s.level - s.pending + 1, s.taken, 3, { source, wave });
       if (!ups.length) {
-        s.pending = 0;
+        if (source === 'level') s.pending = 0;
+        else s.bonus.shift();
         continue;
       }
+      s.choiceSrc = source;
       s.choices = ups.map((u: any) => u.id);
       s.choiceN++;
     }
@@ -441,7 +460,9 @@ export class ServerSim {
     if (!u) return false;
     u.apply(s.p);
     s.taken[u.id] = (s.taken[u.id] || 0) + 1;
-    s.pending--;
+    // un premio se cobra aparte: no gasta un nivel
+    if (s.choiceSrc !== 'level') s.bonus.shift();
+    else s.pending--;
     s.choices = [];
     if (u.weapon) s.toasts.push(`${u.name} equipada`);
     return true;
@@ -939,7 +960,9 @@ export class ServerSim {
         // lo que disparó él ya lo vio en su pantalla; las torretas se repiten como efecto
         // las del piloto automático de su torreta no las predijo: también le llegan
         // el misil improvisado lo lanza el servidor: también lo ve quien lo lanzó
-        skipBullet: (b: any) => (b.owner === id && !b.auto && !b.improv) || !!b.turret || !!b.atgm || !!b.flame,
+        // la bala que rebota (mejora Rebote) sigue un camino que él no predijo: también le llega
+        skipBullet: (b: any) =>
+          (b.owner === id && !b.auto && !b.improv && !b.bounced) || !!b.turret || !!b.atgm || !!b.flame,
       },
     );
     const st = this.structures;
@@ -1004,7 +1027,8 @@ export class ServerSim {
       snap.ml = s.lost;
       s.lost = 0;
     }
-    if (s.choices.length) snap.up = [s.choiceN, ...s.choices];
+    // al final, de dónde sale la tanda ('@golden', '@boss'; nada al subir de nivel)
+    if (s.choices.length) snap.up = [s.choiceN, ...s.choices, ...(s.choiceSrc !== 'level' ? [`@${s.choiceSrc}`] : [])];
     if (fx.length) snap.fx = fx;
     if (s.toasts.length) {
       snap.tt = s.toasts.slice(0, 4);

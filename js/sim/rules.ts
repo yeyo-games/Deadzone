@@ -18,6 +18,7 @@ import { rand, randInt } from '../core/util.ts';
 import { ACID } from './build.ts';
 import { bulletHit } from './combat.ts';
 import { onFallen } from './bosses.ts';
+import { onKill, ownShot } from './perks.ts';
 
 import type { Bullet, GameHost, Zombie } from '../core/types.d.ts';
 import type { Player } from './player.ts';
@@ -56,8 +57,15 @@ export const bountyOf = (type: string) => (BOUNTY as Record<string, number>)[typ
  * Lo que paga ahora a p una baja de ese tipo: la recompensa por la racha y por la ronda especial.
  * Las recompensas tienen fracciones: se paga en dólares enteros y lo que sobra queda en p.cash.
  */
-export function bountyNow(game: GameHost, p: Pick<Player, 'cash'>, type: string, combo: number) {
-  const v = (p.cash || 0) + bountyOf(type) * combo * (game.director.eventDef?.pay ?? 1);
+export function bountyNow(
+  game: GameHost,
+  p: Pick<Player, 'cash'> & { stats?: { greed?: number } },
+  type: string,
+  combo: number,
+) {
+  // Codicia (perks.ts): dinero extra por baja
+  const greed = 1 + (p.stats?.greed || 0);
+  const v = (p.cash || 0) + bountyOf(type) * combo * greed * (game.director.eventDef?.pay ?? 1);
   const n = Math.floor(v + 1e-9);
   p.cash = Math.max(0, v - n);
   return n;
@@ -94,6 +102,8 @@ export function hitZombie(game: GameHost, z: Zombie, b: Bullet, hx: number, hy: 
   if (z.dead) return false;
   z.lastOwner = b.owner || null;
   bulletHit(game, z, b, hx, hy);
+  // la remató una bala del arma de un jugador (no una explosión ni una torreta): lo usan las mejoras
+  if (z.hp <= 0) z.shotKill = ownShot(b);
   if (b.shot && !b.shot.hit) {
     b.shot.hit = true;
     shotHit(b);
@@ -122,6 +132,8 @@ export function killZombie(game: GameHost, z: Zombie, h: KillHooks) {
   if (z.type === 'fat' && live) game.structures.queueDeathBlast(z.type, z.x, z.y);
   // los jefes recuerdan a los caídos (resurrección) y algunos se curan con ellos
   if (live) onFallen(game, z);
+  // mejoras de quien la hizo: curarse, que estalle, infierno… (perks.ts)
+  if (live) onKill(game, z, game.ownerOf?.(z.lastOwner ?? null) ?? null);
   h.xp(z);
   if (live) h.bounty(z);
   const hasGuns = game.mode.inGroup() || (game.player && game.player.weapons.length > 1);

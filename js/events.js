@@ -40,13 +40,17 @@ export function killZombie(game, z) {
       game.moneyEarned += reward;
       game.moneyPop(`+$${reward}`, 'gold');
       game.sfx.gold();
-      game.toast(`¡Zombi dorado! +$${reward}`);
+      game.toast(`¡Zombi dorado! +${reward}`);
+      // y una mejora rara a elegir (ui/levelup.js)
+      game.bonusPicks.push('golden');
     },
     // jefe derrotado: el premio es para cada jugador (en el cooperativo el compañero cobra en su equipo)
     boss: (_zb, reward) => {
       game.money += reward;
       game.moneyEarned += reward;
-      game.moneyPop(`+$${reward}`, 'gold');
+      game.moneyPop(`+${reward}`, 'gold');
+      // y el cofre legendario: una legendaria (o la sinergia lista) a elegir
+      game.bonusPicks.push('boss');
     },
     toast: game.toast,
   });

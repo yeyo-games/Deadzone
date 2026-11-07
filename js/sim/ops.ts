@@ -9,7 +9,7 @@
 // Cada tipo vive en sim/ops/<tipo>.ts; aquí lo común. Los planos ganados están en sim/plans.ts.
 // Al completarla se cobra la recompensa más sus bonos (rápida, nadie cayó, objetivo intacto y bajas), por
 // la ruleta del botín y por la racha de operaciones seguidas; el informe se ve unos segundos (OPS.bonus).
-import { OP_PLAN, OPS, ROBOT, ZOMBIES } from '../core/config.ts';
+import { OP_PLAN, OPS, ROBOT, SPECIAL_ORDER, ZOMBIES } from '../core/config.ts';
 import { rand, TAU } from '../core/util.ts';
 import type { GameHost, Vec } from '../core/types.d.ts';
 import {
@@ -274,7 +274,9 @@ export class Ops {
     const d = game.director;
     const next = d.wave + 1;
     const c = d.composition(next);
-    const mix: [string, number][] = (['normal', 'swat', 'sprinter', 'fat', 'heavy', 'bull', 'rock', 'demon'] as const)
+    const mix: [string, number][] = (
+      ['normal', 'swat', 'sprinter', 'fat', 'heavy', 'bull', 'rock', 'demon', ...SPECIAL_ORDER] as const
+    )
       .map((k): [string, number] => [k, c[k]])
       .filter(([, n]) => n > 0);
     // el escalado del grupo (crowd) ya va en composition: se fija aquí y no cambia si alguien se va

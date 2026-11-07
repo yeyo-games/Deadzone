@@ -74,7 +74,21 @@ test('salen desde la oleada DEMON.from, pocos, y crecen; en la estampida no', ()
   assert.ok(waveCounts(DEMON.from + 10, m, null).demon > waveCounts(DEMON.from, m, null).demon);
   assert.equal(waveCounts(30, m, EVENTS.types.stampede).demon, 0);
   const c = waveCounts(20, m, null);
-  assert.equal(c.total, c.normal + c.swat + c.sprinter + c.fat + c.heavy + c.bull + c.rock + c.demon);
+  assert.equal(
+    c.total,
+    c.normal +
+      c.swat +
+      c.sprinter +
+      c.fat +
+      c.heavy +
+      c.bull +
+      c.rock +
+      c.demon +
+      c.spitter +
+      c.screamer +
+      c.digger +
+      c.jumper,
+  );
 });
 
 test('la vida del rocoso y el más rápido de todos los zombis comunes', () => {

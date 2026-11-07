@@ -20,6 +20,7 @@ import type { Block } from './build.ts';
 import type { Player } from './player.ts';
 import type { Obstacle, World } from './world.ts';
 import { bossImpact, bossPunch, bossThink, type Fallen, type Lob, updateBossWorld, type Zone } from './bosses.ts';
+import { diggerThink, jumperThink, screamerThink, spitterThink, tryJump } from './specials.ts';
 
 const CELL = 64;
 
@@ -421,6 +422,11 @@ export class Horde {
       if (z.type === 'rock' && this.rockThink(z, p, d, dt, game)) continue;
       if (z.type === 'demon') this.demonThink(z, p, dx, dy, d, dt, game, world);
       if (def.boss && bossThink(this, z, p, d, dt, game)) continue;
+      // zombis con habilidades (specials.ts): mientras preparan su ataque, cavan o saltan no caminan
+      if (z.type === 'spitter' && spitterThink(this, z, p, d, dt, game)) continue;
+      if (z.type === 'screamer' && screamerThink(this, z, p, d, dt, game)) continue;
+      if (z.type === 'digger' && diggerThink(this, z, p, d, dt, game, world)) continue;
+      if (z.type === 'jumper' && jumperThink(z, dt, game)) continue;
       let mx;
       let my;
       if (z.type === 'golden') {
@@ -552,8 +558,8 @@ export class Horde {
       }
       // te moriste: los de cerca corren a comerte (render/death.js)
       if (!p.alive && !targets && p !== IDLE && d < DEATH.feastR) sp *= DEATH.feast;
-      // alambre de púas: frena y hiere
-      const trap = game.structures.wires.length ? game.structures.trapAt(z, dt, game) : null;
+      // alambre de púas: frena y hiere (el saltador pasa por encima)
+      const trap = game.structures.wires.length && z.type !== 'jumper' ? game.structures.trapAt(z, dt, game) : null;
       if (trap) {
         sp *= trap.slow;
         z.hp -= trap.dps * dt;
@@ -659,6 +665,12 @@ export class Horde {
         z.chkT = 0;
         z.chkX = z.x;
         z.chkY = z.y;
+      }
+      // el saltador brinca la barricada de una sola capa en vez de morderla (specials.ts)
+      if (z.type === 'jumper' && world.lastBlock && !z.dead && tryJump(z, world.lastBlock as Block, game, world)) {
+        z.ox = z.x;
+        z.oy = z.y;
+        continue;
       }
       // golpea la barricada que le cierra el paso
       if (world.lastBlock && !z.inRange && !z.dead && z.type !== 'bull' && z.type !== 'rock') {

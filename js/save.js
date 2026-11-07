@@ -12,6 +12,7 @@ import {
 import { storage } from './core/util.ts';
 import { isClass } from './sim/abilities.ts';
 import { heavyMaxHp, widenHeavyUp } from './sim/heavy.ts';
+import { isSource } from './sim/upgrades.ts';
 
 // Cada cuenta tiene dos guardados: el automático (también a mitad de ronda) y el punto
 // de control al terminar cada ronda, para continuar tras morir (ver accounts.js).
@@ -48,6 +49,7 @@ export function saveProgress(game) {
     level: game.level,
     xp: game.xp,
     taken: game.taken,
+    bonus: game.bonusPicks,
     money: game.money,
     moneyEarned: game.moneyEarned,
     dev: !!game.devUsed,
@@ -109,6 +111,7 @@ export function loadProgress(game, kind = 'save') {
   game.xp = d.xp;
   game.xpNeed = xpForLevel(d.level);
   game.taken = d.taken || {};
+  game.bonusPicks = Array.isArray(d.bonus) ? d.bonus.filter(isSource) : [];
   game.money = d.money;
   game.moneyEarned = d.moneyEarned;
   game.devUsed = !!d.dev;

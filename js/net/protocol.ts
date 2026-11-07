@@ -33,6 +33,11 @@ export const TYPES = [
   'titan',
   'rey',
   'demon',
+  // zombis con habilidades (al final: el orden viaja en la foto)
+  'spitter',
+  'screamer',
+  'digger',
+  'jumper',
 ];
 export const PICKS = ['ammo', 'med', 'crate'];
 

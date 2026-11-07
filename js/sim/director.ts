@@ -7,6 +7,8 @@ import {
   MAX_ALIVE,
   ROCK,
   DEMON,
+  SPECIALS,
+  SPECIAL_ORDER,
   START,
   WORLD_SIZE,
   WAVES,
@@ -35,6 +37,11 @@ export interface WaveCounts {
   bull: number;
   rock: number;
   demon: number;
+  /** zombis con habilidades (SPECIALS) */
+  spitter: number;
+  screamer: number;
+  digger: number;
+  jumper: number;
   /** el jefe de la oleada (1) o ninguno */
   boss?: number;
   total: number;
@@ -61,12 +68,21 @@ export function waveCounts(w: number, m: number, ev: EventDef | null): WaveCount
   let rock = few(w >= ROCK.from ? ROCK.first + Math.floor((w - ROCK.from) * ROCK.per) : 0);
   // demonios rojos desde la oleada DEMON.from: pocos, rapidísimos y duros
   let demon = few(w >= DEMON.from ? DEMON.first + Math.floor((w - DEMON.from) * DEMON.per) : 0);
+  // zombis con habilidades (SPECIALS): cada uno desde su oleada, pocos y cada vez más
+  const sp = (k: (typeof SPECIAL_ORDER)[number]) => {
+    const S = SPECIALS[k];
+    return few(w >= S.from ? S.first + Math.floor((w - S.from) * S.per) : 0);
+  };
+  let spitter = sp('spitter');
+  let screamer = sp('screamer');
+  let digger = sp('digger');
+  let jumper = sp('jumper');
   if (ev?.size) {
     // estampida: una horda más chica, toda de velocistas y toros
     const total = Math.round((normalTotal + sprinter + fat + bull) * ev.size);
     bull = Math.max(few(2), Math.round(total * (ev.bulls ?? 0)));
     sprinter = total - bull;
-    normal = swat = fat = heavy = rock = demon = 0;
+    normal = swat = fat = heavy = rock = demon = spitter = screamer = digger = jumper = 0;
   }
   normal -= heavy;
   return {
@@ -78,7 +94,11 @@ export function waveCounts(w: number, m: number, ev: EventDef | null): WaveCount
     bull,
     rock,
     demon,
-    total: normal + swat + sprinter + fat + heavy + bull + rock + demon,
+    spitter,
+    screamer,
+    digger,
+    jumper,
+    total: normal + swat + sprinter + fat + heavy + bull + rock + demon + spitter + screamer + digger + jumper,
   };
 }
 
@@ -175,6 +195,7 @@ export class Director {
       bull: bulls,
       rock: rocks,
       demon: demons,
+      ...specials
     } = waveCounts(w, boss ? m * BOSS.support : m, ev);
     const q: string[] = [];
     for (let i = 0; i < normals; i++) q.push('normal');
@@ -185,6 +206,9 @@ export class Director {
     for (let i = 0; i < bulls; i++) q.splice(randInt(Math.floor(q.length * 0.15), q.length), 0, 'bull');
     for (let i = 0; i < rocks; i++) q.splice(randInt(Math.floor(q.length * 0.1), q.length), 0, 'rock');
     for (let i = 0; i < demons; i++) q.splice(randInt(Math.floor(q.length * 0.1), q.length), 0, 'demon');
+    // los de habilidades, repartidos desde el primer décimo de la oleada
+    for (const k of SPECIAL_ORDER)
+      for (let i = 0; i < specials[k]; i++) q.splice(randInt(Math.floor(q.length * 0.1), q.length), 0, k);
     // el jefe sale en la primera ráfaga
     if (boss) q.unshift(boss);
     this.queue = q;

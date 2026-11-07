@@ -4,6 +4,10 @@ import { TAU, rand, clamp } from '../core/util.ts';
 import type { Bullet, GameHost, Zombie } from '../core/types.d.ts';
 import type { Player } from './player.ts';
 import { milBlastR, milDmg, milRange, milReload, milSalvo, milTurn, repairHeavies, updateAutoHeavy } from './heavy.ts';
+import { perkBlast } from './perks.ts';
+
+/** Explosión de una mejora (perks.ts): de quién es, radio, daño y fuego que pega alrededor. */
+type PerkBlast = { owner?: string | null; R?: number; power?: number; burn?: number };
 
 // Ficha de la tienda: sólo los campos que usa este módulo; w/h/hp existen en todas las piezas que se construyen.
 interface ShopDef {
@@ -336,7 +340,7 @@ export class Structures {
   declare grenades: Grenade[];
   declare blasts: Blast[];
   declare scorches: Scorch[];
-  declare pending: { kind: string; x: number; y: number; t: number }[];
+  declare pending: { kind: string; x: number; y: number; t: number; o?: PerkBlast }[];
   declare fires: Fire[];
   declare stuck: Stuck[];
   declare stickies: Sticky[];
@@ -838,8 +842,9 @@ export class Structures {
   }
 
   // Los reventones de ácido se encolan: así una cadena de gordos no se pisa a sí misma.
-  queueDeathBlast(kind: string, x: number, y: number) {
-    this.pending.push({ kind, x, y, t: 0.06 });
+  // También las de las mejoras ('perk', con su radio y daño en o): así una cadena no se dispara entera de golpe.
+  queueDeathBlast(kind: string, x: number, y: number, o?: PerkBlast) {
+    this.pending.push({ kind, x, y, t: 0.06, ...(o ? { o } : {}) });
   }
 
   /* ---------- cohetes clavados ---------- */
@@ -1058,7 +1063,8 @@ export class Structures {
       b.t -= dt;
       if (b.t > 0) continue;
       this.pending.splice(i, 1);
-      this.acidBurst(game, b.x, b.y);
+      if (b.kind === 'perk') perkBlast(game, b.x, b.y, b.o || {});
+      else this.acidBurst(game, b.x, b.y);
     }
     this.updateFires(dt, game);
     this.updateMissiles(dt, game);
