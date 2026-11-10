@@ -88,6 +88,10 @@
           <button class="op-btn" id="btn-esc-shop" type="button">Tienda</button>
         </div>
         <div class="esc-fuel" id="esc-fuel" hidden><i id="esc-fuel-fill"></i><span id="esc-fuel-lbl"></span></div>
+        <div class="esc-sub">
+          <div class="esc-obj" id="esc-obj" hidden><span id="esc-obj-t"></span><i class="esc-mini"><u id="esc-obj-fill"></u></i></div>
+          <div class="esc-ups" id="esc-ups" hidden></div>
+        </div>
       </div>
       <!-- operación de alto riesgo en curso (ui/ops.js) -->
       <div id="op-hud" hidden>
@@ -306,7 +310,7 @@
       <div class="panel coop-panel">
         <p class="kicker">De 2 a 4 jugadores</p>
         <h2>En línea</h2>
-        <p class="acct-lead">Todos se conectan a un <b>servidor</b>: funciona en cualquier red. Crea una sala y pásale el código o el enlace a tu amigo: se juega de <b>2 a 4</b>. Si alguien cae, revive al terminar la oleada.</p>
+        <p class="acct-lead">Todos se conectan a un <b>servidor</b>: funciona en cualquier red. Crea una sala y pásale el código o el enlace a tu amigo: se juega de <b>2 a 4</b>. Si alguien cae, revive al terminar la oleada (en la Huida, en la siguiente parada).</p>
         <p class="coop-label">Tu clase</p>
         <div class="class-row"></div>
         <div class="coop-step" id="ol-choose">
@@ -531,10 +535,28 @@
             </dl>
             <p class="rc-help help-desktop">Clic en una parada · teclas 1–3 · Enter para viajar</p>
             <div class="rc-btns">
+              <button class="btn ghost" id="btn-route-van" type="button">Taller</button>
               <button class="btn ghost" id="btn-route-shop" type="button">Tienda</button>
               <button class="btn primary" id="btn-route-go" type="button">Viajar</button>
             </div>
           </aside>
+        </div>
+        <!-- taller: mejoras de la camioneta (ui/route.js) -->
+        <div class="route-garage" id="route-garage" hidden>
+          <div class="rg-panel">
+            <header class="rg-head">
+              <div>
+                <p class="kicker">Taller</p>
+                <h3>Mejora la camioneta</h3>
+              </div>
+              <b class="rg-money" id="rg-money">$0</b>
+            </header>
+            <div class="rg-list" id="rg-list"></div>
+            <footer class="rg-foot">
+              <p>Sirven a todo el equipo y duran todo el viaje</p>
+              <button class="btn primary" id="btn-garage-close" type="button">Listo</button>
+            </footer>
+          </div>
         </div>
       </div>
     </section>

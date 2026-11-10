@@ -549,6 +549,11 @@ export class Horde {
         sp *= z.buffK || 1;
       }
       if (z.rageT > 0) sp *= DEMON.frenzy.speed;
+      // deslumbrado por los faros de la camioneta (modo Huida): más lento mientras le dé la luz
+      if (z.dazzleT > 0) {
+        z.dazzleT -= dt;
+        sp *= 1 - (z.dazzleK || 0);
+      }
       // sólo frenan cuando ya te tienen encima (para pegarte); antes vienen a toda velocidad
       if (inRange && d < z.r + p.r + 4) sp *= 0.15;
       else if (views && z.type !== 'golden') {

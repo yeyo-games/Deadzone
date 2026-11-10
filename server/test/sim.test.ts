@@ -20,6 +20,8 @@ import {
   START,
   WEAPONS,
   ZOMBIES,
+  ESCAPE,
+  VAN_UPS,
 } from '../../js/core/config.ts';
 import { heavyLevel } from '../../js/sim/heavy.ts';
 import { UPGRADES } from '../../js/sim/upgrades.ts';
@@ -1062,6 +1064,14 @@ test('Huida en línea: la camioneta para todos, la foto lleva el viaje y se vota
   // la tienda abre entre paradas
   a.money = 10000;
   assert.ok(sim.shop('a', 'gun', 'shotgun', 0), 'se compra entre paradas');
+  // las mejoras de la camioneta: las paga quien las compra y sirven a todos
+  const m1 = a.money;
+  assert.ok(sim.shop('a', 'van', 'armor', 0), 'blindaje comprado');
+  assert.equal(m1 - a.money, VAN_UPS.armor.price[0]);
+  assert.equal(e.ups.armor, 1);
+  b.money = 0;
+  assert.equal(sim.shop('b', 'van', 'turret', 0), false, 'sin dinero no');
+  assert.equal(sim.shop('a', 'van', 'cohete', 0), false, 'una que no existe tampoco');
   const next = e.route!.nodes[e.at].next;
   assert.equal(sim.voteStop('a', 999), false, 'no se vota una parada que no sigue');
   assert.ok(sim.voteStop('a', next[0]));
@@ -1075,6 +1085,8 @@ test('Huida en línea: la camioneta para todos, la foto lleva el viaje y se vota
   assert.equal(sim.game.world, sim.world);
   assert.ok(b.p.alive, 'el caído revive en la siguiente parada');
   assert.equal(e.phase, 'search');
+  assert.equal(e.van!.max, ESCAPE.van.hp * (1 + VAN_UPS.armor.hp), 'la camioneta llega blindada');
+  assert.equal(sim.shop('a', 'van', 'horn', 0), false, 'a mitad de una parada no hay taller');
   // fin: escaparon
   e.finish(sim.game, 'won');
   assert.ok(sim.over);

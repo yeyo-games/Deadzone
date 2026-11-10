@@ -37,7 +37,7 @@ import * as Rules from '../../../js/sim/rules.ts';
 import { heavyAuto, heavyPrice, toggleHeavyFire, upgradeHeavy } from '../../../js/sim/heavy.ts';
 import { comboBreak, comboKill, comboTick, packCombo } from '../../../js/sim/combo.ts';
 import { Escape, packEscape } from '../../../js/sim/escape.ts';
-import { ESCAPE_ROUTE } from '../../../js/core/config.ts';
+import { ESCAPE_ROUTE, VAN_UPS } from '../../../js/core/config.ts';
 import { TYPES } from '../../../js/net/protocol.ts';
 import { TAU } from '../../../js/core/util.ts';
 import type { Cmd, Act } from '../validate.ts';
@@ -335,6 +335,8 @@ export class ServerSim {
         const s = p && this.slots.get(p.sid);
         if (s) s.bonus.push(src as UpgradeSource);
       },
+      // la armería de la comisaría le dio un arma (el aviso sólo a él)
+      escapeGun: (name: string, p: any) => this.slots.get(p?.sid)?.toasts.push(`Armería abierta: ${name}`),
       onEscapeEnd: (r: string) => this.onEscapeEnd(r),
       spawnFocus: () => {
         const alive = [...this.slots.values()].filter((s) => !s.away && s.p.alive);
@@ -607,6 +609,7 @@ export class ServerSim {
     const between = this.director.state === 'waiting' || (!!this.escape && !!this.vote);
     if (!between || !this.ops.canShop()) return false;
     if (k === 'item') return this.buyItem(s, wid);
+    if (k === 'van') return this.buyVan(s, wid);
     if (k === 'robot') return this.buyRobot(s, wid);
     if (k === 'heavy') return this.buyHeavyAmmo(s, n);
     const d = Object.hasOwn(WEAPONS, wid) ? (WEAPONS as any)[wid] : null;
@@ -631,6 +634,18 @@ export class ServerSim {
       s.money -= cost;
       w.reserve += p.magSize(d) * n;
     } else return false;
+    return true;
+  }
+
+  // Modo Huida: una mejora de la camioneta (la paga quien la compra; sirve a todos).
+  buyVan(s: Slot, k: string) {
+    const e = this.escape;
+    const cost = e ? e.upCost(k) : 0;
+    if (!e || !this.vote || !cost || s.money < cost) return false;
+    s.money -= cost;
+    e.buyUp(k);
+    const name = (VAN_UPS as Record<string, { name: string }>)[k].name;
+    this.toastAll(`${s.name || 'Alguien'} mejoró la camioneta: ${name} ${e.ups[k]}`);
     return true;
   }
 

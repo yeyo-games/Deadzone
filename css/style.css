@@ -2254,6 +2254,31 @@ h4.pg-warn { color: #a3291b; }
 }
 @keyframes esc-flow { to { background-position: 28px 0; } }
 .esc-fuel span { position: relative; display: block; padding-left: 6px; font-size: 11px; font-weight: 800; line-height: 15px; letter-spacing: 0.1em; text-transform: uppercase; color: #1a1206; text-shadow: none; }
+/* objetivo de la parada (bomba, médico, armería, provisiones) y mejoras de la camioneta, en una línea */
+.esc-sub { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.esc-sub:not(:has(> :not([hidden]))) { display: none; }
+.esc-obj { --c: #f0c440; display: flex; align-items: center; gap: 7px; flex: 1; min-width: 0; padding-left: 6px; border-left: 3px solid var(--c); }
+.esc-obj[hidden] { display: none; }
+.esc-obj.medic { --c: #e05a5a; }
+.esc-obj.armory { --c: #6f9fd8; }
+.esc-obj.cart { --c: #86c08e; }
+.esc-obj span { font-size: 12px; font-weight: 800; letter-spacing: 0.04em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #e6e0d2; }
+.esc-obj .esc-mini { flex: none; width: 56px; height: 5px; }
+.esc-obj .esc-mini[hidden] { display: none; }
+.esc-obj .esc-mini u { background: var(--c); transition: transform 0.15s; }
+.esc-obj.hurt .esc-mini u { background: linear-gradient(90deg, #e0503a, #86c08e); }
+.esc-obj.done span { color: #9cf0a8; }
+.esc-obj.done span::before { content: '✓ '; }
+.esc-obj.fail { --c: #6a6a6a; }
+.esc-obj.fail span { color: var(--dim); text-decoration: line-through; }
+.esc-ups { display: flex; gap: 4px; margin-left: auto; }
+.esc-ups[hidden] { display: none; }
+.esc-ups .eu { position: relative; display: grid; place-items: center; width: 22px; height: 22px; color: #f0c440; background: rgba(240, 196, 64, 0.1); border: 1px solid rgba(240, 196, 64, 0.35); }
+.esc-ups .eu.off { opacity: 0.35; }
+.esc-ups .eu.medic { color: #ff7a6a; border-color: rgba(224, 90, 90, 0.5); background: rgba(224, 90, 90, 0.12); }
+.esc-ups .eu.medic svg { fill: currentColor; stroke: none; }
+.esc-ups svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.esc-ups b { position: absolute; right: -3px; bottom: -4px; font-family: var(--display); font-size: 12px; line-height: 1; color: #fff; text-shadow: 0 1px 2px #000; }
 /* en la Huida no hay oleadas: se esconde el contador y su panel */
 .esc-on #wave-stat { display: none; }
 /* fin: escapaste */
@@ -2366,4 +2391,74 @@ h4.pg-warn { color: #a3291b; }
   .route-card h3 { font-size: 20px; }
   .rc-desc { font-size: 12px; }
   .rc-art { height: 64px; }
+}
+/* taller del mapa de ruta: mejoras de la camioneta */
+.route-wrap { position: relative; }
+.rc-btns { grid-template-columns: 1fr 1fr 1.4fr; }
+.route-garage { position: absolute; inset: 0; z-index: 5; display: grid; place-items: center; background: rgba(6, 7, 5, 0.72); animation: route-in 0.25s ease both; }
+.route-garage[hidden] { display: none; }
+.rg-panel {
+  width: min(560px, 100%);
+  max-height: 100%;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 10px;
+  padding: 14px 14px 12px;
+  background: rgba(16, 18, 13, 0.97);
+  border: 1px solid var(--line);
+  border-top: 3px solid #f0c440;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+  min-height: 0;
+}
+.rg-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; }
+.rg-head .kicker { margin: 0; color: #f0c440; }
+.rg-head h3 { margin: 0; font-family: var(--display); font-size: 30px; font-weight: 500; line-height: 0.95; letter-spacing: 0.03em; text-transform: uppercase; }
+.rg-money { font-family: var(--display); font-size: 28px; font-weight: 500; color: #f0c440; }
+.rg-list { display: grid; gap: 6px; overflow-y: auto; min-height: 0; }
+.rg-item {
+  display: grid;
+  grid-template-columns: 44px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+  background: rgba(230, 224, 210, 0.04);
+  border: 1px solid var(--line);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+}
+.rg-item:hover:not(:disabled) { background: rgba(240, 196, 64, 0.1); border-color: rgba(240, 196, 64, 0.55); }
+.rg-item:active:not(:disabled) { transform: scale(0.99); }
+.rg-ic { display: grid; place-items: center; width: 44px; height: 44px; color: #f0c440; background: radial-gradient(circle at 40% 35%, rgba(240, 196, 64, 0.22), rgba(240, 196, 64, 0.05)); border: 1px solid rgba(240, 196, 64, 0.4); }
+.rg-ic svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.rg-txt { display: grid; gap: 2px; min-width: 0; }
+.rg-txt b { font-family: var(--display); font-size: 21px; font-weight: 500; line-height: 1; letter-spacing: 0.03em; }
+.rg-txt small { font-size: 12px; line-height: 1.25; color: #c8c2b2; }
+.rg-pips { display: flex; gap: 3px; margin-top: 2px; }
+.rg-pips em { width: 16px; height: 4px; background: rgba(230, 224, 210, 0.16); }
+.rg-pips em.on { background: #f0c440; box-shadow: 0 0 5px rgba(240, 196, 64, 0.6); }
+.rg-price { font-family: var(--display); font-size: 22px; color: #f0c440; white-space: nowrap; }
+.rg-item.poor { opacity: 0.55; }
+.rg-item.poor .rg-price { color: #e05a48; }
+.rg-item.max { cursor: default; opacity: 0.8; }
+.rg-item.max .rg-price { color: #9cf0a8; font-size: 18px; }
+.rg-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.rg-foot p { margin: 0; font-size: 12px; color: var(--dim); }
+.rg-foot .btn { font-size: 22px; padding: 9px 22px 6px; }
+@media (max-width: 760px) {
+  .rg-panel { padding: 10px; gap: 7px; }
+  .rg-head h3 { font-size: 22px; }
+  .rg-item { grid-template-columns: 36px 1fr auto; gap: 8px; padding: 6px 8px; }
+  .rg-ic { width: 36px; height: 36px; }
+  .rg-txt b { font-size: 18px; }
+  .rg-txt small { font-size: 11px; }
+  .rg-foot p { display: none; }
+  .rc-btns .btn { font-size: 18px; padding: 9px 6px 6px; }
+}
+/* con un jefe (el del puente en la Huida), el panel de la Huida baja para no tapar su barra */
+#hud:has(#boss-bar:not([hidden])) #esc-hud { top: calc(var(--sat) + 74px); }
+@media (max-width: 760px) {
+  #hud:has(#boss-bar:not([hidden])) #esc-hud { top: calc(var(--sat) + 176px); }
 }

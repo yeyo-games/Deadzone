@@ -2,8 +2,8 @@
 // cargar con H, defender la camioneta, subir y salir, y que explote.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { ESCAPE, ESCAPE_ROUTE, ESCAPE_STOPS, EVENTS } from '../js/core/config.ts';
-import { packEscape, unpackEscape } from '../js/sim/escape.ts';
+import { ESCAPE, ESCAPE_OBJ, ESCAPE_ROUTE, ESCAPE_STOPS, EVENTS, VAN_UP_ORDER, VAN_UPS } from '../js/core/config.ts';
+import { needAt, packEscape, unpackEscape } from '../js/sim/escape.ts';
 import { isFinal, makeRoute, nextStops } from '../js/sim/route.ts';
 import { Director } from '../js/sim/director.ts';
 import { Escape } from '../js/sim/escape.ts';
@@ -372,6 +372,8 @@ test('gasolinera: barriles que estallan con un disparo cerca y en cadena', () =>
   e.begin(t.game);
   assert.equal(e.barrels.length, ESCAPE_STOPS.gas.barrels);
   const [a, b] = e.barrels;
+  // sólo estos dos (los demás, puestos al azar, podían quedar cerca y estallar también en cadena)
+  e.barrels = [a, b];
   // dos barriles juntos: uno estalla con la bala y el otro por la explosión
   b.x = a.x + 40;
   b.y = a.y;
@@ -421,4 +423,252 @@ test('el estado viaja en la foto y el cliente lo deja listo para dibujarse', () 
   assert.equal(c.cans[0].taken, true);
   assert.equal(c.bossType, 'supremo');
   assert.ok(c.active);
+});
+
+test('la ruta no usa nada que dependa del motor de JavaScript (el navegador y el servidor deben generar la misma)', async () => {
+  const fs = await import('node:fs');
+  const src = fs.readFileSync(new URL('../js/sim/route.ts', import.meta.url), 'utf8');
+  assert.ok(!/\.sort\(\(\)\s*=>/.test(src), 'sort con comparador al azar: cada motor lo baraja distinto');
+  // una semilla fija da siempre el mismo mapa (si cambia la generación, se actualiza a propósito)
+  const r = makeRoute(429790250);
+  assert.equal(r.nodes.length, makeRoute(429790250).nodes.length);
+  assert.deepEqual(
+    r.nodes.map((n) => n.next.length > 0 || n.kind === 'bridge'),
+    r.nodes.map(() => true),
+  );
+});
+
+/* ---------- mejoras de la camioneta y objetivos de las paradas ---------- */
+
+/** Empieza una parada de este tipo (la primera de la ruta pasa a ser de ese tipo), sin que lleguen zombis. */
+function parada(t, kind) {
+  const e = t.e;
+  const n = e.route.nodes[1];
+  n.kind = kind;
+  n.mod = '';
+  e.at = n.id;
+  e.stop = 2;
+  e.begin(t.game);
+  e.spawnAcc = -1e9;
+  return e;
+}
+
+const zombiJunto = (t, x, y) => {
+  const z = t.horde.spawn('normal', x, y, 1, 1);
+  z.spawnT = 0;
+  return z;
+};
+
+test('mejoras de la camioneta: niveles con precio, blindaje con más vida y tanque con un bidón menos', () => {
+  const t = partida();
+  const e = t.e;
+  assert.equal(e.upCost('armor'), VAN_UPS.armor.price[0]);
+  for (const _ of VAN_UPS.armor.price) assert.ok(e.buyUp('armor'));
+  assert.equal(e.upCost('armor'), 0, 'al máximo');
+  assert.equal(e.buyUp('armor'), false);
+  assert.equal(e.buyUp('nada'), false);
+  const need = e.need;
+  e.buyUp('tank');
+  assert.equal(e.need, need - VAN_UPS.tank.cans);
+  assert.equal(needAt(1, { tank: 5 }), 1, 'nunca menos de un bidón');
+  e.begin(t.game);
+  const L = VAN_UPS.armor.price.length;
+  assert.equal(e.van.max, ESCAPE.van.hp * (1 + VAN_UPS.armor.hp * L));
+  const hp = e.van.hp;
+  e.hitVan(10, t.game);
+  assert.ok(Math.abs(hp - e.van.hp - 10 * (1 - VAN_UPS.armor.cut * L)) < 1e-6, 'el golpe quita menos');
+  // el viaje nuevo las olvida
+  e.newTrip(5);
+  assert.deepEqual(e.ups, {});
+});
+
+test('torreta del techo: dispara sola mientras carga (no mientras se buscan bidones)', () => {
+  const t = partida();
+  const shots = [];
+  t.game.bullets.spawn = (b) => shots.push(b);
+  const e = t.e;
+  e.buyUp('turret');
+  e.begin(t.game);
+  e.spawnAcc = -1e9;
+  const v = e.van;
+  const z = zombiJunto(t, v.x + v.w / 2, v.y - 150);
+  z.speed = 0;
+  step(t, 1);
+  assert.equal(shots.length, 0, 'buscando bidones no dispara');
+  e.phase = 'fuel';
+  step(t, 1.5);
+  assert.ok(shots.length > 0, 'cargando, dispara');
+  assert.equal(shots[0].dmg, VAN_UPS.turret.dmg[0]);
+});
+
+test('claxon: una vez por parada aturde y avienta a los de alrededor; faros: los de cerca van lentos', () => {
+  const t = partida();
+  const e = t.e;
+  e.buyUp('horn');
+  e.buyUp('lights');
+  e.begin(t.game);
+  e.spawnAcc = -1e9;
+  const v = e.van;
+  const z = zombiJunto(t, v.x + v.w + 40, v.y + v.h / 2);
+  t.horde.update(0.001, t.game);
+  t.player.x = v.x + v.w / 2;
+  t.player.y = v.y + v.h + 20;
+  assert.equal(e.prompt(t.game).k, 'horn', 'con H junto a la camioneta: tocar el claxon');
+  t.player.use = true;
+  for (let i = 0; i < 30 && !e.hornUsed; i++) e.update(1 / 30, t.game);
+  assert.ok(e.hornUsed);
+  assert.ok(z.stumbleT > 0, 'aturdido');
+  assert.ok(z.kx > 100, `aventado: ${Math.round(z.kx)}`);
+  assert.equal(e.prompt(t.game), null, 'ya no se puede otra vez');
+  const z2 = zombiJunto(t, v.x + v.w + 60, v.y + v.h / 2);
+  t.horde.update(0.001, t.game);
+  e.update(1 / 30, t.game);
+  assert.ok(z2.dazzleT > 0 && z2.dazzleK === VAN_UPS.lights.slow[0], 'deslumbrado');
+  // en la parada siguiente se puede de nuevo
+  e.begin(t.game);
+  assert.equal(e.hornUsed, false);
+});
+
+test('gasolinera: parado en la bomba se llenan bidones, hasta que se seca', () => {
+  const t = partida();
+  const e = parada(t, 'gas');
+  const o = e.obj;
+  assert.equal(o.kind, 'pump');
+  const tick = (s) => {
+    for (let i = 0; i < s * 30; i++) {
+      t.player.x = o.x;
+      t.player.y = o.y;
+      e.update(1 / 30, t.game);
+    }
+  };
+  tick(ESCAPE_OBJ.pump.t + 0.2);
+  assert.equal(e.have, 1, 'un bidón de la bomba');
+  tick(ESCAPE_OBJ.pump.t * ESCAPE_OBJ.pump.max);
+  assert.equal(e.have, ESCAPE_OBJ.pump.max, 'hasta que se seca');
+  assert.equal(o.state, 2);
+});
+
+test('clínica: el médico te sigue a la camioneta y luego los cura entre paradas; si lo matan, se pierde', () => {
+  const t = partida();
+  const e = parada(t, 'clinic');
+  const o = e.obj;
+  assert.equal(o.kind, 'medic');
+  assert.equal(o.state, 0, 'espera');
+  t.player.x = o.x + 20;
+  t.player.y = o.y;
+  e.update(1 / 30, t.game);
+  assert.equal(o.state, 1, 'al tocarlo te sigue');
+  // el jugador se va: el médico lo sigue
+  const d0 = Math.hypot(t.player.x + 200 - o.x, t.player.y - o.y);
+  t.player.x += 200;
+  for (let i = 0; i < 15; i++) e.update(1 / 30, t.game);
+  assert.ok(Math.hypot(t.player.x - o.x, t.player.y - o.y) < d0 - 40, 'lo sigue');
+  // junto a la camioneta: sube
+  const v = e.van;
+  o.x = v.x + v.w / 2;
+  o.y = v.y + v.h + 10;
+  t.player.x = o.x;
+  t.player.y = o.y + 30;
+  e.update(1 / 30, t.game);
+  assert.equal(o.state, 2);
+  assert.ok(e.medic, 'a bordo');
+  // la parada siguiente: cura todo
+  t.player.hp = 10;
+  e.begin(t.game);
+  assert.equal(t.player.hp, t.player.stats.maxHp);
+  // otra clínica: si los zombis lo rodean, muere
+  const t2 = partida();
+  const e2 = parada(t2, 'clinic');
+  const m = e2.obj;
+  m.state = 1;
+  for (let i = 0; i < 4; i++) zombiJunto(t2, m.x + Math.cos(i * 1.6) * 12, m.y + Math.sin(i * 1.6) * 12);
+  t2.horde.update(0.001, t2.game);
+  for (let i = 0; i < 30 * 6 && m.state === 1; i++) {
+    t2.player.x = m.x + 40;
+    t2.player.y = m.y;
+    e2.updateMedic(1 / 30, [t2.player], t2.game);
+    for (const z of t2.horde.list) {
+      z.x = m.x + 8;
+      z.y = m.y;
+    }
+    t2.horde.grid.clear();
+    for (const z of t2.horde.list) t2.horde.grid.insert?.(z);
+    t2.horde.update(0.001, t2.game);
+  }
+  assert.equal(m.state, 3, 'murió');
+  assert.equal(e2.medic, false);
+});
+
+test('comisaría: con H en la armería te llevas un arma mejor y munición', () => {
+  const t = partida();
+  const e = parada(t, 'police');
+  const o = e.obj;
+  assert.equal(o.kind, 'armory');
+  const had = t.player.weapons.length;
+  t.player.x = o.x;
+  t.player.y = o.y + 20;
+  assert.equal(e.prompt(t.game).k, 'armory');
+  t.player.use = true;
+  for (let i = 0; i < 30 * (ESCAPE_OBJ.armory.t + 0.3) && o.state === 0; i++) e.update(1 / 30, t.game);
+  assert.equal(o.state, 2, 'abierta');
+  assert.equal(t.player.weapons.length, had + 1, 'un arma nueva');
+  assert.ok(ESCAPE_OBJ.armory.guns.includes(t.player.weapons[t.player.wi].id), 'y en la mano');
+  assert.ok(
+    t.game.pickups.list.some((p) => p.k === 'ammo'),
+    'munición',
+  );
+  assert.equal(e.prompt(t.game), null, 'ya está abierta');
+});
+
+test('supermercado: las provisiones se juntan y se venden al salir', () => {
+  const t = partida();
+  const e = parada(t, 'market');
+  const o = e.obj;
+  assert.equal(o.kind, 'cart');
+  assert.ok(o.items.length >= 3, `provisiones: ${o.items.length}`);
+  for (const it of o.items.slice(0, 3)) {
+    t.player.x = it.x;
+    t.player.y = it.y;
+    e.update(1 / 30, t.game);
+  }
+  assert.equal(o.n, 3);
+  const money = t.game.money;
+  e.phase = 'leaving';
+  e.phaseT = ESCAPE.leaveT;
+  e.update(1 / 30, t.game);
+  assert.equal(t.game.money - money, ESCAPE_ROUTE.stopPay * e.stop + 3 * ESCAPE_OBJ.cart.pay * e.stop);
+});
+
+test('la foto lleva las mejoras, el médico y el objetivo de la parada', () => {
+  const t = partida();
+  const e = parada(t, 'market');
+  e.buyUp('turret');
+  e.buyUp('horn');
+  e.medic = true;
+  e.hornUsed = true;
+  e.turretA = 1.25;
+  e.obj.items[0].taken = true;
+  e.obj.n = 1;
+  const c = new e.constructor();
+  unpackEscape(c, packEscape(e, -1), []);
+  assert.deepEqual(
+    VAN_UP_ORDER.map((k) => c.ups[k]),
+    VAN_UP_ORDER.map((k) => e.ups[k] || 0),
+  );
+  assert.ok(c.medic && c.hornUsed);
+  assert.equal(c.turretA, 1.25);
+  assert.equal(c.obj.kind, 'cart');
+  assert.equal(c.obj.items.length, e.obj.items.length);
+  assert.ok(c.obj.items[0].taken);
+  assert.equal(c.obj.n, 1);
+  // la armería
+  const t2 = partida();
+  const e2 = parada(t2, 'police');
+  const c2 = new e2.constructor();
+  unpackEscape(c2, packEscape(e2, -1), []);
+  assert.equal(c2.obj.kind, 'armory');
+  assert.equal(c2.obj.x, Math.round(e2.obj.x));
+  t2.player.x = e2.obj.x;
+  t2.player.y = e2.obj.y;
+  assert.equal(c2.prompt({ ...t2.game, escape: c2 }, t2.player).k, 'armory', 'el aviso de H también en el cliente');
 });

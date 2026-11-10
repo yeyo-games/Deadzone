@@ -23,6 +23,18 @@ export interface Route {
   layers: number;
 }
 
+/**
+ * Baraja en su lugar con la semilla (Fisher-Yates). No se usa sort con un comparador al azar: cuántas veces
+ * llama al azar depende del motor (Chrome y Node daban rutas distintas con la misma semilla).
+ */
+export function shuffle<T>(a: T[], rng: () => number) {
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
 /** Genera la ruta con esta semilla: siempre la misma para la misma semilla. */
 export function makeRoute(seed: number): Route {
   const rng = mulberry32(seed);
@@ -35,7 +47,7 @@ export function makeRoute(seed: number): Route {
     const n = edge ? 1 : R.width[0] + Math.floor(rng() * (R.width[1] - R.width[0] + 1));
     const row: RouteNode[] = [];
     // tipos sin repetir dentro de la capa
-    const kinds = [...ESCAPE_STOP_KINDS].sort(() => rng() - 0.5);
+    const kinds = shuffle([...ESCAPE_STOP_KINDS], rng);
     for (let i = 0; i < n; i++) {
       const kind = l === 0 ? 'start' : l === R.layers - 1 ? 'bridge' : kinds[i % kinds.length];
       const def = ESCAPE_STOPS[kind];

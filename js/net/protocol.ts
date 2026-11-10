@@ -97,5 +97,6 @@ export const SFX_SYNC = [
   'stickyBoom',
   'bossQuake',
   'demonShriek',
+  'horn',
 ];
 export const DECAL_SYNC = ['corpse', 'splat', 'drip', 'acid', 'crack'];

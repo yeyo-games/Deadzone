@@ -1,10 +1,23 @@
 // Mapa de ruta del modo Huida (entre paradas): se elige la siguiente parada en el mapa (clic o toque, o
-// teclas 1–3 y Enter), se ve qué trae (tipo, ronda especial, amenaza, bidones), se puede ir a la tienda, y
+// teclas 1–3 y Enter), se ve qué trae (tipo, ronda especial, amenaza, bidones), se puede ir a la tienda o al
+// taller (mejoras de la camioneta: VAN_UPS), y
 // al viajar la camioneta recorre la carretera en el mapa y un fundido lleva al mapa nuevo. Los datos están
 // en sim/route.ts y sim/escape.ts; el dibujo en render/route.js.
-import { ESCAPE, ESCAPE_ROUTE, ESCAPE_STOPS, EVENTS } from '../core/config.ts';
+import { ESCAPE, ESCAPE_ROUTE, ESCAPE_STOPS, EVENTS, VAN_UP_ORDER, VAN_UPS } from '../core/config.ts';
 import { drawRoute, drawStopArt, roadAt, routeHit } from '../render/route.js';
+import { needAt } from '../sim/escape.ts';
 import { on } from './dom.js';
+import { saveTrip } from './escape.js';
+
+/** Íconos de las mejoras de la camioneta (también en el panel de la Huida). */
+export const VAN_ICONS = {
+  armor: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M8 12h8M12 8v8"/>',
+  turret: '<circle cx="9" cy="15" r="5"/><path d="M12 13l9-6M3 21h12"/>',
+  horn: '<path d="M3 10v4h4l6 4V6L7 10z"/><path d="M16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12"/>',
+  tank: '<path d="M7 5h7l4 4v11a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/><path d="M9 14h6"/>',
+  lights: '<path d="M3 7h5a5 5 0 0 1 0 10H3z"/><path d="M14 9l7-2M14 12h7M14 15l7 2"/>',
+};
+export const vanIcon = (k) => `<svg viewBox="0 0 24 24" aria-hidden="true">${VAN_ICONS[k]}</svg>`;
 
 // Lo de la pantalla que no es del juego: lo elegido, la animación y el acomodo del último dibujo.
 const view = { sel: -1, hover: -1, t: 0, travel: null, puffs: [], L: null, w: 0, h: 0, dpr: 1, voted: -1, from: -1 };
@@ -29,6 +42,7 @@ export function openRoute(game) {
   view.t = 0;
   view.voted = -1;
   view.from = e.at;
+  game.$('route-garage').hidden = true;
   game.setState('route');
   game.$('route-kicker').textContent = `Parada ${e.stop} superada · ${e.stopDef.name}`;
   game.$('route-sub').textContent = `Siguiente: parada ${e.stop + 1} de ${e.total}`;
@@ -45,7 +59,7 @@ function preview(e, id) {
     def,
     stop,
     level: ESCAPE.startLevel + Math.floor((stop - 1) * ESCAPE_ROUTE.levelPerStop) + (def.level || 0),
-    need: ESCAPE.need + Math.floor((stop - 1) / ESCAPE_ROUTE.needEvery),
+    need: needAt(stop, e.ups),
   };
 }
 
@@ -53,6 +67,7 @@ function renderCard(game) {
   const e = game.escape;
   const $ = game.$;
   $('route-money').textContent = `$${game.money}`;
+  if (!$('route-garage').hidden) renderGarage(game);
   const ok = view.sel >= 0;
   $('route-card').classList.toggle('empty', !ok);
   $('btn-route-go').disabled = !ok || !!view.travel;
@@ -81,6 +96,57 @@ function renderCard(game) {
   }
 }
 
+/* ---------- el taller: mejoras de la camioneta ---------- */
+
+/** La lista del taller: cada mejora con su nivel, lo que hace y lo que cuesta el siguiente. */
+function renderGarage(game) {
+  const e = game.escape;
+  let html = '';
+  for (const k of VAN_UP_ORDER) {
+    const d = VAN_UPS[k];
+    const n = e.ups[k] || 0;
+    const cost = e.upCost(k);
+    const pips = d.price.map((_, i) => `<em class="${i < n ? 'on' : ''}"></em>`).join('');
+    const cls = !cost ? 'max' : cost > game.money ? 'poor' : '';
+    html += `<button class="rg-item ${cls}" type="button" data-k="${k}" ${cost ? '' : 'disabled'}>
+      <span class="rg-ic">${vanIcon(k)}</span>
+      <span class="rg-txt"><b>${d.name}</b><small>${d.desc}</small><i class="rg-pips">${pips}</i></span>
+      <span class="rg-price">${cost ? `$${cost}` : 'Máximo'}</span></button>`;
+  }
+  const list = game.$('rg-list');
+  if (list.dataset.sig !== html) {
+    list.dataset.sig = html;
+    list.innerHTML = html;
+  }
+  game.$('rg-money').textContent = `$${game.money}`;
+}
+
+/** Abre o cierra el taller. */
+function garage(game, open) {
+  const g = game.$('route-garage');
+  if (open && view.travel) return;
+  g.hidden = !open;
+  game.sfx.pageFlip?.();
+  if (open) renderGarage(game);
+}
+
+/** Compra el siguiente nivel de una mejora (en línea la cobra el servidor). */
+function buyUp(game, k) {
+  const e = game.escape;
+  const cost = e.upCost(k);
+  if (!cost || cost > game.money) return game.sfx.empty?.();
+  if (game.mode.viaServer()) {
+    game.online.buy('van', k, 0);
+    game.sfx.buy();
+    return;
+  }
+  game.money -= cost;
+  e.buyUp(k);
+  game.sfx.buy();
+  saveTrip(game);
+  renderCard(game);
+}
+
 /** Elige una de las paradas siguientes (por su lugar: 0, 1, 2…). */
 function choose(game, i) {
   if (view.travel) return;
@@ -105,6 +171,7 @@ function travel(game) {
   }
   view.travel = { to: view.sel, k: 0 };
   game.$('btn-route-go').disabled = true;
+  game.$('route-garage').hidden = true;
   game.sfx.boost();
 }
 
@@ -116,8 +183,9 @@ export function updateRoute(game, dt) {
   const s = game.input.consume('slot');
   if (s) choose(game, s - 1);
   if (game.input.consume('nextRound')) travel(game);
-  game.input.consume('pause');
-  // en línea: el tiempo que queda para votar se pone al día
+  // Esc cierra el taller
+  if (game.input.consume('pause') && !game.$('route-garage').hidden) garage(game, false);
+  // en línea: el tiempo que queda para votar (y el dinero y las mejoras, que cambian con las compras)
   if (game.mode.viaServer() && !view.travel && Math.floor(view.t * 4) !== Math.floor((view.t - dt) * 4))
     renderCard(game);
   if (view.travel) {
@@ -197,6 +265,7 @@ export function travelOnline(game, from, to, then) {
   view.sel = to;
   view.travel = { to, k: 0, then };
   game.$('btn-route-go').disabled = true;
+  game.$('route-garage').hidden = true;
   game.sfx.boost();
 }
 
@@ -268,6 +337,12 @@ export function bindRoute(game) {
       id >= 0 && e.route.nodes[view.from >= 0 ? view.from : e.at].next.includes(id) ? 'pointer' : 'default';
   });
   on(game, 'btn-route-go', () => travel(game));
+  on(game, 'btn-route-van', () => game.state === 'route' && garage(game, true));
+  on(game, 'btn-garage-close', () => garage(game, false));
+  game.$('rg-list').addEventListener('click', (ev) => {
+    const b = ev.target.closest('.rg-item');
+    if (b && game.state === 'route') buyUp(game, b.dataset.k);
+  });
   on(game, 'btn-route-shop', () => {
     if (game.state !== 'route' || view.travel) return;
     game.shopReturn = 'route';

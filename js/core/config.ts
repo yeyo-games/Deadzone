@@ -2690,40 +2690,50 @@ export const ESCAPE_STOPS: Record<
     level?: number;
     barrels?: number;
     swat?: number;
+    /** objetivo propio de la parada (clave de ESCAPE_OBJ) y cómo se anuncia */
+    obj?: string;
+    goal?: string;
   }
 > = {
   start: { name: 'La ciudad', names: ['Centro de la ciudad'], desc: 'Donde empezó todo', col: '#9c968a' },
   gas: {
     name: 'Gasolinera',
     names: ['Gasolinera de la ruta 9', 'Gasolinera El Mirador', 'Estación de servicio 24 h', 'Gasolinera Las Palmas'],
-    desc: 'Más bidones y barriles que explotan: dispárales cuando lleguen los zombis',
+    desc: 'Llena bidones directo de la bomba quedándote en la zona. Barriles que explotan',
     col: '#f0c440',
-    cans: 2,
+    cans: 1,
     barrels: 6,
+    obj: 'pump',
+    goal: 'Quédate en la bomba para llenar bidones',
   },
   clinic: {
     name: 'Clínica',
     names: ['Clínica San Judas', 'Hospital del Valle', 'Centro de salud norte', 'Clínica Santa Fe'],
-    desc: 'Botiquines de sobra',
+    desc: 'Rescata al médico: te sigue a la camioneta y te cura entre paradas. Botiquines de sobra',
     col: '#e05a5a',
-    meds: 4,
+    meds: 3,
+    obj: 'medic',
+    goal: 'Rescata al médico y llévalo a la camioneta',
   },
   police: {
     name: 'Comisaría',
     names: ['Comisaría 14', 'Cuartel de policía', 'Estación de la guardia', 'Comisaría del puerto'],
-    desc: 'Cajas de armas, pero la horda llega con escudos antidisturbios',
+    desc: 'Abre la armería (mantén H) y llévate un arma mejor; la horda llega con escudos',
     col: '#6f9fd8',
-    crates: 3,
+    crates: 2,
     swat: 0.45,
+    obj: 'armory',
+    goal: 'Abre la armería para llevarte un arma',
   },
   market: {
     name: 'Supermercado',
     names: ['Supermercado El Ahorro', 'Plaza comercial', 'Mercado central', 'Bodega de abarrotes'],
-    desc: 'Las bajas pagan el doble y hay más cajas, pero llegan más zombis',
+    desc: 'Llena el carrito con provisiones: se venden al salir. Las bajas pagan el doble, pero llegan más zombis',
     col: '#86c08e',
     pay: 2,
     rate: 1.25,
-    crates: 1,
+    obj: 'cart',
+    goal: 'Junta provisiones para el carrito',
   },
   homes: {
     name: 'Barrio',
@@ -2743,6 +2753,72 @@ export const ESCAPE_STOPS: Record<
 export const ESCAPE_STOP_KINDS = ['gas', 'clinic', 'police', 'market', 'homes'];
 // Latas del modo Huida (para el personaje): por cada parada superada y de más al escapar.
 export const ESCAPE_CANS = { stop: 1, won: 6 };
+
+// Objetivos propios de cada tipo de parada (sim/escape.ts): dist es a cuántos px de la camioneta salen.
+export const ESCAPE_OBJ = {
+  // gasolinera: la bomba llena un bidón cada t s con alguien parado en la zona (r px), hasta max bidones
+  pump: { dist: [420, 900], r: 64, t: 8, max: 2 },
+  // clínica: el médico espera a que lo toquen y luego sigue al más cercano; los zombis que lo tocan le
+  // quitan vida (dps cada uno); en la camioneta se queda todo el viaje: entre paradas cura heal de lo perdido
+  medic: { dist: [700, 1500], hp: 240, speed: 175, near: 56, touch: 40, dps: 22, heal: 1, pay: 250 },
+  // comisaría: la armería se abre con H mantenida t s; da el arma más cara que no tengas hasta
+  // cap[0] + cap[1] × parada (si ya las tienes todas, cash), y munición
+  armory: {
+    dist: [480, 1100],
+    t: 4,
+    reach: 54,
+    guns: ['shotgun', 'ar', 'flamer', 'autoshotgun', 'lmg', 'sniper', 'bazooka'],
+    cap: [800, 900],
+    cash: 800,
+  },
+  // supermercado: n bolsas de provisiones (separadas gap px); cada una se vende en pay × parada al salir
+  cart: { n: 6, dist: [300, 1400], gap: 200, grab: 30, pay: 25 },
+};
+export const ESCAPE_OBJ_KINDS = ['pump', 'medic', 'armory', 'cart'];
+
+// Mejoras de la camioneta del modo Huida (se compran en el mapa de ruta, entre paradas; las paga quien
+// las compra y sirven a todos). price: lo que cuesta cada nivel.
+export const VAN_UPS = {
+  // vida de más por nivel y golpes que le quitan menos (cut por nivel)
+  armor: {
+    name: 'Blindaje',
+    desc: 'Más vida y los golpes le quitan menos',
+    price: [300, 650, 1100],
+    hp: 0.3,
+    cut: 0.1,
+  },
+  // dispara sola al zombi más cercano mientras carga y con el tanque lleno
+  turret: {
+    name: 'Torreta en el techo',
+    desc: 'Dispara sola a los zombis cercanos mientras se carga',
+    price: [700, 1400],
+    range: [320, 400],
+    cd: [0.3, 0.18],
+    dmg: [26, 34],
+  },
+  // una vez por parada, con H junto a la camioneta: aturde y avienta a los de alrededor
+  horn: {
+    name: 'Claxon',
+    desc: 'Una vez por parada (H en la camioneta): aturde y aparta a la horda',
+    price: [400, 800],
+    r: [230, 320],
+    stun: [1.8, 2.8],
+    push: 420,
+    hold: 0.25,
+  },
+  // un bidón menos por parada
+  tank: { name: 'Tanque más grande', desc: 'Un bidón menos en cada parada', price: [1200], cans: 1 },
+  // luz alrededor de la camioneta y los zombis que entran en ella van más lentos (slow: lo que pierden)
+  lights: {
+    name: 'Faros potentes',
+    desc: 'Alumbran alrededor de la camioneta y deslumbran: los zombis cerca van más lentos',
+    price: [350, 700],
+    r: [240, 330],
+    slow: [0.3, 0.45],
+  },
+};
+export const VAN_UP_ORDER = ['armor', 'turret', 'horn', 'tank', 'lights'] as const;
+export type VanUp = (typeof VAN_UP_ORDER)[number];
 
 export const OPS = {
   from: 20,

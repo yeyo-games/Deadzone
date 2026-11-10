@@ -3,7 +3,18 @@
 // pasando solas. Dentro, una página por zombi y por jefe: su dibujo animado, de qué oleada sale, su
 // vida, velocidad y daño, cómo es y sus debilidades. Se ve una página a la vez y se pasa de una en una
 // con los botones, tocando la página, deslizando el dedo o con las flechas.
-import { BOSS, BOSS_ORDER, BOSSES, DEMON, ESCAPE_STOPS, ROCK, SPECIALS, ZOMBIES } from '../core/config.ts';
+import {
+  BOSS,
+  BOSS_ORDER,
+  BOSSES,
+  DEMON,
+  ESCAPE_STOPS,
+  ROCK,
+  SPECIALS,
+  VAN_UP_ORDER,
+  VAN_UPS,
+  ZOMBIES,
+} from '../core/config.ts';
 import { rand, TAU } from '../core/util.ts';
 import { zombieSprites } from '../render/sprites.js';
 import { bossSprite } from '../render/bossart.js';
@@ -245,7 +256,7 @@ function buildPages() {
       ]) +
         list('pg-weak', 'Entre paradas', [
           'Eliges el camino en el mapa: cada parada trae algo distinto',
-          'Tienda, premio y descansas un poco',
+          'Tienda, taller para mejorar la camioneta, premio y descansas un poco',
           'El viaje se guarda: lo sigues desde el menú',
         ]),
     ),
@@ -264,6 +275,21 @@ function buildPages() {
         'Muchas paradas llegan con niebla, apagón, estampida, dorados, asedio o luna de sangre: más peligro, más paga',
         'Los bidones de más dan una mejora rara a elegir',
         'Los barriles de las gasolineras estallan con un disparo: espera a que se junten los zombis',
+      ]),
+    ),
+  );
+  pages.push(
+    pg(
+      '<p class="pg-kicker">Modo Huida</p><h3>El taller</h3><p class="pg-look">Entre paradas, en el mapa, el taller mejora la camioneta. Lo que compras sirve a todo el equipo y dura todo el viaje.</p>' +
+        list(
+          'pg-weak',
+          'Mejoras',
+          VAN_UP_ORDER.map((k) => `${VAN_UPS[k].name}: ${VAN_UPS[k].desc.toLowerCase()}`),
+        ),
+      list('pg-warn', 'Consejos', [
+        'El blindaje y la torreta salvan la camioneta durante la carga',
+        'El claxon sirve una vez por parada: guárdalo para cuando la rodeen',
+        'El médico de la clínica cura a todos entre paradas: vale la pena escoltarlo',
       ]),
     ),
   );

@@ -393,6 +393,15 @@ export class Sfx {
     this.burst({ dur: 0.5, freq: 1200, gain: 0.15, type: 'bandpass', q: 1, attack: 0.15 });
   }
 
+  // Claxon de la camioneta (modo Huida): dos notas graves a la vez, largo y ronco.
+  horn() {
+    if (!this.ok('horn', 0.5, true)) return;
+    for (const f of [370, 466]) {
+      this.tone({ freq: f, dur: 0.7, gain: 0.2, type: 'square' });
+      this.tone({ freq: f * 0.5, dur: 0.7, gain: 0.12, type: 'sawtooth' });
+    }
+  }
+
   turret() {
     if (!this.ok('turret', 0.12)) return;
     this.burst({ dur: 0.07, freq: 2600, sweep: 800, gain: 0.22 });

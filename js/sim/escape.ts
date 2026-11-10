@@ -10,15 +10,28 @@
 // lo que cambia (a quién se le paga, a quién se le da una mejora) lo ponen los ganchos escapePay y
 // escapePick. packEscape / unpackEscape llevan el estado en la foto del servidor. Sólo lógica: el dibujo
 // está en render/escape.js y la pantalla en ui/escape.js y ui/route.js.
-import { BOSSES, ESCAPE, ESCAPE_ROUTE, ESCAPE_STOPS, EVENTS } from '../core/config.ts';
+import {
+  BOSSES,
+  ESCAPE,
+  ESCAPE_OBJ,
+  ESCAPE_OBJ_KINDS,
+  ESCAPE_ROUTE,
+  ESCAPE_STOPS,
+  EVENTS,
+  VAN_UP_ORDER,
+  VAN_UPS,
+  WEAPONS,
+} from '../core/config.ts';
+import type { VanUp } from '../core/config.ts';
 import type { EventDef } from '../core/config.ts';
 import { rand, TAU } from '../core/util.ts';
 import type { GameHost, Zombie } from '../core/types.d.ts';
+import { turretBullet } from './build.ts';
 import { spawnBoss } from './bosses.ts';
 import { waveCounts } from './director.ts';
 import { GOAL_TYPES, makeGoal, type Goal } from './ops/common.ts';
 import type { Player } from './player.ts';
-import { isFinal, makeRoute, type Route, type RouteNode } from './route.ts';
+import { isFinal, makeRoute, shuffle, type Route, type RouteNode } from './route.ts';
 
 export type EscapePhase = 'search' | 'fuel' | 'ready' | 'leaving' | 'lost' | 'done';
 /** Las fases en el orden en que viajan en la foto. */
@@ -59,6 +72,26 @@ export interface Van {
   drive: number;
 }
 
+/**
+ * El objetivo propio de la parada (ESCAPE_OBJ): la bomba de la gasolinera, el médico de la clínica, la
+ * armería de la comisaría o las provisiones del supermercado. x, y: dónde está (el médico se mueve) ·
+ * prog: 0..1 (la bomba hacia el siguiente bidón) · state: 0 esperando, 1 en marcha (el médico te sigue),
+ * 2 cumplido, 3 fallido · n: bidones que dio la bomba o provisiones juntadas · items: las provisiones.
+ */
+export interface StopObj {
+  kind: string;
+  x: number;
+  y: number;
+  prog: number;
+  state: number;
+  hp: number;
+  n: number;
+  items: { x: number; y: number; taken: boolean }[];
+  /** el médico: hacia dónde mira y si lo acaban de golpear */
+  ang: number;
+  hitT: number;
+}
+
 /** Cómo se anuncia el guardia de un bidón. */
 const GUARD_NAMES: Record<string, string> = {
   spitter: 'Un escupidor',
@@ -82,11 +115,27 @@ function pay(game: GameHost, n: number, p: Player | null) {
   game.moneyPop?.(`+$${n}`, 'gold');
 }
 
+/** Nivel de una mejora de la camioneta y su cifra de ese nivel (lista por nivel, empieza en el 1). */
+const lv = (ups: Record<string, number>, k: VanUp) => ups[k] || 0;
+const at = <T>(a: readonly T[], n: number) => a[Math.min(a.length, n) - 1];
+
 /** Una mejora a elegir para un jugador (gancho escapePick en línea; en solitario, bonusPicks). */
 function pick(game: GameHost, src: string, p: Player | null) {
   if (game.escapePick) return game.escapePick(src, p);
   game.bonusPicks?.push(src);
 }
+
+/** Bidones que hacen falta en la parada número `stop` (uno más cada needEvery; el tanque grande, menos). */
+export function needAt(stop: number, ups: Record<string, number> = {}) {
+  const base = ESCAPE.need + Math.floor((stop - 1) / ESCAPE_ROUTE.needEvery);
+  return Math.max(1, base - VAN_UPS.tank.cans * (ups.tank || 0));
+}
+
+/** "1 bidón" o "3 bidones". */
+const cans = (n: number) => `${n} ${n === 1 ? 'bidón' : 'bidones'}`;
+
+// consulta de la cuadrícula de la horda (se reusa)
+const near: Zombie[] = [];
 
 /** Peso de cada tipo en la mezcla de un nivel de amenaza (la composición de esa oleada, con su ronda especial). */
 function mix(level: number, ev: EventDef | null): [string, number][] {
@@ -131,11 +180,24 @@ export class Escape {
   declare route: Route | null;
   declare at: number;
   declare visited: number[];
+  /** del viaje: mejoras de la camioneta (nivel por clave de VAN_UPS) y si el médico va a bordo */
+  declare ups: Record<string, number>;
+  declare medic: boolean;
+  /** de la parada: claxon ya usado (y su onda), la torreta del techo (ángulo, recarga, fogonazo) */
+  declare hornUsed: boolean;
+  declare hornT: number;
+  declare turretA: number;
+  declare turretCd: number;
+  declare turretFlash: number;
+  /** el objetivo propio de la parada (o null) */
+  declare obj: StopObj | null;
 
   constructor() {
     this.route = null;
     this.at = 0;
     this.visited = [];
+    this.ups = {};
+    this.medic = false;
     this.active = false;
     this.van = null;
     this.goal = null;
@@ -161,6 +223,12 @@ export class Escape {
     this.stuckT = 0;
     this.boss = null;
     this.bossType = '';
+    this.hornUsed = false;
+    this.hornT = 0;
+    this.turretA = -Math.PI / 2;
+    this.turretCd = 0;
+    this.turretFlash = 0;
+    this.obj = null;
   }
 
   /** La parada en la que estás (del mapa de ruta) y lo que trae su tipo. */
@@ -183,7 +251,7 @@ export class Escape {
 
   /** Bidones que hacen falta: uno más cada ESCAPE_ROUTE.needEvery paradas. */
   get need() {
-    return ESCAPE.need + Math.floor((this.stop - 1) / ESCAPE_ROUTE.needEvery);
+    return needAt(this.stop, this.ups);
   }
 
   /** Amenaza al llegar: sube con cada parada recorrida y con el tipo de parada. */
@@ -223,6 +291,8 @@ export class Escape {
     this.route = null;
     this.at = 0;
     this.visited = [];
+    this.ups = {};
+    this.medic = false;
     this.resetState();
   }
 
@@ -246,6 +316,22 @@ export class Escape {
     this.at = 0;
     this.visited = [0];
     this.stop = 1;
+    this.ups = {};
+    this.medic = false;
+  }
+
+  /** Lo que cuesta el siguiente nivel de esa mejora de la camioneta (0: ya está al máximo o no existe). */
+  upCost(k: string) {
+    const d = (VAN_UPS as Record<string, { price: number[] }>)[k];
+    const n = this.ups[k] || 0;
+    return d && n < d.price.length ? d.price[n] : 0;
+  }
+
+  /** Sube esa mejora un nivel (el dinero lo cobra quien llama). */
+  buyUp(k: string) {
+    if (!this.upCost(k)) return false;
+    this.ups[k] = (this.ups[k] || 0) + 1;
+    return true;
   }
 
   /** Sigue el viaje hacia la parada `id` (el juego cambia de mapa y llama a begin). */
@@ -271,7 +357,9 @@ export class Escape {
     const world = game.world;
     const all = everyone(game);
     // en el viaje se descansa: recupera parte de la vida perdida
-    if (this.stop > 1) for (const pl of all) if (pl.alive) pl.hp += (pl.stats.maxHp - pl.hp) * ESCAPE_ROUTE.restHeal;
+    // (con el médico a bordo, cura todo)
+    const heal = this.medic ? ESCAPE_OBJ.medic.heal : ESCAPE_ROUTE.restHeal;
+    if (this.stop > 1) for (const pl of all) if (pl.alive) pl.hp += (pl.stats.maxHp - pl.hp) * heal;
     const anchor = all.find((q) => q.alive) || all[0] || world.spawn;
     const V = ESCAPE.van;
     // la camioneta en el sitio libre más cercano al punto de partida, con calle libre por delante para
@@ -299,7 +387,9 @@ export class Escape {
       rx = first.x;
       ry = first.y;
     }
-    const van: Van = { x: rx, y: ry, w: V.w, h: V.h, hp: V.hp, max: V.hp, hitT: 0, drive: 0 };
+    // el blindaje le da más vida
+    const hp = V.hp * (1 + VAN_UPS.armor.hp * lv(this.ups, 'armor'));
+    const van: Van = { x: rx, y: ry, w: V.w, h: V.h, hp, max: hp, hitT: 0, drive: 0 };
     this.van = van;
     this.restore(game);
     // los jugadores, junto a la puerta (uno al lado del otro)
@@ -317,6 +407,7 @@ export class Escape {
     }
     if (p0) world.updateFlow(p0.x, p0.y);
     this.placeLoot(game);
+    this.placeObj(game);
     // sin oleadas: el director sólo reparte lo que le toca (ver update)
     const d = game.director;
     d.state = 'escape';
@@ -329,10 +420,10 @@ export class Escape {
     game.banner(
       `Parada ${this.stop} · ${node.name}`,
       this.final
-        ? `¡El puente! Junta ${this.need} bidones y cruza`
+        ? `¡El puente! Junta ${cans(this.need)} y cruza`
         : ev
           ? `${ev.name}: ${ev.desc.toLowerCase()}`
-          : `Junta ${this.need} bidones de combustible y vuelve a la camioneta`,
+          : `Junta ${cans(this.need)} de combustible y vuelve a la camioneta`,
     );
     game.sfx.wave();
   }
@@ -388,7 +479,7 @@ export class Escape {
     }
     // los más lejanos van custodiados por un zombi con habilidad
     const far = [...this.cans].sort((a, b) => Math.hypot(b.x - cx, b.y - cy) - Math.hypot(a.x - cx, a.y - cy));
-    const kinds = [...ESCAPE.guardTypes].sort(() => Math.random() - 0.5);
+    const kinds = shuffle([...ESCAPE.guardTypes], Math.random);
     far.slice(0, ESCAPE.guards).forEach((c, i) => {
       c.guard = kinds[i % kinds.length];
     });
@@ -429,7 +520,8 @@ export class Escape {
     const van = this.van;
     if (!van || van.hp <= 0 || (this.phase !== 'search' && this.phase !== 'fuel' && this.phase !== 'ready')) return;
     // con el tanque lleno el motor ya está en marcha: aguanta más (es el momento de subir)
-    const k = this.phase === 'ready' ? ESCAPE.readyDmg : 1;
+    // (el blindaje quita una parte de cada golpe)
+    const k = (this.phase === 'ready' ? ESCAPE.readyDmg : 1) * (1 - VAN_UPS.armor.cut * lv(this.ups, 'armor'));
     van.hp -= Math.min(dmg, van.max * ESCAPE.van.maxHit) * k;
     van.hitT = 0.2;
     game.particles.impact(van.x + Math.random() * van.w, van.y + Math.random() * van.h, rand(-1, 1), rand(-1, 1));
@@ -447,12 +539,20 @@ export class Escape {
   }
 
   /** Lo que ese jugador puede hacer con H ahora (para el aviso en pantalla), o null. */
-  prompt(game: GameHost, p: Player | null = game.player): { text: string; prog: number } | null {
+  prompt(game: GameHost, p: Player | null = game.player): { text: string; prog: number; k: string } | null {
     if (!this.active || !p?.alive || p.inVan) return null;
     if (this.phase === 'search' && this.have >= this.need && this.nearVan(game, 48, p))
-      return { text: 'Cargar combustible', prog: this.holdT / ESCAPE.startT };
+      return { text: 'Cargar combustible', prog: this.holdT / ESCAPE.startT, k: 'fuel' };
     if (this.phase === 'ready' && !this.bossAlive && this.nearVan(game, ESCAPE.boardReach, p))
-      return { text: 'Subir a la camioneta', prog: this.holdT / ESCAPE.boardT };
+      return { text: 'Subir a la camioneta', prog: this.holdT / ESCAPE.boardT, k: 'board' };
+    // el claxon: una vez por parada, mientras se busca o se carga (con el tanque lleno, H es subir)
+    const live = this.phase === 'fuel' || (this.phase === 'search' && this.have < this.need);
+    if (live && lv(this.ups, 'horn') && !this.hornUsed && this.nearVan(game, ESCAPE.boardReach, p))
+      return { text: 'Tocar el claxon', prog: this.holdT / VAN_UPS.horn.hold, k: 'horn' };
+    const o = this.obj;
+    if (o?.kind === 'armory' && o.state === 0 && this.phase !== 'leaving' && this.phase !== 'lost')
+      if (Math.hypot(o.x - p.x, o.y - p.y) < ESCAPE_OBJ.armory.reach + p.r)
+        return { text: 'Abrir la armería', prog: this.holdT / ESCAPE_OBJ.armory.t, k: 'armory' };
     return null;
   }
 
@@ -461,6 +561,8 @@ export class Escape {
     const van = this.van!;
     this.phaseT += dt;
     van.hitT = Math.max(0, van.hitT - dt);
+    this.hornT = Math.max(0, this.hornT - dt);
+    this.turretFlash = Math.max(0, this.turretFlash - dt);
     // dañada: humo del cofre y, muy dañada, fuego
     if (this.phase === 'search' || this.phase === 'fuel' || this.phase === 'ready') {
       const k = van.hp / van.max;
@@ -493,11 +595,24 @@ export class Escape {
     }
     this.updateBarrels(game);
     // H mantenida en la camioneta (por cualquiera): empezar a cargar o subir
-    const holder = ps.find((q) => q.use && this.prompt(game, q));
+    // (y en la comisaría, la armería; con el claxon comprado, tocarlo)
+    let held = '';
+    let holder: Player | undefined;
+    for (const q of ps) {
+      const pr = q.use ? this.prompt(game, q) : null;
+      if (!pr) continue;
+      held = pr.k;
+      holder = q;
+      break;
+    }
     if (holder) this.holdT += dt;
     else this.holdT = 0;
-    if (this.phase === 'search' && holder && this.holdT >= ESCAPE.startT) this.startFuel(game);
-    else if (this.phase === 'ready' && holder && this.holdT >= ESCAPE.boardT) this.board(game);
+    if (held === 'fuel' && this.holdT >= ESCAPE.startT) this.startFuel(game);
+    else if (held === 'board' && this.holdT >= ESCAPE.boardT) this.board(game);
+    else if (held === 'horn' && this.holdT >= VAN_UPS.horn.hold) this.honk(game);
+    else if (held === 'armory' && this.holdT >= ESCAPE_OBJ.armory.t) this.openArmory(holder!, game);
+    this.updateObj(dt, ps, game);
+    this.updateVanUps(dt, game);
     if (this.phase === 'fuel') {
       this.fuelT += dt;
       if (this.fuelT >= this.fuelMax) {
@@ -513,11 +628,287 @@ export class Escape {
     game.director.herdStragglers(dt, game);
   }
 
+  /* ---------- mejoras de la camioneta ---------- */
+
+  /** La torreta del techo (cargando y con el tanque lleno) y los faros que deslumbran. */
+  updateVanUps(dt: number, game: GameHost) {
+    const van = this.van!;
+    const cx = van.x + van.w / 2;
+    const cy = van.y + van.h / 2;
+    const L = lv(this.ups, 'lights');
+    if (L) {
+      const R = at(VAN_UPS.lights.r, L);
+      const k = at(VAN_UPS.lights.slow, L);
+      game.horde.grid.query(cx - R, cy - R, cx + R, cy + R, near);
+      for (const z of near) {
+        if (z.dead || z.def?.boss || (z.x - cx) ** 2 + (z.y - cy) ** 2 > R * R) continue;
+        z.dazzleT = 0.25;
+        z.dazzleK = k;
+      }
+    }
+    const T = lv(this.ups, 'turret');
+    if (!T || (this.phase !== 'fuel' && this.phase !== 'ready')) return;
+    this.turretCd -= dt;
+    const R = at(VAN_UPS.turret.range, T);
+    // la torreta está en el techo, un poco atrás del centro
+    const tx = van.x + van.w * 0.46;
+    game.horde.grid.query(tx - R, cy - R, tx + R, cy + R, near);
+    let best: Zombie | null = null;
+    let bd = R * R;
+    for (const z of near) {
+      if (z.dead || z.under) continue;
+      const d = (z.x - tx) ** 2 + (z.y - cy) ** 2;
+      if (d < bd) {
+        bd = d;
+        best = z;
+      }
+    }
+    if (!best) return;
+    const want = Math.atan2(best.y - cy, best.x - tx);
+    const diff = Math.atan2(Math.sin(want - this.turretA), Math.cos(want - this.turretA));
+    this.turretA += Math.max(-dt * 8, Math.min(dt * 8, diff));
+    if (this.turretCd > 0 || Math.abs(diff) > 0.3) return;
+    this.turretCd = at(VAN_UPS.turret.cd, T);
+    this.turretFlash = 0.06;
+    const a = this.turretA + rand(-0.05, 0.05);
+    const mx = tx + Math.cos(a) * 18;
+    const my = cy + Math.sin(a) * 18;
+    const b = turretBullet(mx, my, a, null);
+    b.dmg = at(VAN_UPS.turret.dmg, T);
+    b.life = R + 40;
+    game.bullets.spawn(b);
+    // en línea: el servidor avisa del disparo y cada cliente lanza su bala de adorno
+    game.onTurretShot?.(mx, my, a);
+    game.particles.muzzleSmoke(mx, my, a);
+    game.sfx.turret();
+  }
+
+  /** El claxon: aturde y avienta a los zombis de alrededor (a los jefes sólo los aturde un poco). */
+  honk(game: GameHost) {
+    const van = this.van!;
+    const n = lv(this.ups, 'horn');
+    const R = at(VAN_UPS.horn.r, n);
+    const stun = at(VAN_UPS.horn.stun, n);
+    const cx = van.x + van.w / 2;
+    const cy = van.y + van.h / 2;
+    this.hornUsed = true;
+    this.hornT = 0.8;
+    this.holdT = 0;
+    game.horde.grid.query(cx - R, cy - R, cx + R, cy + R, near);
+    for (const z of near) {
+      if (z.dead) continue;
+      const dx = z.x - cx;
+      const dy = z.y - cy;
+      const d = Math.hypot(dx, dy) || 1;
+      if (d > R) continue;
+      z.stumbleT = Math.max(z.stumbleT || 0, stun * (z.def?.boss ? 0.4 : 1));
+      if (z.def?.boss) continue;
+      const k = VAN_UPS.horn.push * (1 - (d / R) * 0.5);
+      z.kx += (dx / d) * k;
+      z.ky += (dy / d) * k;
+      z.lunge = 0;
+    }
+    game.sfx.horn?.();
+    game.camera?.shake?.(0.25, cx, cy);
+    game.toast('¡Claxonazo!');
+  }
+
+  /* ---------- objetivo de la parada ---------- */
+
+  /** Pone el objetivo de este tipo de parada (lejos de la camioneta, en un sitio al que se puede llegar). */
+  placeObj(game: GameHost) {
+    const kind = this.stopDef.obj;
+    if (!kind) return;
+    const van = this.van!;
+    const world = game.world;
+    const cx = van.x + van.w / 2;
+    const cy = van.y + van.h / 2;
+    const field = this.goal?.field;
+    const avoid: { x: number; y: number }[] = [...this.cans, ...this.barrels];
+    const spot = (d: number[], r: number, gap: number, taken: { x: number; y: number }[]) => {
+      for (let i = 0; i < 400; i++) {
+        const a = rand(0, TAU);
+        const dd = rand(d[0], d[1]) * (i > 250 ? 0.6 : 1);
+        const x = cx + Math.cos(a) * dd;
+        const y = cy + Math.sin(a) * dd;
+        if (world.pointBlocked(x, y, r)) continue;
+        if (field && !world.reachable(x, y, field)) continue;
+        if (i < 300 && [...avoid, ...taken].some((o) => Math.hypot(o.x - x, o.y - y) < gap)) continue;
+        return { x, y };
+      }
+      return null;
+    };
+    const O = ESCAPE_OBJ;
+    const d = (O as unknown as Record<string, { dist: number[] }>)[kind].dist;
+    const base = spot(d, kind === 'pump' ? O.pump.r * 0.6 : 22, 120, []);
+    if (!base) return;
+    const o: StopObj = { kind, x: base.x, y: base.y, prog: 0, state: 0, hp: 0, n: 0, items: [], ang: 0, hitT: 0 };
+    if (kind === 'medic') o.hp = O.medic.hp;
+    if (kind === 'cart')
+      for (let i = 0; i < O.cart.n; i++) {
+        const s = i === 0 ? base : spot(d, 16, O.cart.gap, o.items);
+        if (s) o.items.push({ x: s.x, y: s.y, taken: false });
+      }
+    this.obj = o;
+  }
+
+  /** La bomba llena bidones, el médico sigue al más cercano y sufre, las provisiones se juntan. */
+  updateObj(dt: number, ps: Player[], game: GameHost) {
+    const o = this.obj;
+    if (!o) return;
+    o.hitT = Math.max(0, o.hitT - dt);
+    if (o.kind === 'pump') {
+      const P = ESCAPE_OBJ.pump;
+      if (o.state !== 0) return;
+      const p = ps.find((q) => Math.hypot(q.x - o.x, q.y - o.y) < P.r);
+      if (!p) return;
+      o.prog += dt / P.t;
+      if (o.prog < 1) return;
+      o.prog = 0;
+      o.n++;
+      this.gainCan(o.x, o.y, p, game);
+      if (o.n >= P.max) {
+        o.state = 2;
+        game.toast('La bomba se quedó seca');
+      }
+    } else if (o.kind === 'medic') this.updateMedic(dt, ps, game);
+    else if (o.kind === 'cart') {
+      const C = ESCAPE_OBJ.cart;
+      for (const it of o.items) {
+        if (it.taken) continue;
+        const p = ps.find((q) => Math.hypot(it.x - q.x, it.y - q.y) <= C.grab + q.r);
+        if (!p) continue;
+        it.taken = true;
+        o.n++;
+        game.particles.pickupFx(it.x, it.y, '#86c08e');
+        game.sfx.pickup();
+        const left = o.items.filter((x) => !x.taken).length;
+        game.toast(left ? `Provisiones ${o.n} de ${o.items.length}` : '¡Carrito lleno! Se venden al salir');
+      }
+    }
+  }
+
+  /** El médico: espera, sigue al jugador más cercano esquivando paredes y sube al llegar a la camioneta. */
+  updateMedic(dt: number, ps: Player[], game: GameHost) {
+    const o = this.obj!;
+    const M = ESCAPE_OBJ.medic;
+    if (o.state >= 2) return;
+    let p: Player | null = null;
+    let pd = Infinity;
+    for (const q of ps) {
+      const d = Math.hypot(q.x - o.x, q.y - o.y);
+      if (d < pd) {
+        pd = d;
+        p = q;
+      }
+    }
+    if (o.state === 0) {
+      if (!p || pd > M.touch + p.r) return;
+      o.state = 1;
+      game.toast('¡El médico te sigue! Llévalo a la camioneta');
+      game.sfx.radio();
+    }
+    // los zombis que lo tocan le pegan
+    game.horde.grid.query(o.x - 40, o.y - 40, o.x + 40, o.y + 40, near);
+    for (const z of near) {
+      if (z.dead || z.air > 0 || Math.hypot(z.x - o.x, z.y - o.y) > z.r + 14) continue;
+      o.hp -= M.dps * dt;
+      o.hitT = 0.15;
+      if (Math.random() < dt * 6) game.particles.blood?.(o.x, o.y, rand(-1, 1), rand(-1, 1), 3);
+    }
+    if (o.hp <= 0) {
+      o.state = 3;
+      game.particles.blood?.(o.x, o.y, 0, 0, 14);
+      game.toast('El médico murió');
+      game.sfx.opAlert();
+      return;
+    }
+    // sigue al más cercano (sin pegarse: se queda a near px); ya cerca de la camioneta, va directo a ella
+    const van = this.van!;
+    const qx = Math.max(van.x, Math.min(o.x, van.x + van.w));
+    const qy = Math.max(van.y, Math.min(o.y, van.y + van.h));
+    const vd = Math.hypot(qx - o.x, qy - o.y);
+    const home = vd < 150;
+    const gx = home ? qx : p?.x;
+    const gy = home ? qy : p?.y;
+    const gd = home ? vd : pd;
+    const gap = home ? 0 : M.near;
+    if (p && gx !== undefined && gy !== undefined && gd > gap) {
+      const a = Math.atan2(gy - o.y, gx - o.x);
+      o.ang = a;
+      const step = Math.min(gd - gap, M.speed * (pd > 260 ? 1.25 : 1) * dt);
+      const nx = o.x + Math.cos(a) * step;
+      const ny = o.y + Math.sin(a) * step;
+      const w = game.world;
+      // si choca con algo, se desliza por el otro eje
+      if (!w.pointBlocked(nx, ny, 10)) {
+        o.x = nx;
+        o.y = ny;
+      } else if (!w.pointBlocked(nx, o.y, 10)) o.x = nx;
+      else if (!w.pointBlocked(o.x, ny, 10)) o.y = ny;
+      // muy lejos (se atoró): corre hasta tu lado, para no quedarse atrás para siempre
+      if (pd > 600) {
+        const b = Math.atan2(p.y - o.y, p.x - o.x);
+        o.x = p.x - Math.cos(b) * M.near;
+        o.y = p.y - Math.sin(b) * M.near;
+      }
+    }
+    // en la camioneta: sube y se queda todo el viaje
+    const dx = Math.max(van.x - o.x, 0, o.x - (van.x + van.w));
+    const dy = Math.max(van.y - o.y, 0, o.y - (van.y + van.h));
+    if (Math.hypot(dx, dy) < 30) {
+      o.state = 2;
+      if (this.medic) {
+        // ya traían uno: éste cura a todos y paga
+        for (const q of everyone(game)) if (q.alive) q.hp = q.stats.maxHp;
+        for (const q of everyone(game)) pay(game, M.pay, q);
+        game.toast('Otro médico a bordo: los cura a todos');
+      } else {
+        this.medic = true;
+        game.toast('¡Médico a bordo! Los curará entre paradas');
+      }
+      game.particles.pickupFx(o.x, o.y, '#e05a5a');
+      game.sfx.opDone();
+    }
+  }
+
+  /** La armería: el arma más cara que no tenga quien la abre (hasta el tope de la parada), y munición. */
+  openArmory(p: Player, game: GameHost) {
+    const o = this.obj!;
+    const A = ESCAPE_OBJ.armory;
+    o.state = 2;
+    this.holdT = 0;
+    const cap = A.cap[0] + A.cap[1] * this.stop;
+    const W = WEAPONS as unknown as Record<string, { name: string; price: number }>;
+    let best = '';
+    for (const id of A.guns)
+      if (W[id] && p.canBuy(id) && W[id].price <= cap && (!best || W[id].price > W[best].price)) best = id;
+    if (best) {
+      p.buy(best);
+      const i = p.weapons.findIndex((w) => w.id === best);
+      if (i >= 0) p.select(i);
+      if (game.escapeGun) game.escapeGun(W[best].name, p);
+      else game.toast(`Armería abierta: ${W[best].name}`);
+    } else {
+      pay(game, A.cash, p);
+      game.toast(`Armería abierta: ya tenías todo, +$${A.cash}`);
+    }
+    game.pickups.drop('ammo', o.x + 20, o.y + 10);
+    game.pickups.drop('ammo', o.x - 20, o.y + 10);
+    game.sfx.opDone();
+    game.updateHud?.(true);
+  }
+
   /** Un jugador recoge un bidón. */
   takeCan(c: Can, p: Player, game: GameHost) {
     c.taken = true;
+    this.gainCan(c.x, c.y, p, game);
+  }
+
+  /** Un bidón más (recogido del suelo o de la bomba de la gasolinera). */
+  gainCan(x: number, y: number, p: Player | null, game: GameHost) {
     this.have++;
-    game.particles.pickupFx(c.x, c.y, '#f0b030');
+    game.particles.pickupFx(x, y, '#f0b030');
     game.sfx.pickup();
     if (this.have === this.need) {
       game.toast('¡Ya tienen el combustible! Vuelvan a la camioneta');
@@ -727,6 +1118,14 @@ export class Escape {
     if (k >= ESCAPE.leaveT || this.stuckT > 0.7) {
       // el premio de la parada, para cada uno; en la última, escaparon
       if (!this.final) for (const p of everyone(game)) pay(game, ESCAPE_ROUTE.stopPay * this.stop, p);
+      // supermercado: las provisiones del carrito se venden (cada uno cobra lo de todas)
+      const o = this.obj;
+      if (o?.kind === 'cart' && o.n > 0) {
+        const n = o.n * ESCAPE_OBJ.cart.pay * this.stop;
+        for (const p of everyone(game)) pay(game, n, p);
+        game.toast(`Vendieron ${o.n} provisiones: +$${n}`);
+        o.n = 0;
+      }
       this.finish(game, this.final ? 'won' : 'stop');
     }
   }
@@ -783,6 +1182,18 @@ export function packEscape(e: Escape, bossType = -1): number[] {
   for (const c of e.cans) out.push(Math.round(c.x), Math.round(c.y), c.taken ? 1 : 0);
   out.push(e.barrels.length);
   for (const b of e.barrels) out.push(Math.round(b.x), Math.round(b.y), b.alive ? 1 : 0);
+  // mejoras de la camioneta, claxon, torreta y médico a bordo
+  for (const k of VAN_UP_ORDER) out.push(e.ups[k] || 0);
+  out.push(e.hornUsed ? 1 : 0, Math.round(e.hornT * 10), Math.round(e.turretA * 100), e.turretFlash > 0 ? 1 : 0);
+  out.push(e.medic ? 1 : 0);
+  // el objetivo de la parada
+  const o = e.obj;
+  if (!o) out.push(-1);
+  else {
+    out.push(ESCAPE_OBJ_KINDS.indexOf(o.kind), Math.round(o.x), Math.round(o.y), Math.round(o.prog * 100));
+    out.push(o.state, Math.ceil(o.hp), o.n, Math.round(o.ang * 100), o.hitT > 0 ? 1 : 0, o.items.length);
+    for (const it of o.items) out.push(Math.round(it.x), Math.round(it.y), it.taken ? 1 : 0);
+  }
   return out;
 }
 
@@ -829,6 +1240,30 @@ export function unpackEscape(e: Escape, a: number[], bossTypes: string[] = []) {
   const barrels: Barrel[] = [];
   for (let k = 0; k < nb; k++, i += 3) barrels.push({ x: a[i], y: a[i + 1], alive: !!a[i + 2], ph: k * 1.3 });
   e.barrels = barrels;
+  for (const k of VAN_UP_ORDER) e.ups[k] = a[i++] || 0;
+  e.hornUsed = !!a[i++];
+  e.hornT = (a[i++] || 0) / 10;
+  e.turretA = (a[i++] || 0) / 100;
+  e.turretFlash = a[i++] ? 0.06 : 0;
+  e.medic = !!a[i++];
+  const ok = a[i++] ?? -1;
+  if (ok < 0) e.obj = null;
+  else {
+    const o = (e.obj || { items: [] }) as StopObj;
+    o.kind = ESCAPE_OBJ_KINDS[ok];
+    o.x = a[i++];
+    o.y = a[i++];
+    o.prog = a[i++] / 100;
+    o.state = a[i++];
+    o.hp = a[i++];
+    o.n = a[i++];
+    o.ang = a[i++] / 100;
+    o.hitT = a[i++] ? 0.15 : 0;
+    const ni = a[i++];
+    o.items = [];
+    for (let k = 0; k < ni; k++, i += 3) o.items.push({ x: a[i], y: a[i + 1], taken: !!a[i + 2] });
+    e.obj = o;
+  }
   e.active = true;
   return e.seedFor();
 }
