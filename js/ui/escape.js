@@ -144,9 +144,6 @@ export function bindEscape(game) {
     tryFullscreen(game);
     loadTrip(game);
   });
-  on(game, 'btn-esc-shop', () => {
-    if (game.state === 'play' && game.escape.phase === 'search') game.openShop();
-  });
 }
 
 /** Objetivo de ahora, en una línea. */
@@ -217,7 +214,6 @@ export function updateEscapeHud(game) {
     }
     $('esc-cans').innerHTML = cans;
     $('esc-lvl').textContent = e.level;
-    $('btn-esc-shop').hidden = e.phase !== 'search';
   }
   $('esc-threat-fill').style.transform = `scaleX(${e.levelProg.toFixed(3)})`;
   const van = e.van;

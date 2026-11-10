@@ -363,27 +363,88 @@ function drawVanUps(ctx, L, W, time, phase, ups, e) {
   }
 }
 
-// Manguera del bidón al tanque mientras carga (un bidón en el suelo junto a la puerta trasera).
-function drawFueling(ctx, van, time) {
-  const x0 = van.x + van.w * 0.18;
-  const y0 = van.y + van.h + 4;
-  const cx = x0 - 22;
-  const cy = y0 + 18;
-  drawCanSprite(ctx, cx, cy, 0.9, -0.3);
-  ctx.strokeStyle = '#1c1c1c';
-  ctx.lineWidth = 3;
+// La carga, en el suelo (debajo de la camioneta): charco bajo la toma, los bidones llenos esperando en fila a
+// la derecha y los vaciados tirados a la izquierda. `k`: 0..1 de la carga · `n`: bidones.
+const capOf = (van) => ({ x: van.x + van.w * 0.24, y: van.y + van.h });
+function drawFueling(ctx, van, time, k, n) {
+  const cap = capOf(van);
+  // charco de gasolina con reflejo tornasol
+  ctx.save();
+  ctx.globalAlpha = 0.4 + 0.1 * Math.sin(time * 2);
+  const g = ctx.createRadialGradient(cap.x - 4, cap.y + 24, 2, cap.x - 4, cap.y + 24, 26);
+  g.addColorStop(0, 'rgba(150,110,220,0.75)');
+  g.addColorStop(0.5, 'rgba(70,160,160,0.5)');
+  g.addColorStop(1, 'rgba(30,30,30,0)');
+  ctx.fillStyle = g;
   ctx.beginPath();
-  ctx.moveTo(cx + 4, cy - 10);
-  ctx.quadraticCurveTo(cx + 14, y0 - 2 + Math.sin(time * 6) * 2, x0, y0 - 6);
+  ctx.ellipse(cap.x - 4, cap.y + 24, 26, 10, 0, 0, TAU);
+  ctx.fill();
+  ctx.restore();
+  const cur = Math.min(n - 1, Math.floor(k * n));
+  for (let i = 0; i < n; i++) {
+    if (i === cur) continue;
+    // vacíos: tirados de lado, amontonados a la izquierda
+    if (i < cur)
+      drawCanSprite(ctx, cap.x - 26 - i * 9, cap.y + 26 + (i % 2) * 6, 0.8, Math.PI / 2 + (i % 2 ? 0.35 : -0.2));
+    // llenos: de pie en fila a la derecha, esperando su turno
+    else drawCanSprite(ctx, cap.x + 30 + (i - cur - 1) * 22, cap.y + 24, 0.85, 0);
+  }
+}
+
+// Encima de la camioneta: la tapa del tanque abierta en el costado y el bidón que se está vaciando, pegado a
+// la toma, con el chorro dorado que entra, gotas y vapor. Al terminar cada bidón se inclina más.
+function drawFuelPour(ctx, van, time, k, n) {
+  const cap = capOf(van);
+  const part = (k * n) % 1;
+  // boca del tanque abierta (con su tapita levantada)
+  ctx.fillStyle = '#14181a';
+  ctx.strokeStyle = OUT;
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.arc(cap.x, cap.y - 4, 4, 0, TAU);
+  ctx.fill();
   ctx.stroke();
-  // gotas que suben por la manguera
-  ctx.fillStyle = '#f0c440';
-  for (let i = 0; i < 3; i++) {
-    const k = (time * 1.5 + i / 3) % 1;
-    const px = cx + 4 + (x0 - cx - 4) * k;
-    const py = cy - 10 + (y0 - 6 - (cy - 10)) * k - Math.sin(k * Math.PI) * 6;
+  ctx.fillStyle = '#5a8a90';
+  roundRect(ctx, cap.x + 4, cap.y - 9, 8, 9, 2);
+  ctx.fill();
+  ctx.stroke();
+  // el bidón, de cabeza contra la toma: se inclina y se mece mientras se vacía
+  const tilt = 2.75 + part * 0.25 + Math.sin(time * 6) * 0.04;
+  const bx = cap.x + 6;
+  const by = cap.y + 16;
+  drawCanSprite(ctx, bx, by, 1, tilt);
+  // la boca del bidón (la tapa del dibujo, en (-5, -11) sin girar)
+  const c = Math.cos(tilt);
+  const s = Math.sin(tilt);
+  const mx = bx + -5 * c - -11 * s;
+  const my = by + -5 * s + -11 * c;
+  // chorro dorado de la boca a la toma
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = 'rgba(240,180,50,0.95)';
+  ctx.lineWidth = 3.5;
+  ctx.beginPath();
+  ctx.moveTo(mx, my);
+  ctx.quadraticCurveTo((mx + cap.x) / 2 + Math.sin(time * 20) * 1.2, (my + cap.y - 4) / 2, cap.x, cap.y - 4);
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,245,200,0.85)';
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
+  ctx.lineCap = 'butt';
+  // gotas que saltan de la toma
+  for (let i = 0; i < 4; i++) {
+    const t = (time * 2.4 + i / 4) % 1;
+    const a = i * 1.7 + 0.6;
+    ctx.fillStyle = `rgba(255,214,110,${1 - t})`;
     ctx.beginPath();
-    ctx.arc(px, py, 1.6, 0, TAU);
+    ctx.arc(cap.x + Math.cos(a) * 9 * t, cap.y - 4 + Math.sin(a) * 4 * t + t * t * 10, 1.5 * (1 - t) + 0.4, 0, TAU);
+    ctx.fill();
+  }
+  // vapor que sube y se tuerce
+  for (let i = 0; i < 3; i++) {
+    const t = (time * 0.7 + i / 3) % 1;
+    ctx.fillStyle = `rgba(210,220,200,${0.2 * (1 - t)})`;
+    ctx.beginPath();
+    ctx.arc(cap.x + Math.sin(t * 6 + i) * 6, cap.y - 10 - t * 28, 3 + t * 7, 0, TAU);
     ctx.fill();
   }
 }
@@ -520,9 +581,12 @@ export function drawEscapeGround(ctx, game, time) {
   const van = e.van;
   if (van && e.phase !== 'done') {
     if (van.x + van.w > v.x0 - 60 && van.x < v.x1 + 60 && van.y + van.h > v.y0 - 60 && van.y < v.y1 + 60) {
-      if (e.phase === 'fuel') drawFueling(ctx, van, time);
+      const fk = Math.min(1, e.fuelT / e.fuelMax);
+      const fn = Math.max(1, Math.min(e.have, 6));
+      if (e.phase === 'fuel') drawFueling(ctx, van, time, fk, fn);
       if (e.phase !== 'lost') drawVanBody(ctx, van, time, e.phase, e.ups, e);
       else drawWreck(ctx, van);
+      if (e.phase === 'fuel') drawFuelPour(ctx, van, time, fk, fn);
     }
   }
 }
@@ -986,34 +1050,79 @@ export function drawEscapeUi(ctx, game, time) {
   ctx.fillRect(van.x - 1, van.y - 17, van.w + 2, 8);
   ctx.fillStyle = hp > 0.5 ? '#86c08e' : hp > 0.25 ? '#e0a040' : '#e0503a';
   ctx.fillRect(van.x, van.y - 16, van.w * hp, 6);
-  // indicador de la carga: un anillo que se llena sobre la camioneta, con el bidón al centro
-  if (e.phase === 'fuel') {
-    const k = Math.min(1, e.fuelT / e.fuelMax);
-    const R = 22;
-    const gy = van.y - 46;
-    ctx.fillStyle = 'rgba(10,10,8,0.75)';
-    ctx.beginPath();
-    ctx.arc(cx, gy, R + 5, 0, TAU);
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(240,196,64,0.25)';
-    ctx.lineWidth = 6;
-    ctx.beginPath();
-    ctx.arc(cx, gy, R, 0, TAU);
-    ctx.stroke();
-    ctx.strokeStyle = '#f0c440';
-    ctx.beginPath();
-    ctx.arc(cx, gy, R, -Math.PI / 2, -Math.PI / 2 + TAU * k);
-    ctx.stroke();
-    drawCanSprite(ctx, cx, gy + 1, 0.75);
-    ctx.font = `700 ${Math.round(16 / Math.max(0.6, z))}px Teko, sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.lineWidth = 4;
-    ctx.strokeStyle = 'rgba(0,0,0,0.85)';
-    ctx.fillStyle = '#ffe6a8';
-    const t = `${Math.ceil(e.fuelMax - e.fuelT)} s`;
-    ctx.strokeText(t, cx, gy + R + 22);
-    ctx.fillText(t, cx, gy + R + 22);
+  // medidor de la carga, encima de la vida (sin tapar la camioneta)
+  if (e.phase === 'fuel') drawFuelGauge(ctx, van, Math.min(1, e.fuelT / e.fuelMax), e.fuelMax - e.fuelT, time, z);
+}
+
+// Medidor de combustible: un tablero con el ícono de la bomba, la aguja que sube de E a F, diez rayas que se
+// encienden y los segundos que faltan. Late más rápido al final.
+function drawFuelGauge(ctx, van, k, left, time, z) {
+  const s = 1.25 / Math.max(0.8, z);
+  const w = 112 * s;
+  const h = 26 * s;
+  const x = van.x + van.w / 2 - w / 2;
+  const y = van.y - 22 - h;
+  ctx.save();
+  // tablero
+  ctx.fillStyle = 'rgba(12,12,9,0.88)';
+  ctx.strokeStyle = 'rgba(240,196,64,0.75)';
+  ctx.lineWidth = 1.5 * s;
+  roundRect(ctx, x, y, w, h, 5 * s);
+  ctx.fill();
+  ctx.stroke();
+  // flechita hacia la camioneta
+  ctx.fillStyle = 'rgba(12,12,9,0.88)';
+  ctx.beginPath();
+  ctx.moveTo(x + w / 2 - 5 * s, y + h);
+  ctx.lineTo(x + w / 2, y + h + 5 * s);
+  ctx.lineTo(x + w / 2 + 5 * s, y + h);
+  ctx.fill();
+  // ícono de la bomba
+  const ix = x + 6 * s;
+  const iy = y + 5 * s;
+  ctx.fillStyle = '#f0c440';
+  roundRect(ctx, ix, iy, 9 * s, 16 * s, 1.5 * s);
+  ctx.fill();
+  ctx.fillStyle = '#12120c';
+  ctx.fillRect(ix + 2 * s, iy + 2 * s, 5 * s, 4 * s);
+  ctx.strokeStyle = '#f0c440';
+  ctx.lineWidth = 1.6 * s;
+  ctx.beginPath();
+  ctx.moveTo(ix + 9 * s, iy + 4 * s);
+  ctx.lineTo(ix + 13 * s, iy + 7 * s);
+  ctx.lineTo(ix + 13 * s, iy + 13 * s);
+  ctx.stroke();
+  // rayas que se encienden (la que se está llenando parpadea)
+  const n = 10;
+  const bx = x + 22 * s;
+  const bw = w - 22 * s - 30 * s;
+  const gap = 2 * s;
+  const sw = (bw - gap * (n - 1)) / n;
+  const lit = k * n;
+  for (let i = 0; i < n; i++) {
+    const on = i < Math.floor(lit);
+    const cur = i === Math.floor(lit);
+    let col = 'rgba(240,196,64,0.14)';
+    if (on) col = i < 3 ? '#e0703a' : i < 7 ? '#f0c440' : '#9cf0a8';
+    else if (cur) col = `rgba(240,196,64,${0.25 + 0.5 * (0.5 + 0.5 * Math.sin(time * 10))})`;
+    ctx.fillStyle = col;
+    const sh = (10 + i * 0.8) * s;
+    ctx.fillRect(bx + i * (sw + gap), y + h - 6 * s - sh, sw, sh);
   }
+  // E y F
+  ctx.font = `700 ${Math.round(8 * s)}px Teko, sans-serif`;
+  ctx.fillStyle = 'rgba(230,224,210,0.6)';
+  ctx.textAlign = 'left';
+  ctx.fillText('E', bx, y + h - 1 * s);
+  ctx.textAlign = 'right';
+  ctx.fillText('F', bx + bw, y + h - 1 * s);
+  // segundos que faltan
+  const urgent = left < 6;
+  ctx.font = `700 ${Math.round(15 * s)}px Teko, sans-serif`;
+  ctx.textAlign = 'right';
+  ctx.fillStyle = urgent && Math.sin(time * 12) > 0 ? '#ffffff' : '#ffe6a8';
+  ctx.fillText(`${Math.ceil(left)}s`, x + w - 5 * s, y + h / 2 + 5 * s);
+  ctx.restore();
 }
 
 /** Flechas en la orilla: amarillas hacia los bidones que faltan, verde grande hacia la camioneta. */
