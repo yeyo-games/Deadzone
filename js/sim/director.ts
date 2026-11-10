@@ -255,7 +255,8 @@ export class Director {
   }
 
   update(dt: number, game: GameHost) {
-    if (this.state === 'waiting') return;
+    // modo Huida: no hay oleadas, el reparto lo hace sim/escape.ts
+    if (this.state === 'waiting' || this.state === 'escape') return;
     if (this.state === 'break') {
       this.timer -= dt;
       if (this.timer <= 0) this.startWave(game);

@@ -69,6 +69,14 @@ export function renderLobby(game) {
     list.appendChild(li);
   }
   game.$('ol-count').textContent = `${rows.length}/${st.maxPlayers}`;
+  // modo de la partida: lo elige el propietario; los demás lo ven
+  const mode = st.mode === 'escape' ? 'escape' : 'waves';
+  for (const b of game.root.querySelectorAll('.ol-mode-btn')) {
+    const on = b.dataset.mode === mode;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-checked', String(on));
+    b.disabled = !ol.isOwner || (st.phase !== 'waiting' && st.phase !== 'finished');
+  }
   const phase = st.phase;
   const owner = ol.isOwner;
   const lobbyLike = phase === 'waiting' || phase === 'finished';
@@ -103,7 +111,10 @@ export function renderLobby(game) {
     res.innerHTML = '';
     const h = document.createElement('p');
     h.className = 'ol-res-head';
-    h.textContent = `Oleada ${r.wave} · ${fmtTime(r.time)} · ${r.kills} bajas en total`;
+    h.textContent =
+      r.mode === 'escape'
+        ? `${r.result === 'won' ? '¡Escaparon!' : `Huida: parada ${r.stop} de ${r.total}`} · ${fmtTime(r.time)} · ${r.kills} bajas`
+        : `Oleada ${r.wave} · ${fmtTime(r.time)} · ${r.kills} bajas en total`;
     res.appendChild(h);
     for (const pl of r.players || []) {
       const row = document.createElement('div');
@@ -210,6 +221,10 @@ export function bindLobby(game) {
     if (me) game.online.send('ready', { v: !me.ready });
   });
   on(game, 'btn-ol-start', () => game.online.send('start'));
+  for (const b of game.root.querySelectorAll('.ol-mode-btn'))
+    b.addEventListener('click', () => {
+      if (game.online.isOwner) game.online.send('mode', { v: b.dataset.mode });
+    });
   on(game, 'btn-ol-lobby', () => game.online.send('lobby'));
   on(game, 'btn-ol-copy', () => copyInvite(game));
   game.$('ol-join-form').addEventListener('submit', (e) => {

@@ -1944,6 +1944,7 @@ export const RARITY: Record<string, { name: string; weight: number; fromWave: nu
 export const UPGRADE_SOURCES: Record<string, { rarities: string[][]; title: string }> = {
   level: { rarities: [['comun', 'rara']], title: '' },
   golden: { rarities: [['rara'], ['comun']], title: 'Botín del zombi dorado' },
+  fuel: { rarities: [['rara'], ['comun']], title: 'Bidón extra' },
   boss: { rarities: [['legendaria', 'sinergia'], ['rara'], ['comun']], title: 'Cofre legendario del jefe' },
 };
 
@@ -2598,6 +2599,151 @@ export const CAR_COLORS = ['#7d2f2a', '#c75f43', '#3f566b', '#6b6d68', '#b8b1a0'
 //   roll: ruleta del botín al final: [multiplicador, probabilidad] · streak: cada operación completada
 //   seguida sube el total `step` (hasta `max` veces); fallar o retirarse la corta · reportT: s que se ve
 //   el informe de la misión
+// Modo Huida (sim/escape.ts): escapar de la ciudad en una camioneta, parada por parada. Etapa 1: una parada.
+// cans / need: bidones repartidos y cuántos hacen falta para cargar · dist: a qué distancia de la camioneta
+// (px) · gap: separación mínima entre bidones · grab: alcance para recogerlos · extraK: cada bidón de más
+// acorta la carga en esta fracción (hasta extraMax), paga extraPay y da una mejora rara a elegir ·
+// guards: bidones custodiados; al acercarte a guardR px sale su guardia (un zombi con habilidad de
+// guardTypes y guardPack normales) · crates / meds: cajas de armas y botiquines por el mapa ·
+// startLevel / levelEvery: amenaza al llegar y s por nivel · rate: zombis por s (base + por nivel) ·
+// alive: tope de vivos (base + por nivel) · startT / boardT: s con H mantenida para empezar a cargar y para
+// subir; boardReach: desde cuántos px de la camioneta se puede subir · fuelT: s de carga · fuelRate: cuántos
+// más zombis llegan durante la carga · goalShare: parte de esos que va por la camioneta · readyDmg: daño que
+// recibe la camioneta con el tanque lleno (fracción) · van: tamaño y vida; maxHit: lo más que le quita un
+// golpe (fracción) · runway: calle libre por delante (px) que se busca al ponerla · leaveT: s que dura la
+// salida · lostT: s entre que explota y el fin de la partida · barrels: barriles de las gasolineras (a near
+// px de la camioneta; estallan con una bala a hitR px o una explosión a chainR px; radio y daño por la
+// vida de la amenaza) · boss: jefes que pueden bloquear el puente y su vida (fracción de la de las oleadas)
+export const ESCAPE = {
+  cans: 5,
+  need: 3,
+  dist: [700, 1700],
+  gap: 420,
+  grab: 34,
+  extraK: 0.12,
+  extraMax: 2,
+  extraPay: 150,
+  guards: 2,
+  guardR: 760,
+  guardTypes: ['spitter', 'screamer', 'bull', 'digger', 'jumper'],
+  guardPack: 4,
+  crates: 3,
+  meds: 2,
+  startLevel: 1,
+  levelEvery: 35,
+  rate: [0.9, 0.45],
+  alive: [60, 20],
+  startT: 1,
+  boardT: 0.6,
+  boardReach: 110,
+  fuelT: 38,
+  fuelRate: 1.8,
+  goalShare: 0.55,
+  readyDmg: 0.4,
+  van: { w: 104, h: 50, hp: 3000, maxHit: 0.04 },
+  runway: 520,
+  leaveT: 3.2,
+  lostT: 2.6,
+  barrels: { near: [160, 480], hitR: 14, chainR: 150, radius: 130, power: 320 },
+  boss: { pool: ['supremo', 'aplastador', 'campanero', 'contaminado', 'carcelero'], hp: 0.55 },
+  // en línea: cuántos zombis más llegan por cada jugador de más
+  perPlayer: 0.4,
+};
+
+// Viaje del modo Huida (etapa 2, sim/escape.ts y ui/route.js): una ruta con ramas de `layers` capas; la
+// primera es la salida (una parada) y la última el puente; cada capa del medio tiene entre width[0] y
+// width[1] paradas, y cada una se une a 1 o 2 de la siguiente. levelPerStop: amenaza de más por cada
+// parada recorrida (se suma a ESCAPE.startLevel) · needEvery: cada cuántas paradas hace falta un bidón más
+// modChance: probabilidad de que una parada traiga una ronda especial (EVENTS) · stopPay: premio al dejar
+// una parada (por número de parada) · restHeal: parte de la vida perdida que se recupera en el viaje a la
+// siguiente parada · voteT: s para votar el camino en línea · fadeT: s del fundido entre paradas ·
+// travelT: s del viaje en el mapa
+export const ESCAPE_ROUTE = {
+  layers: 7,
+  width: [2, 3],
+  levelPerStop: 0.45,
+  needEvery: 4,
+  modChance: 0.45,
+  stopPay: 60,
+  restHeal: 0.6,
+  voteT: 25,
+  fadeT: 0.6,
+  travelT: 1.5,
+};
+
+// Tipos de parada. names: nombres al azar · desc: lo que cambia (se ve en el mapa) · cans / crates / meds:
+// bidones, cajas de armas y botiquines de más · pay: multiplica el dinero de las bajas · rate: multiplica
+// cuántos zombis llegan · level: amenaza de más al llegar · barrels: barriles explosivos · swat: parte de
+// la horda que llega con escudo · col: color de su insignia en el mapa
+export const ESCAPE_STOPS: Record<
+  string,
+  {
+    name: string;
+    names: string[];
+    desc: string;
+    col: string;
+    cans?: number;
+    crates?: number;
+    meds?: number;
+    pay?: number;
+    rate?: number;
+    level?: number;
+    barrels?: number;
+    swat?: number;
+  }
+> = {
+  start: { name: 'La ciudad', names: ['Centro de la ciudad'], desc: 'Donde empezó todo', col: '#9c968a' },
+  gas: {
+    name: 'Gasolinera',
+    names: ['Gasolinera de la ruta 9', 'Gasolinera El Mirador', 'Estación de servicio 24 h', 'Gasolinera Las Palmas'],
+    desc: 'Más bidones y barriles que explotan: dispárales cuando lleguen los zombis',
+    col: '#f0c440',
+    cans: 2,
+    barrels: 6,
+  },
+  clinic: {
+    name: 'Clínica',
+    names: ['Clínica San Judas', 'Hospital del Valle', 'Centro de salud norte', 'Clínica Santa Fe'],
+    desc: 'Botiquines de sobra',
+    col: '#e05a5a',
+    meds: 4,
+  },
+  police: {
+    name: 'Comisaría',
+    names: ['Comisaría 14', 'Cuartel de policía', 'Estación de la guardia', 'Comisaría del puerto'],
+    desc: 'Cajas de armas, pero la horda llega con escudos antidisturbios',
+    col: '#6f9fd8',
+    crates: 3,
+    swat: 0.45,
+  },
+  market: {
+    name: 'Supermercado',
+    names: ['Supermercado El Ahorro', 'Plaza comercial', 'Mercado central', 'Bodega de abarrotes'],
+    desc: 'Las bajas pagan el doble y hay más cajas, pero llegan más zombis',
+    col: '#86c08e',
+    pay: 2,
+    rate: 1.25,
+    crates: 1,
+  },
+  homes: {
+    name: 'Barrio',
+    names: ['Barrio Las Lomas', 'Colonia del Río', 'Fraccionamiento Jardines', 'Barrio viejo'],
+    desc: 'Tranquilo: llegan menos zombis',
+    col: '#c9a87a',
+    rate: 0.75,
+  },
+  bridge: {
+    name: 'Puente de salida',
+    names: ['Puente de salida'],
+    desc: 'La última parada: un jefe bloquea el puente; derrótalo y cruza',
+    col: '#ff8a5a',
+    level: 1,
+  },
+};
+export const ESCAPE_STOP_KINDS = ['gas', 'clinic', 'police', 'market', 'homes'];
+// Latas del modo Huida (para el personaje): por cada parada superada y de más al escapar.
+export const ESCAPE_CANS = { stop: 1, won: 6 };
+
 export const OPS = {
   from: 20,
   every: 5,

@@ -19,6 +19,7 @@ import {
 import { drawPickups } from './pickups.js';
 import { drawBossAir, drawBossGround } from './bosses.js';
 import { drawOpsArrows, drawOpsCarried, drawOpsGround, drawOpsUi } from './ops.js';
+import { drawEscapeArrows, drawEscapeGround, drawEscapeUi } from './escape.js';
 import { drawBullets } from './bullets.js';
 import { drawPeers, drawRemoteBullets } from './remote.js';
 import { drawHorde } from './zombies.js';
@@ -58,6 +59,7 @@ export function render(game) {
   drawPickups(ctx, game.pickups.list, v, game.time);
   drawBossGround(ctx, game, game.time);
   if (playing) drawOpsGround(ctx, game, game.time);
+  if (playing) drawEscapeGround(ctx, game, game.time);
   if (game.building && game.state === 'play' && p.alive && game.inv[game.buildSel] > 0)
     drawGhost(ctx, game.structures, game, game.buildSel, game.time, game.buildTarget());
   drawStickyZones(ctx, game.structures, game.time);
@@ -75,7 +77,8 @@ export function render(game) {
   if (playing) {
     if (!p.alive) ctx.globalAlpha = 0.55;
     if (p.inRobot) drawRobot(ctx, game.robot, p, game.time);
-    else if (p.alive) drawSurvivor(ctx, p, game.time);
+    // dentro de la camioneta (Huida) no se ve
+    else if (p.alive && !p.inVan) drawSurvivor(ctx, p, game.time);
     ctx.globalAlpha = 1;
     drawPeers(ctx, game);
     drawMannedHeavy(ctx, game.structures);
@@ -97,6 +100,7 @@ export function render(game) {
   if (playing) game.floaters.draw(ctx);
   if (playing) drawWorldUi(game, ctx);
   if (playing) drawOpsUi(ctx, game, game.time);
+  if (playing) drawEscapeUi(ctx, game, game.time);
   if (game.state === 'play') drawHeavyPrompt(ctx, game);
 
   ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -113,6 +117,7 @@ export function render(game) {
     if (game.state === 'play') {
       drawGiantMarkers(game, ctx, W, H);
       drawOpsArrows(game, ctx, W, H);
+      drawEscapeArrows(game, ctx, W, H);
       if (game.input.mode === 'mouse' && p.alive) drawCrosshair(game, ctx);
     }
   }

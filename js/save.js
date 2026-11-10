@@ -17,6 +17,51 @@ import { isSource } from './sim/upgrades.ts';
 // Cada cuenta tiene dos guardados: el automático (también a mitad de ronda) y el punto
 // de control al terminar cada ronda, para continuar tras morir (ver accounts.js).
 
+/** Lo que se guarda del jugador: posición, vida, mejoras, armas y su clase (partida guardada y Huida). */
+export function packPlayer(p) {
+  return {
+    x: p.x,
+    y: p.y,
+    hp: p.hp,
+    stamina: p.stamina,
+    stats: p.stats,
+    weapons: p.weapons.map((w) => ({ id: w.id, mag: w.mag, reserve: w.reserve === Infinity ? -1 : w.reserve })),
+    wi: p.wi,
+    shotsFired: p.shotsFired,
+    shotsHit: p.shotsHit,
+    damageTaken: p.damageTaken,
+    cls: p.cls,
+    abCd: p.abCd,
+    heavyAmmo: p.heavyAmmo,
+  };
+}
+
+/** Pone en game.player lo guardado con packPlayer. */
+export function applyPlayer(game, sp) {
+  const p = game.player;
+  Object.assign(p.stats, sp.stats);
+  p.x = sp.x;
+  p.y = sp.y;
+  p.hp = Math.min(sp.hp, p.stats.maxHp);
+  p.stamina = sp.stamina;
+  // (partidas viejas: la pistola se cambia por el arma inicial, que siempre tiene balas infinitas)
+  // (el rifle se cambió por el lanzallamas: quien lo tenía recibe el lanzallamas con el depósito lleno)
+  p.weapons = sp.weapons
+    .map((w) => (w.id === 'rifle' ? { id: 'flamer', mag: WEAPONS.flamer.mag, reserve: WEAPONS.flamer.reserve } : w))
+    .filter((w) => WEAPONS[w.id] && w.id !== 'pistol' && w.id !== START_WEAPON)
+    .map((w) => ({ id: w.id, def: WEAPONS[w.id], mag: w.mag, reserve: w.reserve < 0 ? Infinity : w.reserve }));
+  p.weapons.unshift(p.makeWeapon(START_WEAPON));
+  p.weapons.sort((a, b) => WEAPON_ORDER.indexOf(a.id) - WEAPON_ORDER.indexOf(b.id));
+  p.wi = Math.min(sp.wi, p.weapons.length - 1);
+  p.shotsFired = sp.shotsFired;
+  p.shotsHit = sp.shotsHit;
+  p.damageTaken = sp.damageTaken;
+  // partidas guardadas antes de las clases: la última elegida
+  p.cls = isClass(sp.cls) ? sp.cls : game.classPick;
+  p.abCd = Math.max(0, Number(sp.abCd) || 0);
+  p.heavyAmmo = Math.max(0, Number(sp.heavyAmmo) || 0);
+}
+
 // Se guarda cada pocos segundos, también a mitad de ronda (con los zombis vivos),
 // y al cerrar o minimizar la página. Al terminar una ronda se crea además un punto de control.
 export function saveProgress(game) {
@@ -55,21 +100,7 @@ export function saveProgress(game) {
     dev: !!game.devUsed,
     inv: game.inv,
     buildSel: game.buildSel,
-    player: {
-      x: p.x,
-      y: p.y,
-      hp: p.hp,
-      stamina: p.stamina,
-      stats: p.stats,
-      weapons: p.weapons.map((w) => ({ id: w.id, mag: w.mag, reserve: w.reserve === Infinity ? -1 : w.reserve })),
-      wi: p.wi,
-      shotsFired: p.shotsFired,
-      shotsHit: p.shotsHit,
-      damageTaken: p.damageTaken,
-      cls: p.cls,
-      abCd: p.abCd,
-      heavyAmmo: p.heavyAmmo,
-    },
+    player: packPlayer(p),
     // los bloques temporales de los jefes no se guardan
     blocks: s.blocks
       .filter((b) => b.tempT === undefined && !(b.kind === 'decoy' && b.up))
@@ -118,29 +149,9 @@ export function loadProgress(game, kind = 'save') {
   Object.assign(game.inv, d.inv);
   game.buildSel = d.buildSel || 'wood';
   const p = game.player;
-  const sp = d.player;
-  Object.assign(p.stats, sp.stats);
-  p.x = sp.x;
-  p.y = sp.y;
-  p.hp = Math.min(sp.hp, p.stats.maxHp);
-  p.stamina = sp.stamina;
-  // (partidas viejas: la pistola se cambia por el arma inicial, que siempre tiene balas infinitas)
-  // (el rifle se cambió por el lanzallamas: quien lo tenía recibe el lanzallamas con el depósito lleno)
-  p.weapons = sp.weapons
-    .map((w) => (w.id === 'rifle' ? { id: 'flamer', mag: WEAPONS.flamer.mag, reserve: WEAPONS.flamer.reserve } : w))
-    .filter((w) => WEAPONS[w.id] && w.id !== 'pistol' && w.id !== START_WEAPON)
-    .map((w) => ({ id: w.id, def: WEAPONS[w.id], mag: w.mag, reserve: w.reserve < 0 ? Infinity : w.reserve }));
-  p.weapons.unshift(p.makeWeapon(START_WEAPON));
-  p.weapons.sort((a, b) => WEAPON_ORDER.indexOf(a.id) - WEAPON_ORDER.indexOf(b.id));
-  p.wi = Math.min(sp.wi, p.weapons.length - 1);
-  p.shotsFired = sp.shotsFired;
-  p.shotsHit = sp.shotsHit;
-  p.damageTaken = sp.damageTaken;
-  // partidas guardadas antes de las clases: la última elegida
-  p.cls = isClass(sp.cls) ? sp.cls : game.classPick;
-  p.abCd = Math.max(0, Number(sp.abCd) || 0);
-  p.heavyAmmo = Math.max(0, Number(sp.heavyAmmo) || 0);
+  applyPlayer(game, d.player);
   game.analitica.iniciar('solo', typeof d.partida === 'string' ? d.partida : null);
+
   for (const b of d.blocks) {
     if (!SHOP[b.kind]) continue;
     const o = {

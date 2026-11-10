@@ -47,6 +47,8 @@ export const LobbyState = schema(
     maxPlayers: t.uint8(),
     minPlayers: t.uint8(),
     wave: t.uint16(),
+    // modo de la partida: 'waves' (oleadas) o 'escape' (Huida); lo elige el propietario en la sala
+    mode: t.string(),
     members: t.map(Member),
     bodies: t.map(Body),
   },

@@ -32,8 +32,12 @@ export const owns = (w, slot, id) => !itemOf(slot, id)?.price || w.own.includes(
 
 // Al superar una oleada: latas según la oleada (las partidas con trampas no ganan).
 export function earnCans(game, wave) {
-  if (game.devUsed) return;
-  const n = cansForWave(wave);
+  addCans(game, cansForWave(wave));
+}
+
+/** Suma n latas a la cuenta (oleadas superadas, paradas de la Huida). */
+export function addCans(game, n) {
+  if (game.devUsed || !(n > 0)) return;
   const w = wallet(game);
   w.n += n;
   saveWallet(game, w);

@@ -17,12 +17,16 @@ import { drawRocket } from '../render/bullets.js';
 import { drawGunIcon } from '../render/sprites.js';
 import { drawBottle, drawGrenades, drawBlocks, drawGround, drawStickyBomb } from '../render/build.js';
 import { closest, on } from './dom.js';
+import { refreshRoute } from './route.js';
 import { hasPlan } from './ops.js';
 
 export function openShop(game) {
   game.shopPending = false;
   game.setState('shop');
-  game.$('shop-kicker').textContent = `Oleada ${game.director.wave} superada`;
+  // en la Huida se abre desde el mapa de ruta
+  game.$('shop-kicker').textContent = game.escape?.active
+    ? `Parada ${game.escape.stop} superada`
+    : `Oleada ${game.director.wave} superada`;
   renderShop(game);
 }
 
@@ -31,6 +35,13 @@ export function closeShop(game) {
   game.saveProgress();
   game.input.reset();
   game.last = performance.now();
+  // abierta desde el mapa de ruta (Huida): vuelve al mapa
+  if (game.shopReturn === 'route') {
+    game.shopReturn = null;
+    game.setState('route');
+    refreshRoute(game);
+    return;
+  }
   game.setState('play');
   if (BUILD_ORDER.some((k) => game.inv[k] > 0)) {
     game.toast(game.input.mode === 'touch' ? 'Toca Construir para colocar' : 'Pulsa F para colocar · V para cambiar');

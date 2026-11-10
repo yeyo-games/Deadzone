@@ -203,6 +203,18 @@ export interface GameHost {
   onGiantStep(z: Zombie): void;
   onGoldenExpired(z: Zombie): void;
   onWaveCleared(): void;
+  /** fin de una parada o del modo Huida (sim/escape.ts): 'stop', 'won' o 'van' */
+  onEscapeEnd?(result: string): void;
+  /** modo Huida: lo que leen las reglas compartidas */
+  escape?: { active: boolean; payK: number };
+  /** modo Huida en línea: paga a un jugador y le da una mejora a elegir (en solitario no están) */
+  escapePay?(n: number, p: Player | null): void;
+  escapePick?(src: string, p: Player | null): void;
+  /** dinero y mejoras pendientes de la partida en solitario */
+  money?: number;
+  moneyEarned?: number;
+  bonusPicks?: string[];
+  moneyPop?(text: string, kind: string): void;
   banner(title: string, sub?: string): void;
   toast(msg: string): void;
   [k: string]: any;

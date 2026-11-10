@@ -15,6 +15,7 @@ import {
   PLAYER_BASE,
   CLASS_ORDER,
   EVENT_ORDER,
+  ESCAPE_CANS,
 } from '../core/config.ts';
 import { ServerClock, applyMove, BODY } from './netcode.ts';
 import { IN_RUN, IN_FIRE, IN_RELOAD, IN_USE } from './protocol.ts';
@@ -95,7 +96,14 @@ interface SdkLike {
 type IdsMsg = { ids?: string[] } | null;
 type LoadMsg = { seed: number; ids?: string[] };
 type ResumeMsg = { seed: number; phase: string; inGame: boolean };
-export type ResultsMsg = { wave: number } | null;
+export type ResultsMsg = {
+  wave: number;
+  /** modo Huida: cómo terminó ('won', 'van' o 'dead') y hasta qué parada llegaron */
+  mode?: string;
+  result?: string;
+  stop?: number;
+  total?: number;
+} | null;
 type Diag = { hz: number; ms: number; mx: number; skip: number; rooms: number; players: number; cpu: number };
 type HeavyBlock = {
   kind: string;
@@ -431,10 +439,20 @@ export class Online {
     const g = this.game;
     this.results = r;
     if (this.playing) this.stopPlay('fin');
+    // escaparon en la Huida: las latas de premio
+    if (r?.mode === 'escape' && r.result === 'won') g.addCans(ESCAPE_CANS.won);
     g.newWorld();
     g.setupMenu();
     g.showOnline(true);
-    g.onlineStatus(r ? `Partida terminada en la oleada ${r.wave}.` : 'Partida terminada.');
+    g.onlineStatus(
+      !r
+        ? 'Partida terminada.'
+        : r.mode === 'escape'
+          ? r.result === 'won'
+            ? '¡Escaparon de la ciudad!'
+            : `La huida terminó en la parada ${r.stop} de ${r.total}.`
+          : `Partida terminada en la oleada ${r.wave}.`,
+    );
   }
 
   /* ---------- partida ---------- */
@@ -687,6 +705,9 @@ export class Online {
     // jugadores, robots, zombis, objetos, balas y estructuras: lo que arma el servidor para este jugador
     g.remote.applyWorld(s, ts, { myIdx: this.me ? this.me.idx : -1, identify: (idx: number) => this.identify(idx) });
     this.applyHeavy(s);
+    // modo Huida: el viaje, la camioneta y la votación del camino (ui/escape.js)
+    if (Array.isArray(s.hu)) g.onlineEscape(s);
+    else if (g.escape.active) g.escape.active = false;
     if (Array.isArray(s.fx)) for (const e of s.fx) g.remote.replay(e);
     if (Array.isArray(s.tt) && s.tt.length) g.toast(String(s.tt[s.tt.length - 1]));
     if (s.dg) this.diag = s.dg;

@@ -3,7 +3,7 @@
 // pasando solas. Dentro, una página por zombi y por jefe: su dibujo animado, de qué oleada sale, su
 // vida, velocidad y daño, cómo es y sus debilidades. Se ve una página a la vez y se pasa de una en una
 // con los botones, tocando la página, deslizando el dedo o con las flechas.
-import { BOSS, BOSS_ORDER, BOSSES, DEMON, ROCK, SPECIALS, ZOMBIES } from '../core/config.ts';
+import { BOSS, BOSS_ORDER, BOSSES, DEMON, ESCAPE_STOPS, ROCK, SPECIALS, ZOMBIES } from '../core/config.ts';
 import { rand, TAU } from '../core/util.ts';
 import { zombieSprites } from '../render/sprites.js';
 import { bossSprite } from '../render/bossart.js';
@@ -227,6 +227,46 @@ function buildPages() {
       ),
     );
   });
+  // modo Huida: el viaje, la camioneta y los tipos de parada
+  index.push({ name: 'La huida', i: pages.length });
+  pages.push(
+    pg(
+      '<p class="pg-kicker">Modo Huida</p><h3 class="pg-big">La huida</h3><p class="pg-look">Hay una camioneta en el centro. Siete paradas hasta el puente que saca de la ciudad: en cada una hay que llenar el tanque.</p>' +
+        list('pg-weak', 'En cada parada', [
+          'Junta los bidones (las flechas amarillas te llevan) y vuelve a la camioneta',
+          'Mantén H junto a ella para cargar: la horda irá por la camioneta',
+          'Con el tanque lleno, mantén H otra vez y suban todos',
+        ]),
+      list('pg-warn', 'Cuidado', [
+        'Cada minuto llegan más zombis y más duros',
+        'Los bidones más lejanos están custodiados',
+        'Si la camioneta explota, se acaba la huida',
+        'En el puente, un jefe lo bloquea: hay que derrotarlo para cruzar',
+      ]) +
+        list('pg-weak', 'Entre paradas', [
+          'Eliges el camino en el mapa: cada parada trae algo distinto',
+          'Tienda, premio y descansas un poco',
+          'El viaje se guarda: lo sigues desde el menú',
+        ]),
+    ),
+  );
+  pages.push(
+    pg(
+      '<p class="pg-kicker">Modo Huida</p><h3>Las paradas</h3>' +
+        list(
+          'pg-weak',
+          'Qué trae cada una',
+          ['gas', 'clinic', 'police', 'market', 'homes'].map(
+            (k) => `${ESCAPE_STOPS[k].name}: ${ESCAPE_STOPS[k].desc.toLowerCase()}`,
+          ),
+        ),
+      list('pg-warn', 'Además', [
+        'Muchas paradas llegan con niebla, apagón, estampida, dorados, asedio o luna de sangre: más peligro, más paga',
+        'Los bidones de más dan una mejora rara a elegir',
+        'Los barriles de las gasolineras estallan con un disparo: espera a que se junten los zombis',
+      ]),
+    ),
+  );
   pages.push(
     pg(
       '<h3 class="pg-big">Últimas notas</h3><ul class="pg-notes"><li>Las barricadas compran tiempo: ponlas donde la horda se amontona.</li><li>El fuego se contagia de zombi en zombi.</li><li>Los explosivos sirven contra todo lo blindado.</li><li>Entre oleadas, la tienda; al subir de nivel, una mejora.</li><li>Cada jefe derrotado deja un cofre con mejoras legendarias.</li></ul>',

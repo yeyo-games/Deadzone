@@ -8,6 +8,8 @@ import { drawSurvivor } from './sprites.js';
 export function drawPeers(ctx, game) {
   const R = game.remote;
   if (!R.active) return;
+  // modo Huida: al salir van todos dentro de la camioneta
+  if (game.escape?.active && game.escape.phase === 'leaving') return;
   ctx.font = '700 11px sans-serif';
   ctx.textAlign = 'center';
   // robots estacionados de los demás (los pilotados se dibujan con su piloto)

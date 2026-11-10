@@ -7,6 +7,7 @@ import { refreshHall } from './board.js';
 import { fitLook } from './look.js';
 import { beginTuto, tutoDone } from './tutorial.js';
 import { Solo } from '../net/mode.ts';
+import { refreshEscapeMenu } from './escape.js';
 
 export function setupMenu(game) {
   game.resetRun();
@@ -39,6 +40,7 @@ export function setupMenu(game) {
   game.$('btn-start').textContent = save ? 'Nueva partida' : 'Jugar';
   game.$('btn-start').classList.toggle('primary', !save);
   refreshHall(game);
+  refreshEscapeMenu(game);
   const best = storage.get('dz-best', null);
   game.$('best').textContent = best ? `Récord: ${fmtTime(best.time)} · ${best.kills} bajas · oleada ${best.wave}` : '';
 }
@@ -57,12 +59,22 @@ export function start(game, freshWorld) {
   // la práctica no se guarda ni cuenta para récords (como una partida separada)
   if (practice) game.mode = new Solo(game, true);
   game.player.cls = game.classPick;
+  // modo Huida (botón del menú): no se guarda ni cuenta para la clasificación de oleadas por ahora
+  const escape = game.runKind === 'escape';
+  game.runKind = 'waves';
+  game.lastKind = escape ? 'escape' : 'waves';
+  if (escape) {
+    game.mode = new Solo(game, true);
+    // un viaje nuevo reemplaza al guardado
+    storage.remove(`${game.accounts.saveKey()}-huida`);
+  }
   game.analitica.iniciar('solo');
   game.input.reset();
   game.input.setRun(false);
   game.setState('play');
+  if (escape) game.escape.begin(game);
   // la primera partida (o si se pidió repetirlo) empieza con el entrenamiento
-  if (practice || !tutoDone(game)) beginTuto(game, practice);
+  else if (practice || !tutoDone(game)) beginTuto(game, practice);
   game.updateHud(true);
 }
 
@@ -85,6 +97,7 @@ export function tryFullscreen(game) {
 export function bindMenu(game) {
   on(game, 'btn-start', () => {
     tryFullscreen(game);
+    game.runKind = 'waves';
     showClass(game, false);
   });
   on(game, 'btn-continue', () => {

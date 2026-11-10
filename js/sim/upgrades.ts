@@ -238,7 +238,7 @@ export const rarityOf = (u: Pick<Upgrade, 'rarity'>) => (u.rarity && RARITY[u.ra
 const weightOf = (u: Upgrade) => (u.weight || 1) * RARITY[rarityOf(u)].weight;
 
 /** De dónde sale una tanda: subir de nivel, el zombi dorado o el cofre de un jefe (UPGRADE_SOURCES). */
-export type UpgradeSource = 'level' | 'golden' | 'boss';
+export type UpgradeSource = 'level' | 'golden' | 'boss' | 'fuel';
 export const isSource = (s: unknown): s is UpgradeSource => typeof s === 'string' && s in UPGRADE_SOURCES;
 
 /** Saca de pool una mejora al azar según su peso. */

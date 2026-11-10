@@ -1028,3 +1028,81 @@ test('premios en línea: el jefe deja un cofre legendario a cada uno y el dorado
   assert.deepEqual(b.bonus, ['boss', 'golden']);
   assert.deepEqual(a.bonus, [], 'el dorado es de quien lo mata');
 });
+
+test('Huida en línea: la camioneta para todos, la foto lleva el viaje y se vota el camino', () => {
+  const sim = new ServerSim(
+    77,
+    [
+      { id: 'a', idx: 1, name: 'Ana' },
+      { id: 'b', idx: 2, name: 'Beto' },
+    ],
+    'escape',
+  );
+  const e = sim.escape!;
+  assert.ok(e && e.active, 'empieza el viaje');
+  assert.equal(sim.director.state, 'escape', 'sin oleadas');
+  const a = sim.slots.get('a')!;
+  const b = sim.slots.get('b')!;
+  // los dos junto a la puerta
+  for (const s of [a, b]) assert.ok(e.nearVan(sim.game, 60, s.p), `${s.name} junto a la camioneta`);
+  const snap = sim.snapshot('a', 0)! as any;
+  assert.ok(Array.isArray(snap.hu), 'la foto lleva el estado de la Huida');
+  assert.equal(snap.hu[0], e.route!.seed);
+  // un bidón extra paga a quien lo recoge
+  e.have = e.need;
+  const m0 = b.money;
+  e.takeCan(e.cans[0], b.p, sim.game);
+  assert.equal(b.money - m0, 150);
+  assert.deepEqual(b.bonus, ['fuel'], 'y le toca la mejora rara');
+  // termina la parada: se abre la votación
+  b.p.alive = false;
+  e.finish(sim.game, 'stop');
+  assert.ok(sim.vote, 'votación abierta');
+  assert.ok(Array.isArray((sim.snapshot('a', 0) as any).hv), 'la votación va en la foto');
+  // la tienda abre entre paradas
+  a.money = 10000;
+  assert.ok(sim.shop('a', 'gun', 'shotgun', 0), 'se compra entre paradas');
+  const next = e.route!.nodes[e.at].next;
+  assert.equal(sim.voteStop('a', 999), false, 'no se vota una parada que no sigue');
+  assert.ok(sim.voteStop('a', next[0]));
+  assert.ok(sim.voteStop('b', next[0]));
+  const seed0 = sim.world.seedBase;
+  sim.step();
+  assert.equal(sim.vote, null, 'votaron todos: se viaja');
+  assert.equal(e.at, next[0]);
+  assert.equal(e.stop, 2);
+  assert.notEqual(sim.world.seedBase, seed0, 'mapa nuevo');
+  assert.equal(sim.game.world, sim.world);
+  assert.ok(b.p.alive, 'el caído revive en la siguiente parada');
+  assert.equal(e.phase, 'search');
+  // fin: escaparon
+  e.finish(sim.game, 'won');
+  assert.ok(sim.over);
+  const r = sim.results() as any;
+  assert.equal(r.mode, 'escape');
+  assert.equal(r.result, 'won');
+  assert.equal(r.stop, 2);
+});
+
+test('Huida en línea: dentro de la camioneta no se mueve nadie y suben todos juntos', () => {
+  const sim = new ServerSim(
+    78,
+    [
+      { id: 'a', idx: 1, name: 'Ana' },
+      { id: 'b', idx: 2, name: 'Beto' },
+    ],
+    'escape',
+  );
+  const e = sim.escape!;
+  e.phase = 'ready';
+  const a = sim.slots.get('a')!;
+  const b = sim.slots.get('b')!;
+  a.p.use = true;
+  sim.game.targets = [a.p, b.p];
+  for (let i = 0; i < 60 && e.phase === 'ready'; i++) e.update(1 / 60, sim.game);
+  assert.equal(e.phase, 'leaving');
+  assert.ok(a.p.inVan && b.p.inVan, 'suben los dos');
+  const x = a.p.x;
+  sim.applyCmd(a, { s: 1, mx: 1, my: 0, f: 0, a: 0, w: -1 });
+  assert.equal(a.p.x, x, 'dentro no se mueve');
+});

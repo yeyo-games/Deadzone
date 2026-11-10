@@ -36,6 +36,9 @@ import { Abilities, isClass } from '../../../js/sim/abilities.ts';
 import * as Rules from '../../../js/sim/rules.ts';
 import { heavyAuto, heavyPrice, toggleHeavyFire, upgradeHeavy } from '../../../js/sim/heavy.ts';
 import { comboBreak, comboKill, comboTick, packCombo } from '../../../js/sim/combo.ts';
+import { Escape, packEscape } from '../../../js/sim/escape.ts';
+import { ESCAPE_ROUTE } from '../../../js/core/config.ts';
+import { TYPES } from '../../../js/net/protocol.ts';
 import { TAU } from '../../../js/core/util.ts';
 import type { Cmd, Act } from '../validate.ts';
 import type { Snapshot } from '../../../js/core/types.d.ts';
@@ -139,6 +142,12 @@ export class ServerSim {
   game: any;
   flowT = 0;
   goldenT = GOLDEN.firstAfter;
+  // modo de la sala: oleadas o Huida (js/sim/escape.ts: el viaje en camioneta, parada por parada)
+  mode: 'waves' | 'escape' = 'waves';
+  escape: Escape | null = null;
+  // entre paradas de la Huida: votación del camino (hasta `until`; voto de cada jugador: id de la parada)
+  vote: { until: number; votes: Map<string, number> } | null = null;
+  escapeResult = '';
   deadT = 0;
   over = false;
   kills: Record<string, number> = {};
@@ -146,7 +155,11 @@ export class ServerSim {
   // operaciones de alto riesgo (js/sim/ops.ts): aquí manda el servidor (oferta votada, refuerzos, pagos)
   ops = new Ops(true);
 
-  constructor(seed: number, players: { id: string; idx: number; name: string; cls?: string }[]) {
+  constructor(
+    seed: number,
+    players: { id: string; idx: number; name: string; cls?: string }[],
+    mode: 'waves' | 'escape' = 'waves',
+  ) {
     this.seed = seed;
     this.world = new World(seed);
     this.horde = new Horde();
@@ -203,6 +216,7 @@ export class ServerSim {
         stN: 0,
       });
     });
+    if (mode === 'escape') this.startEscape();
   }
 
   newField() {
@@ -312,6 +326,16 @@ export class ServerSim {
         for (const s of this.slots.values()) if (s.p.alive) this.world.computeField(s.p.field, s.p.x, s.p.y);
       },
       opsDone: () => this.reviveFallen(),
+      // modo Huida: a quién se le paga un bidón extra o una parada, a quién le toca la mejora y el fin de una parada
+      escapePay: (n: number, p: any) => {
+        const s = p && this.slots.get(p.sid);
+        if (s) s.money += n;
+      },
+      escapePick: (src: string, p: any) => {
+        const s = p && this.slots.get(p.sid);
+        if (s) s.bonus.push(src as UpgradeSource);
+      },
+      onEscapeEnd: (r: string) => this.onEscapeEnd(r),
       spawnFocus: () => {
         const alive = [...this.slots.values()].filter((s) => !s.away && s.p.alive);
         const s = alive.length ? alive[(Math.random() * alive.length) | 0] : null;
@@ -325,6 +349,109 @@ export class ServerSim {
       toast: (m: string) => (this.toastTo ? this.slots.get(this.toastTo)?.toasts.push(m) : this.toastAll(m)),
     };
     return g;
+  }
+
+  /* ---------- modo Huida ---------- */
+
+  // Empieza el viaje: la ruta con la semilla de la sala (el mapa de la salida es el de esa semilla) y la parada 1.
+  startEscape() {
+    const g = this.game;
+    this.mode = 'escape';
+    this.escape = new Escape();
+    g.escape = this.escape;
+    this.escape.newTrip(this.seed);
+    g.targets = [...this.slots.values()].map((s) => s.p);
+    this.escape.begin(g);
+    for (const s of this.slots.values()) this.world.computeField(s.p.field, s.p.x, s.p.y);
+  }
+
+  // Fin de una parada: 'stop' abre la votación del camino; 'won' o 'van' terminan la partida.
+  onEscapeEnd(r: string) {
+    if (r !== 'stop') {
+      this.escapeResult = r;
+      this.over = true;
+      return;
+    }
+    this.horde.list.length = 0;
+    this.bullets.clear();
+    this.vote = { until: this.time + ESCAPE_ROUTE.voteT, votes: new Map() };
+    this.toastAll('¡Parada superada! Voten el camino en el mapa');
+  }
+
+  // Un jugador vota la siguiente parada (sólo una de las que salen de la actual).
+  voteStop(id: string, node: number) {
+    const e = this.escape;
+    if (!e || !this.vote || !e.route || !this.slots.has(id)) return false;
+    if (!e.route.nodes[e.at].next.includes(node)) return false;
+    this.vote.votes.set(id, node);
+    return true;
+  }
+
+  // La votación termina cuando votaron todos los presentes o se acaba el tiempo: gana la más votada
+  // (empate: la del jugador con el número más bajo; sin votos, una al azar).
+  stepVote() {
+    const v = this.vote;
+    const e = this.escape;
+    if (!v || !e?.route) return;
+    const here = [...this.slots.values()].filter((s) => !s.away);
+    if (this.time < v.until && here.some((s) => !v.votes.has(s.id))) return;
+    const next = e.route.nodes[e.at].next;
+    const count = new Map<number, number>();
+    for (const n of v.votes.values()) count.set(n, (count.get(n) || 0) + 1);
+    let best = next[Math.floor(Math.random() * next.length)];
+    let bc = 0;
+    const order = [...this.slots.values()].sort((a, b) => a.idx - b.idx);
+    for (const s of order) {
+      const n = v.votes.get(s.id);
+      if (n === undefined) continue;
+      const c = count.get(n) || 0;
+      if (c > bc) {
+        bc = c;
+        best = n;
+      }
+    }
+    this.nextStop(best);
+  }
+
+  // La siguiente parada: mapa nuevo (cada parada con su semilla), los caídos reviven y empieza.
+  nextStop(id: number) {
+    const e = this.escape!;
+    const g = this.game;
+    if (!e.travel(id)) return;
+    this.vote = null;
+    this.world = new World(e.seedFor());
+    g.world = this.world;
+    const h = this.horde;
+    h.list.length = 0;
+    h.lobs.length = 0;
+    h.zones.length = 0;
+    h.fallen.length = 0;
+    h.grid.clear();
+    this.bullets.clear();
+    this.pickups.clear();
+    this.structures.clear();
+    for (const s of this.slots.values()) {
+      const p = s.p;
+      p.field = this.newField();
+      p.inVan = false;
+      if (!p.alive) {
+        p.alive = true;
+        p.counted = false;
+        p.hp = Math.round(p.stats.maxHp * 0.5);
+        s.toasts.push('¡Reviviste!');
+      }
+      if (s.robot.piloted) s.robot.leave(p, this.world);
+    }
+    g.targets = [...this.slots.values()].filter((s) => !s.away).map((s) => s.p);
+    e.begin(g);
+    for (const s of this.slots.values()) {
+      this.world.computeField(s.p.field, s.p.x, s.p.y);
+      // el robot viaja con la camioneta
+      if (s.robot.owned) {
+        s.robot.x = s.p.x + 70;
+        s.robot.y = s.p.y;
+      }
+    }
   }
 
   // Graba un efecto con su posición (si la tiene) para mandarlo a quien esté cerca.
@@ -476,8 +603,9 @@ export class ServerSim {
     if (k === 'tup') return this.buyHeavyUp(s, wid);
     // balas normales o incendiarias (plano del nido) en la torreta que tiene al lado
     if (k === 'tfire') return this.toggleFire(s);
-    // durante el combate de una operación no hay tienda (sí mientras se prepara)
-    if (this.director.state !== 'waiting' || !this.ops.canShop()) return false;
+    // durante el combate de una operación no hay tienda (sí mientras se prepara); en la Huida, entre paradas
+    const between = this.director.state === 'waiting' || (!!this.escape && !!this.vote);
+    if (!between || !this.ops.canShop()) return false;
     if (k === 'item') return this.buyItem(s, wid);
     if (k === 'robot') return this.buyRobot(s, wid);
     if (k === 'heavy') return this.buyHeavyAmmo(s, n);
@@ -739,7 +867,11 @@ export class ServerSim {
       s.deaths++;
       s.queue.length = 0;
       s.acts.length = 0;
-      this.toastAll(`${s.name} cayó: revive al terminar la ${this.ops.op ? 'operación' : 'oleada'}`);
+      this.toastAll(
+        this.escape
+          ? `${s.name} cayó: revive en la siguiente parada`
+          : `${s.name} cayó: revive al terminar la ${this.ops.op ? 'operación' : 'oleada'}`,
+      );
     }
   }
 
@@ -892,7 +1024,12 @@ export class ServerSim {
     const d = this.director;
     d.update(TICK, g);
     this.ops.update(TICK, g);
-    if (d.state === 'active' && live.some((s) => s.p.alive)) {
+    // modo Huida: la parada (o, entre paradas, la votación del camino)
+    if (this.escape) {
+      if (this.vote) this.stepVote();
+      else this.escape.update(TICK, g);
+    }
+    if ((d.state === 'active' || (d.state === 'escape' && !this.vote)) && live.some((s) => s.p.alive)) {
       this.goldenT = Rules.goldenTick(g, this.goldenT, TICK, (m) => this.toastAll(m));
     }
     this.offerUpgrades();
@@ -911,6 +1048,11 @@ export class ServerSim {
   applyCmd(s: Slot, cmd: Cmd) {
     const g = this.game;
     const p = s.p;
+    // dentro de la camioneta (Huida) no se mueve ni dispara
+    if (p.inVan) {
+      p.use = false;
+      return;
+    }
     g.player = p;
     g.input.cmd = cmd;
     // H mantenida: la usan las operaciones en su paso (ops.update)
@@ -1029,6 +1171,15 @@ export class ServerSim {
     }
     // al final, de dónde sale la tanda ('@golden', '@boss'; nada al subir de nivel)
     if (s.choices.length) snap.up = [s.choiceN, ...s.choices, ...(s.choiceSrc !== 'level' ? [`@${s.choiceSrc}`] : [])];
+    // modo Huida: el viaje y la parada (hu) y, entre paradas, la votación (hv: s que quedan y [jugador, parada]…)
+    if (this.escape) {
+      snap.hu = packEscape(this.escape, this.escape.bossType ? TYPES.indexOf(this.escape.bossType) : -1);
+      if (this.vote)
+        snap.hv = [
+          Math.max(0, Math.ceil(this.vote.until - this.time)),
+          ...[...this.vote.votes].flatMap(([id, n]) => [this.slots.get(id)?.idx ?? 0, n]),
+        ];
+    }
     if (fx.length) snap.fx = fx;
     if (s.toasts.length) {
       snap.tt = s.toasts.slice(0, 4);
@@ -1073,6 +1224,10 @@ export class ServerSim {
 
   results() {
     return {
+      // modo Huida: cómo terminó y hasta qué parada llegaron
+      ...(this.escape
+        ? { mode: 'escape', result: this.escapeResult || 'dead', stop: this.escape.stop, total: this.escape.total }
+        : {}),
       wave: this.director.wave,
       time: Math.round(this.time),
       kills: this.totalKills(),

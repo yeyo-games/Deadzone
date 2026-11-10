@@ -183,6 +183,8 @@ export class Player {
   declare look: any;
   /** dentro del robot (lo pone main.js / el servidor) */
   declare inRobot?: boolean;
+  /** dentro de la camioneta del modo Huida: no recibe golpes (sim/escape.ts) */
+  declare inVan?: boolean;
   declare reloadProg: number;
   declare reloadStep: number;
   // Campos de un compañero remoto (marioneta en el cooperativo, js/net/coop.js); el jugador local no los usa.
@@ -367,7 +369,7 @@ export class Player {
 
   hurt(dmg: number, game: GameHost) {
     // Booster: inmune mientras dura el impulso
-    if (!this.alive || this.boostT > 0) return;
+    if (!this.alive || this.boostT > 0 || this.inVan) return;
     // dentro del robot, el daño lo recibe el robot
     if (this.inRobot) {
       game.onRobotHit(dmg, this);

@@ -18,6 +18,7 @@ import { bossView } from './render/bosses.js';
 import { updateDeath } from './render/death.js';
 import { updateTuto } from './ui/tutorial.js';
 import { updateManual, closeManual } from './ui/manual.js';
+import { updateRoute } from './ui/route.js';
 
 /** @typedef {import('./core/types').GameHost} GameHost */
 
@@ -69,7 +70,8 @@ export function updatePlay(game, dt) {
   Act.stepBuild(game);
   // tecla H (o su botón): se usa mantenida en las operaciones y con las piezas de plano
   p.use = p.alive && game.input.useHeld();
-  if (p.alive) {
+  // dentro de la camioneta (Huida) el jugador no se mueve ni dispara
+  if (p.alive && !p.inVan) {
     p.update(dt, game);
     if (game.input.consume('ability')) Act.useAbility(game);
     Abilities.update(dt, game, p);
@@ -93,9 +95,11 @@ export function updatePlay(game, dt) {
   if (p.alive) game.world.updateAnchors(p.x, p.y);
   // durante el entrenamiento la primera oleada espera
   if (!game.tuto) game.director.update(dt, game);
+  // modo Huida: bidones, camioneta y zombis sin parar (sim/escape.ts)
+  game.escape.update(dt, game);
   game.ops.update(dt, game);
   // zombi dorado: de vez en cuando durante una ronda, nunca dos a la vez
-  if (game.director.state === 'active' && p.alive && !game.tuto) {
+  if ((game.director.state === 'active' || game.director.state === 'escape') && p.alive && !game.tuto) {
     game.goldenT = Rules.goldenTick(game, game.goldenT, dt, game.toast);
   }
   game.horde.update(dt, game);
@@ -177,6 +181,8 @@ export const STATES = {
     },
   },
   shop: { screen: 'screen-shop', enter: quieto },
+  // mapa de ruta del modo Huida, entre paradas (el mundo no avanza)
+  route: { screen: 'screen-route', music: true, enter: quieto, update: updateRoute },
   // taller de la torreta pesada (en línea el mundo sigue: lo mueve el servidor)
   turret: { screen: 'screen-turret', enter: quieto, update: updateTurret },
   over: { screen: 'screen-over' },

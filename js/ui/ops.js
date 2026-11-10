@@ -4,6 +4,7 @@
 // sus sonidos. Todo sale de lo que se ve (opsView): igual en solitario y en línea.
 import { OPS, ROBOT } from '../core/config.ts';
 import { CLEAN_LABEL, fadeOf, OP_INFO, OP_LABELS, opsView, streakMult } from '../sim/ops.ts';
+import { escapePrompt } from './escape.js';
 
 const PLAN_NAMES = { decoy: 'señuelo sonoro', fire: 'munición incendiaria', repair: 'reparador de campo' };
 
@@ -205,7 +206,8 @@ export function updateOpsHud(game, dt) {
   }
   // la operación en curso
   $('op-hud').hidden = !op;
-  const pr = op ? opPrompt(game, v) : opPrompt(game, null);
+  // la tecla H también sirve en la Huida (cargar combustible, subir a la camioneta)
+  const pr = (op ? opPrompt(game, v) : opPrompt(game, null)) || escapePrompt(game);
   if (op) {
     const inf = OP_INFO[op.k];
     $('op-title').textContent = inf.short.toUpperCase();
@@ -251,7 +253,7 @@ export function updateOpsHud(game, dt) {
   $('op-use').hidden = !pr;
   $('btn-use').classList.toggle('gone', !pr);
   if (pr) {
-    const t = `${OP_LABELS[pr.lb] || ''}${pr.sub ? ` (${pr.sub})` : ''}`;
+    const t = pr.text ?? `${OP_LABELS[pr.lb] || ''}${pr.sub ? ` (${pr.sub})` : ''}`;
     if (game.cache.opUse !== t) {
       game.cache.opUse = t;
       $('op-use-t').textContent = t;

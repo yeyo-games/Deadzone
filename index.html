@@ -76,6 +76,19 @@
         <div class="boss-top"><b id="boss-name"></b><span id="boss-tag"></span></div>
         <i class="boss-track"><u id="boss-fill"></u></i>
       </div>
+      <!-- fundido entre paradas del modo Huida (ui/route.js) -->
+      <div id="esc-fade" aria-hidden="true"></div>
+      <!-- modo Huida (ui/escape.js): parada, objetivo, bidones, amenaza, camioneta y carga -->
+      <div id="esc-hud" hidden>
+        <div class="esc-top"><b id="esc-stop">Parada 1</b><span id="esc-goal"></span></div>
+        <div class="esc-row">
+          <div class="esc-cans" id="esc-cans" aria-label="Bidones"></div>
+          <div class="esc-threat" title="Amenaza: sube cada minuto que pasas aquí"><small>Amenaza</small><b id="esc-lvl">1</b><i class="esc-mini"><u id="esc-threat-fill"></u></i></div>
+          <div class="esc-van" id="esc-van"><small>Camioneta</small><i class="esc-bar"><u id="esc-van-fill"></u></i></div>
+          <button class="op-btn" id="btn-esc-shop" type="button">Tienda</button>
+        </div>
+        <div class="esc-fuel" id="esc-fuel" hidden><i id="esc-fuel-fill"></i><span id="esc-fuel-lbl"></span></div>
+      </div>
       <!-- operación de alto riesgo en curso (ui/ops.js) -->
       <div id="op-hud" hidden>
         <div class="op-top"><b id="op-title"></b><span id="op-goal"></span></div>
@@ -243,6 +256,8 @@
           <button class="btn primary" id="btn-continue" hidden>Continuar</button>
           <button class="btn primary" id="btn-start">Jugar</button>
           <button class="btn coop-btn" id="btn-online">En línea · 2 a 4</button>
+          <button class="btn escape-btn esc-continue" id="btn-esc-continue" type="button" hidden>Continuar huida</button>
+          <button class="btn escape-btn" id="btn-escape" type="button"><span class="eb-ic" aria-hidden="true"><svg viewBox="0 0 32 20"><path d="M2 13V8l4-5h12l4 5h6a2 2 0 0 1 2 2v3"/><path d="M2 13h28M7 3v5M13 3v5"/><circle cx="8" cy="15" r="3"/><circle cx="24" cy="15" r="3"/></svg></span><span class="eb-t">Huida<small id="esc-best">Escapa de la ciudad en camioneta</small></span><em>Nuevo</em></button>
         </div>
         <div class="menu-extra">
           <button class="btn manual-btn" id="btn-manual" type="button"><span class="mb-ic" aria-hidden="true"></span>Manual de supervivencia</button>
@@ -312,6 +327,11 @@
           <p class="coop-label">Enlace de invitación</p>
           <input id="ol-link" class="ol-link" readonly aria-label="Enlace de invitación" onfocus="this.select()">
           <button class="btn" id="btn-ol-copy" type="button">Copiar invitación</button>
+          <p class="coop-label">Modo de juego</p>
+          <div class="ol-mode" id="ol-mode" role="radiogroup" aria-label="Modo de juego">
+            <button type="button" class="ol-mode-btn" data-mode="waves" role="radio"><b>Oleadas</b><small>Aguanten juntos todo lo que puedan</small></button>
+            <button type="button" class="ol-mode-btn" data-mode="escape" role="radio"><b>Huida</b><small>Escapen de la ciudad en camioneta</small></button>
+          </div>
           <p class="coop-label">Jugadores <span id="ol-count"></span></p>
           <ul class="ol-members" id="ol-members"></ul>
           <div class="ol-results" id="ol-results" hidden></div>
@@ -482,6 +502,40 @@
         <p class="kicker" id="level-kicker">Nivel 2</p>
         <h2>Elige una mejora</h2>
         <div class="cards" id="cards"></div>
+      </div>
+    </section>
+
+    <!-- mapa de ruta del modo Huida (ui/route.js, render/route.js) -->
+    <section class="screen" id="screen-route" hidden>
+      <div class="route-wrap">
+        <header class="route-head">
+          <div>
+            <p class="kicker" id="route-kicker">Parada 1 superada</p>
+            <h2>Elige el camino</h2>
+            <p class="route-sub" id="route-sub"></p>
+          </div>
+          <div class="route-money" id="route-money">$0</div>
+        </header>
+        <div class="route-body">
+          <div class="route-map"><canvas id="route-map" aria-label="Mapa de la ruta"></canvas></div>
+          <aside class="route-card" id="route-card">
+            <canvas class="rc-art" id="rc-art" aria-hidden="true"></canvas>
+            <span class="rc-kind" id="rc-kind"></span>
+            <h3 id="rc-name"></h3>
+            <p class="rc-desc" id="rc-desc"></p>
+            <p class="rc-mod" id="rc-mod" hidden><b id="rc-mod-t"></b><span id="rc-mod-d"></span></p>
+            <dl class="rc-stats">
+              <div><dt>Amenaza</dt><dd id="rc-lvl">1</dd></div>
+              <div><dt>Bidones</dt><dd id="rc-need">3</dd></div>
+              <div><dt>Parada</dt><dd id="rc-stop">2</dd></div>
+            </dl>
+            <p class="rc-help help-desktop">Clic en una parada · teclas 1–3 · Enter para viajar</p>
+            <div class="rc-btns">
+              <button class="btn ghost" id="btn-route-shop" type="button">Tienda</button>
+              <button class="btn primary" id="btn-route-go" type="button">Viajar</button>
+            </div>
+          </aside>
+        </div>
       </div>
     </section>
 

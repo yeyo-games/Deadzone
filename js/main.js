@@ -23,6 +23,7 @@ import { Pickups } from './sim/pickups.ts';
 import { setChunkView } from './render/world.js';
 import { Director } from './sim/director.ts';
 import { Ops, opsView, viewForbids } from './sim/ops.ts';
+import { Escape } from './sim/escape.ts';
 import { Lighting } from './render/lighting.js';
 import { Camera } from './render/camera.js';
 import { render, resize, adaptQuality } from './render/scene.js';
@@ -33,7 +34,7 @@ import { setState, pause, resume, stepState, updatePlay, updateMenu, emitFires }
 import { setupMenu, start, bindMenu } from './ui/menu.js';
 import { bindOver, gameOver } from './ui/over.js';
 import { openLevelUp } from './ui/levelup.js';
-import { bindLook, earnCans } from './ui/look.js';
+import { addCans, bindLook, earnCans } from './ui/look.js';
 import { renderClassRows, bindClass } from './ui/class.js';
 import { showOnline, onlineStatus, renderLobby, openInvite, bindLobby } from './ui/lobby.js';
 import { showAccount, bindAccount } from './ui/account.js';
@@ -45,6 +46,8 @@ import { Input } from './ui/input.js';
 import { Sfx } from './ui/audio.js';
 import { bindDev, toggleDev, updateDev } from './ui/dev.js';
 import { bindOps, updateOpsHud } from './ui/ops.js';
+import { bindEscape, escapeEnd, onlineEscape, updateEscapeHud } from './ui/escape.js';
+import { bindRoute } from './ui/route.js';
 import { bindTuto, clearTuto } from './ui/tutorial.js';
 import { bindManual } from './ui/manual.js';
 import { cleanLook } from './render/sprites.js';
@@ -84,6 +87,9 @@ class Game {
     // operaciones de alto riesgo entre oleadas (sim/ops.ts); en línea llegan con la foto (opsNet)
     this.ops = new Ops(false);
     this.opsNet = null;
+    // modo Huida (sim/escape.ts): activo sólo en esas partidas
+    this.escape = new Escape();
+    this.runKind = 'waves';
     this.mode = new Solo(this);
     // lo que llega por la red (jugadores, zombis, balas de adorno) en línea
     this.remote = new Remote(this);
@@ -164,6 +170,8 @@ class Game {
   onGiantStep = (z) => Ev.onGiantStep(this, z);
   onPlayerDeath = () => Ev.onPlayerDeath(this);
   onWaveCleared = () => Ev.onWaveCleared(this);
+  onEscapeEnd = (result) => escapeEnd(this, result);
+  onlineEscape = (snap) => onlineEscape(this, snap);
   onRobotHit = (dmg) => Ev.onRobotHit(this, dmg);
   spawnFocus = () => Ev.spawnFocus(this);
   totalKills = () => Ev.totalKills(this);
@@ -218,6 +226,7 @@ class Game {
   updateHud = (force) => updateHud(this, force);
   moneyPop = (text, kind) => moneyPop(this, text, kind);
   earnCans = (wave) => earnCans(this, wave);
+  addCans = (n) => addCans(this, n);
 
   /* ---------- partidas ---------- */
 
@@ -247,6 +256,8 @@ class Game {
     this.robot.reset();
     this.ops.reset();
     this.opsNet = null;
+    this.escape.clear(this);
+    this.escapeResult = '';
     this.setAcid(0);
     this.kills = {
       normal: 0,
@@ -305,6 +316,8 @@ class Game {
     bindLobby(this);
     bindDev(this);
     bindOps(this);
+    bindEscape(this);
+    bindRoute(this);
     bindTuto(this);
     bindManual(this);
   }
@@ -327,6 +340,7 @@ class Game {
       if (this.mode.viaServer()) this.online.update(dt);
       stepState(this, dt);
       if (OPS_STATES.has(this.state)) updateOpsHud(this, dt);
+      updateEscapeHud(this);
       this.floaters.update(dt);
       render(this);
     } catch (err) {

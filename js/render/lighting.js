@@ -4,6 +4,7 @@
 // apagón (sin farolas y más oscuro) y luna de sangre (noche rojiza).
 import { makeCanvas } from '../core/util.ts';
 import { lightSprite, coneSprite } from './sprites.js';
+import { drawEscapeGlow, drawEscapeLights } from './escape.js';
 
 const SCALE = 0.5;
 
@@ -44,7 +45,8 @@ export class Lighting {
     g.setTransform(s, 0, 0, s, base.tx * SCALE, base.ty * SCALE);
 
     const p = game.player;
-    if (p && p.alive && game.state !== 'menu') {
+    // en la camioneta (Huida) alumbran sus faros, no la linterna
+    if (p && p.alive && !p.inVan && game.state !== 'menu') {
       g.globalAlpha = 0.85;
       g.drawImage(this.soft, p.x - 230, p.y - 230, 460, 460);
       g.save();
@@ -64,6 +66,7 @@ export class Lighting {
       g.globalAlpha = l.cur;
       g.drawImage(this.soft, l.x - l.r, l.y - l.r, l.r * 2, l.r * 2);
     }
+    if (game.state !== 'menu') drawEscapeLights(g, game, this.soft, this.cone);
     for (const b of game.structures.blasts) {
       g.globalAlpha = Math.min(1, b.t * 3);
       g.drawImage(this.soft, b.x - 320, b.y - 320, 640, 640);
@@ -178,6 +181,8 @@ export class Lighting {
       ctx.globalAlpha = (l.t / l.max) * 0.6;
       ctx.drawImage(this.warm, l.x - r, l.y - r, r * 2, r * 2);
     }
+    // modo Huida: los bidones brillan cálidos (render/escape.js)
+    if (game.escape?.active && game.state !== 'menu') drawEscapeGlow(ctx, game, this.warm);
     for (const f of game.structures.fires) {
       ctx.globalAlpha = Math.min(1, (f.life - f.t) / 1.2, f.t * 4) * 0.45;
       ctx.drawImage(this.warm, f.x - 170, f.y - 170, 340, 340);

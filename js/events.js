@@ -233,7 +233,8 @@ export function opsDone(game) {
 // Mejor marca de la cuenta: oleada alcanzada y bajas.
 export function recordScore(game) {
   // las partidas con trampas del modo desarrollador no cuentan
-  if (game.state === 'menu' || game.devUsed) return;
+  // la Huida aún no tiene clasificación propia: no entra en la de oleadas
+  if (game.state === 'menu' || game.devUsed || game.escape?.active) return;
   if (
     game.accounts.recordScore({
       wave: game.director.wave,

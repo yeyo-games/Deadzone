@@ -65,7 +65,9 @@ export function bountyNow(
 ) {
   // Codicia (perks.ts): dinero extra por baja
   const greed = 1 + (p.stats?.greed || 0);
-  const v = (p.cash || 0) + bountyOf(type) * combo * greed * (game.director.eventDef?.pay ?? 1);
+  // modo Huida: el tipo de parada (supermercado: el doble)
+  const stop = game.escape?.payK ?? 1;
+  const v = (p.cash || 0) + bountyOf(type) * combo * greed * stop * (game.director.eventDef?.pay ?? 1);
   const n = Math.floor(v + 1e-9);
   p.cash = Math.max(0, v - n);
   return n;

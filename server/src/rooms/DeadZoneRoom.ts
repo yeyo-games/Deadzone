@@ -81,6 +81,7 @@ export class DeadZoneRoom extends Room<{ state: LobbyStateT; input: MoveInputT }
       maxPlayers: this.maxClients,
       minPlayers: CONFIG.minPlayers,
       wave: 0,
+      mode: 'waves',
     });
     // el estado (lobby y cuerpos de los jugadores) se parchea a la tasa de las fotos: cada parche lleva el ack de las entradas
     this.setPatchRate(1000 / CONFIG.snapHz);
@@ -100,6 +101,22 @@ export class DeadZoneRoom extends Room<{ state: LobbyStateT; input: MoveInputT }
       }),
     );
     this.onMessage('start', (c) => this.admin(c, () => this.start(c)));
+    // modo de la partida (sólo el propietario y en la sala)
+    this.onMessage('mode', (c, m) =>
+      this.admin(c, () => {
+        if (c.sessionId !== this.state.ownerId || (this.phase !== 'waiting' && this.phase !== 'finished')) return;
+        if (!m || (m.v !== 'waves' && m.v !== 'escape')) return this.strike(c, 'modo no válido');
+        this.state.mode = m.v;
+      }),
+    );
+    // modo Huida: votar la siguiente parada en el mapa de ruta
+    this.onMessage('route', (c, m) =>
+      this.admin(c, () => {
+        if (!this.sim || this.phase !== 'playing' || !this.member(c)?.inGame) return;
+        if (!m || !Number.isInteger(m.i) || m.i < 0 || m.i > 64) return this.strike(c, 'voto mal formado');
+        this.sim.voteStop(c.sessionId, m.i);
+      }),
+    );
     this.onMessage('lobby', (c) => this.admin(c, () => this.backToLobby(c)));
     this.onMessage('loaded', (c) =>
       this.admin(c, () => {
@@ -352,6 +369,11 @@ export class DeadZoneRoom extends Room<{ state: LobbyStateT; input: MoveInputT }
     }
   }
 
+  /** Modo de la partida que se va a jugar. */
+  mode(): 'waves' | 'escape' {
+    return this.state.mode === 'escape' ? 'escape' : 'waves';
+  }
+
   /* ---------- fases ---------- */
 
   start(c: Client) {
@@ -371,7 +393,7 @@ export class DeadZoneRoom extends Room<{ state: LobbyStateT; input: MoveInputT }
     this.loadUntil = Date.now() + CONFIG.loadSeconds * 1000;
     const ids = [...this.state.members.entries()].filter(([, m]) => m.inGame).map(([id]) => id);
     // después del próximo parche: así el cliente ya ve la fase y quién juega
-    this.broadcast('load', { seed: this.seed, ids }, { afterNextPatch: true });
+    this.broadcast('load', { seed: this.seed, ids, mode: this.mode() }, { afterNextPatch: true });
     // el mundo del servidor se arma mientras los celulares cargan (así no frena al empezar)
     this.setSim(null);
     this.next = new ServerSim(
@@ -380,6 +402,7 @@ export class DeadZoneRoom extends Room<{ state: LobbyStateT; input: MoveInputT }
         const m = this.state.members.get(id)!;
         return { id, idx: m.idx, name: m.name, cls: m.cls };
       }),
+      this.mode(),
     );
   }
 
@@ -400,7 +423,7 @@ export class DeadZoneRoom extends Room<{ state: LobbyStateT; input: MoveInputT }
       m.alive = m.inGame;
       m.kills = 0;
     }
-    const sim = this.next && this.next.seed === this.seed ? this.next : new ServerSim(this.seed, players);
+    const sim = this.next && this.next.seed === this.seed ? this.next : new ServerSim(this.seed, players, this.mode());
     this.next = null;
     // quien se fue durante la carga no aparece en la partida
     for (const id of [...sim.slots.keys()]) if (!players.some((p) => p.id === id)) sim.remove(id);
