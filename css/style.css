@@ -631,6 +631,7 @@ svg.can { width: 14px; height: 16px; vertical-align: -3px; }
 .shop-head h2 { margin-bottom: 4px; }
 .shop-money { font-family: var(--display); font-size: 44px; font-weight: 600; color: var(--st); font-variant-numeric: tabular-nums; }
 .shop-note { margin: 0 0 14px; font-size: 15px; color: var(--dim); }
+.shop-note[hidden] { display: none; }
 .shop-items { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr)); gap: 8px; margin-bottom: 14px; }
 .shop-item {
   display: grid;
@@ -1627,9 +1628,16 @@ kbd {
   background: linear-gradient(90deg, rgba(134, 168, 146, 0.5) calc(var(--k) * 100%), rgba(13, 15, 11, 0.75) 0);
   border: 1px solid rgba(134, 168, 146, 0.7);
   text-shadow: 0 2px 6px #000;
-  pointer-events: none;
   white-space: nowrap;
+  /* se mantiene presionado (dedo o mouse) como la tecla H */
+  pointer-events: auto;
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
+#op-use:hover { border-color: #b8e0c4; }
+#op-use.down { transform: translateX(-50%) scale(0.97); }
 #op-use[hidden] { display: none; }
 #op-use kbd { padding: 2px 7px 0; font-family: var(--display); font-size: 18px; color: #10140f; background: var(--xp); }
 .touch #op-use kbd { display: none; }
@@ -2367,7 +2375,7 @@ h4.pg-warn { color: #a3291b; }
 .rc-stats div:first-child dd { color: #ff8a5a; }
 .rc-help { margin: auto 0 0; font-size: 12px; color: var(--dim); text-align: center; }
 .rc-btns { display: grid; grid-template-columns: 1fr 1.4fr; gap: 8px; }
-.rc-btns .btn { font-size: 22px; padding: 11px 10px 8px; }
+.rc-btns .btn { font-size: 19px; padding: 11px 4px 8px; letter-spacing: 0.04em; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #btn-route-go:disabled { opacity: 0.5; }
 @media (max-width: 760px) {
   .route-wrap { height: calc(100vh - 24px); width: calc(100vw - 20px); gap: 6px; }
@@ -2389,6 +2397,22 @@ h4.pg-warn { color: #a3291b; }
   .rc-desc { font-size: 12px; }
   .rc-art { height: 64px; }
 }
+/* confirmar la parada antes de viajar */
+.rc-confirm { margin: 0; padding: 6px 8px 5px; font-size: 13px; font-weight: 700; color: #ffe6a8; background: rgba(240, 196, 64, 0.12); border-left: 3px solid #f0c440; animation: rc-pulse 1s ease-in-out infinite; }
+.rc-confirm[hidden] { display: none; }
+@keyframes rc-pulse { 50% { background: rgba(240, 196, 64, 0.24); } }
+#btn-route-go.ask { background: #f0c440; color: #14120a; box-shadow: 0 0 14px rgba(240, 196, 64, 0.6); }
+/* tienda de la Huida: números del arma y lo que gana con la siguiente mejora */
+.shop-item .wstats { display: flex; flex-wrap: wrap; gap: 3px 10px; margin-top: 3px; }
+.shop-item .ws { font-size: 12px; font-weight: 700; color: #e6e0d2; white-space: nowrap; }
+.shop-item .ws em { margin-right: 4px; font-style: normal; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); }
+.shop-item .ws u { margin-left: 4px; text-decoration: none; color: #9cf0a8; }
+.shop-item .wlv { margin-left: 8px; font-style: normal; font-size: 15px; letter-spacing: 1px; color: rgba(230, 224, 210, 0.3); }
+.shop-item .wlv.lv1, .shop-item .wlv.lv2 { color: #e0b040; }
+.shop-item .wlv.lv3 { color: #ffd860; text-shadow: 0 0 8px rgba(255, 216, 96, 0.7); }
+.shop-item.new .shop-txt .wn::after { content: 'Huida'; margin-left: 8px; padding: 1px 5px 0; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; vertical-align: middle; color: #14120a; background: #86c08e; }
+.btn.buy.up { border-color: rgba(240, 196, 64, 0.7); color: #ffe6a8; }
+#slots .slv { margin-left: 3px; font-style: normal; font-size: 0.8em; color: #f0c440; }
 /* taller del mapa de ruta: mejoras de la camioneta */
 .route-wrap { position: relative; }
 .rc-btns { grid-template-columns: 1fr 1fr 1.4fr; }

@@ -12,6 +12,7 @@ import {
   MILITARY,
   GUN_REACH,
   RELOAD_STEPS,
+  WEAPON_UP,
   OPS,
   PERKS,
 } from '../core/config.ts';
@@ -81,6 +82,8 @@ export interface WeaponDef extends Weapon {
   rocketK?: number;
   /** es la mejora de esa arma: pide tenerla y la reemplaza */
   upgradeOf?: string;
+  /** sólo la vende la tienda de la Huida */
+  escape?: boolean;
 }
 
 /** Torreta pesada montada: la pieza de build.ts con el retroceso y el cañón que alterna. */
@@ -92,7 +95,14 @@ export interface WeaponSlot {
   def: WeaponDef;
   mag: number;
   reserve: number;
+  /** nivel de mejora (Huida, WEAPON_UP): más daño, cargador y recarga más rápida */
+  lv?: number;
 }
+
+/** Cuánto pega, cuántas balas caben y cuánto tarda en recargar un arma con su nivel de mejora. */
+export const upDmg = (lv = 0) => 1 + WEAPON_UP.dmg * lv;
+export const upMag = (lv = 0) => 1 + WEAPON_UP.mag * lv;
+export const upReload = (lv = 0) => 1 - WEAPON_UP.reload * lv;
 
 const weaponDef = (id: string): WeaponDef => (WEAPONS as Record<string, WeaponDef>)[id];
 
@@ -109,6 +119,11 @@ const GUN_TIP: Record<string, number> = {
   rshotgun: 36,
   mbazooka: 50,
   mlmg: 48,
+  revolver: 18,
+  dualsmg: 24,
+  crossbow: 30,
+  glauncher: 34,
+  railgun: 44,
 };
 
 export class Player {
@@ -283,10 +298,18 @@ export class Player {
 
   makeWeapon(id: string): WeaponSlot {
     const def = weaponDef(id);
-    return { id, def, mag: this.magSize(def), reserve: def.reserve };
+    return { id, def, mag: this.magSize(def), reserve: def.reserve, lv: 0 };
   }
-  magSize(def: WeaponDef) {
-    return Math.round(def.mag * this.stats.ammoMult);
+  magSize(def: WeaponDef, lv = 0) {
+    return Math.round(def.mag * this.stats.ammoMult * upMag(lv));
+  }
+  /** Sube un nivel el arma que tiene (sin cobrar): el cargador nuevo se llena. */
+  upgrade(id: string) {
+    const w = this.weapons.find((x) => x.id === id);
+    if (!w || (w.lv || 0) >= WEAPON_UP.max) return false;
+    w.lv = (w.lv || 0) + 1;
+    w.mag = this.magSize(w.def, w.lv);
+    return true;
   }
   reserveMax(def: WeaponDef) {
     return def.reserveMax === Infinity ? Infinity : Math.round(def.reserveMax * this.stats.ammoMult);
@@ -359,8 +382,8 @@ export class Player {
   /** @param {unknown} [_game] lo pasan algunos llamadores; no se usa */
   startReload(_game?: unknown) {
     const w = this.weapon;
-    if (this.reloadT > 0 || w.mag >= this.magSize(w.def) || w.reserve <= 0) return;
-    this.reloadDur = w.def.reload / this.stats.reloadMult;
+    if (this.reloadT > 0 || w.mag >= this.magSize(w.def, w.lv) || w.reserve <= 0) return;
+    this.reloadDur = (w.def.reload * upReload(w.lv)) / this.stats.reloadMult;
     this.reloadT = this.reloadDur;
     // cada paso de la recarga suena una sola vez, en su momento de la animación
     this.reloadStep = 0;
@@ -523,7 +546,7 @@ export class Player {
         this.reloadProg = 0;
         this.reloadT = 0;
         const w = this.weapon;
-        const need = this.magSize(w.def) - w.mag;
+        const need = this.magSize(w.def, w.lv) - w.mag;
         const take = Math.min(need, w.reserve);
         w.mag += take;
         if (w.reserve !== Infinity) w.reserve -= take;
@@ -684,6 +707,8 @@ export class Player {
     // Doble cañón (perks.ts): balas de más, abiertas a uno y otro lado del disparo
     const twin = extraShots(this, d);
     const extras = shotExtras(this, d);
+    // el nivel de mejora del arma (Huida)
+    const up = upDmg(w.lv);
     for (let i = 0; i < d.pellets + twin; i++) {
       const j = i - d.pellets;
       const off =
@@ -695,7 +720,7 @@ export class Player {
       const a = aim + off;
       fired.push(a);
       if (d.flame) {
-        game.bullets.spawn({ ...flameBullet(ox, oy, a, d.damage * this.stats.dmgMult), shot });
+        game.bullets.spawn({ ...flameBullet(ox, oy, a, d.damage * this.stats.dmgMult * up), shot });
         continue;
       }
       game.bullets.spawn({
@@ -705,14 +730,14 @@ export class Player {
         dy: Math.sin(a),
         speed: d.speed * rand(0.95, 1.05),
         life: d.range * (d.pellets > 1 ? rand(0.8, 1) : 1),
-        dmg: d.damage * this.stats.dmgMult,
+        dmg: d.damage * this.stats.dmgMult * up,
         pierce: d.pierce + this.stats.pierce,
         knock: d.knock,
         shot,
         hits: null,
         rocket: !!d.rocket,
-        ...(d.rocketK ? { rocketK: d.rocketK } : {}),
-        ...(d.blast ? { blast: true, blastR: d.blastR, blastP: (d.blastP ?? 0) * this.stats.dmgMult } : {}),
+        ...(d.rocketK || up > 1 ? { rocketK: (d.rocketK || 1) * up } : {}),
+        ...(d.blast ? { blast: true, blastR: d.blastR, blastP: (d.blastP ?? 0) * this.stats.dmgMult * up } : {}),
         ...extras,
       });
     }

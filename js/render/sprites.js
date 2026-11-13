@@ -1603,10 +1603,134 @@ const GUN_LEN = {
   rshotgun: 38,
   mbazooka: 52,
   mlmg: 50,
+  revolver: 26,
+  dualsmg: 30,
+  crossbow: 34,
+  glauncher: 38,
+  railgun: 48,
 };
+
+/**
+ * Marcas del nivel de mejora (Huida) sobre el arma: una banda dorada por nivel cerca del cañón y, en el
+ * nivel máximo, un brillo. Van encima del dibujo del arma (r: donde empieza, como en GUNS).
+ * @param {Ctx} g @param {string} id @param {number} r @param {number} lv
+ */
+function drawGunLevel(g, id, r, lv) {
+  if (!lv) return;
+  const len = GUN_LEN[id] || 30;
+  const x = r * 0.3 + len * 0.45;
+  g.fillStyle = lv >= 3 ? '#ffd860' : '#e0b040';
+  for (let i = 0; i < lv; i++) g.fillRect(x + i * 3, -3.6, 1.6, 7.2);
+  if (lv >= 3) {
+    g.fillStyle = 'rgba(255,216,96,0.28)';
+    g.fillRect(x - 2, -5, lv * 3 + 3, 10);
+  }
+}
 
 /** @type {Record<string, GunDraw>} */
 const GUNS = {
+  // revólver: tambor redondo, cañón largo y cacha de madera
+  revolver: (g, r) => {
+    const x = r * 0.7;
+    g.fillStyle = '#5a3b26';
+    g.fillRect(x - 3, -2, 5, 5);
+    g.fillStyle = '#2e3033';
+    g.fillRect(x + 2, -3, 6, 6);
+    g.fillStyle = '#44474b';
+    g.beginPath();
+    g.arc(x + 5, 0, 3.2, 0, TAU);
+    g.fill();
+    g.fillStyle = '#1b1c1e';
+    for (let i = 0; i < 6; i++) g.fillRect(x + 4.5 + Math.cos(i) * 1.8, -0.5 + Math.sin(i) * 1.8, 1, 1);
+    g.fillStyle = '#2e3033';
+    g.fillRect(x + 8, -1.4, 12, 2.8);
+    g.fillStyle = '#6a6e73';
+    g.fillRect(x + 8, -1.4, 12, 0.9);
+  },
+  // subfusiles dobles: uno en cada mano, un poco abiertos
+  dualsmg: (g, r) => {
+    for (const y of [-4.5, 4.5]) {
+      g.save();
+      g.translate(0, y);
+      g.rotate(y * 0.012);
+      g.fillStyle = '#25272a';
+      g.fillRect(r * 0.6, -2.4, 15, 4.8);
+      g.fillStyle = '#1b1c1e';
+      g.fillRect(r * 0.6 + 5, 1.6, 4, 5);
+      g.fillStyle = '#7a5a2a';
+      g.fillRect(r * 0.6 + 2, -2.4, 3, 4.8);
+      g.fillStyle = '#3c3f43';
+      g.fillRect(r * 0.6 + 14, -1.2, 5, 2.4);
+      g.restore();
+    }
+  },
+  // ballesta: culata de madera, arco tenso con su cuerda y el virote cargado
+  crossbow: (g, r) => {
+    const x = r * 0.2;
+    g.fillStyle = '#6b4a30';
+    g.fillRect(x, -2.4, 26, 4.8);
+    g.fillStyle = '#4a3220';
+    g.fillRect(x, -2.4, 9, 4.8);
+    // arco
+    g.strokeStyle = '#2a2b2d';
+    g.lineWidth = 2.6;
+    g.beginPath();
+    g.moveTo(x + 22, -11);
+    g.quadraticCurveTo(x + 28, 0, x + 22, 11);
+    g.stroke();
+    // cuerda
+    g.strokeStyle = '#d8d0b8';
+    g.lineWidth = 0.8;
+    g.beginPath();
+    g.moveTo(x + 22, -11);
+    g.lineTo(x + 14, 0);
+    g.lineTo(x + 22, 11);
+    g.stroke();
+    // virote con su punta
+    g.fillStyle = '#a89878';
+    g.fillRect(x + 12, -0.6, 20, 1.2);
+    g.fillStyle = '#c8ccd0';
+    g.beginPath();
+    g.moveTo(x + 32, -1.8);
+    g.lineTo(x + 35, 0);
+    g.lineTo(x + 32, 1.8);
+    g.fill();
+  },
+  // lanzagranadas: tambor gordo de seis granadas y cañón ancho
+  glauncher: (g, r) => {
+    const x = r * 0.15;
+    g.fillStyle = '#3a3e30';
+    g.fillRect(x, -3, 9, 6);
+    g.fillStyle = '#2a2c2e';
+    g.beginPath();
+    g.arc(x + 14, 0, 6.5, 0, TAU);
+    g.fill();
+    g.fillStyle = '#4a5040';
+    for (let i = 0; i < 6; i++) {
+      g.beginPath();
+      g.arc(x + 14 + Math.cos((i / 6) * TAU) * 3.8, Math.sin((i / 6) * TAU) * 3.8, 1.4, 0, TAU);
+      g.fill();
+    }
+    g.fillStyle = '#25272a';
+    g.fillRect(x + 19, -3.6, 15, 7.2);
+    g.fillStyle = '#5a5e52';
+    g.fillRect(x + 31, -4, 4, 8);
+  },
+  // cañón de riel: cuerpo largo con dos rieles y bobinas que brillan en azul
+  railgun: (g, r) => {
+    const x = r * 0.05;
+    g.fillStyle = '#2a2d30';
+    g.fillRect(x, -3.4, 14, 6.8);
+    g.fillStyle = '#3a3f44';
+    g.fillRect(x + 14, -4, 20, 8);
+    g.fillStyle = '#1b1c1e';
+    g.fillRect(x + 32, -3.2, 16, 1.6);
+    g.fillRect(x + 32, 1.6, 16, 1.6);
+    g.fillStyle = '#6ad0ff';
+    for (const cx of [17, 22, 27]) g.fillRect(x + cx, -4.6, 2, 9.2);
+    g.fillStyle = 'rgba(140,220,255,0.55)';
+    g.fillRect(x + 34, -1, 13, 2);
+  },
   pistol: (g, r) => {
     g.fillStyle = '#26282b';
     g.fillRect(r * 0.75, -2.2, 12, 4.4);
@@ -1901,14 +2025,15 @@ export function drawGunScaled(g, p, scale) {
 }
 
 // Silueta del arma para la tienda (mira hacia la derecha).
-/** @param {Ctx} g @param {string} id */
-export function drawGunIcon(g, id) {
+/** @param {Ctx} g @param {string} id @param {number} [lv] nivel de mejora (Huida) */
+export function drawGunIcon(g, id, lv = 0) {
   g.save();
   // la culata de cada arma empieza en un punto distinto: la centramos según su largo
   const r = 14;
   g.translate(-r * 0.05, 0);
   g.scale(42 / Math.max(30, GUN_LEN[id] || 30), 42 / Math.max(30, GUN_LEN[id] || 30));
   GUNS[id](g, r);
+  drawGunLevel(g, id, r, lv);
   g.restore();
 }
 
@@ -2668,7 +2793,10 @@ export function drawSurvivor(g, p, time) {
       GUNS.lmg(g, r);
       g.restore();
     }
-  } else if (!p.manned) GUNS[p.weapon.id](g, r, p);
+  } else if (!p.manned) {
+    GUNS[p.weapon.id](g, r, p);
+    drawGunLevel(g, p.weapon.id, r, p.weapon.lv || 0);
+  }
   if (longGun || rage) {
     limb(g, 0, r * 0.62, r * 0.7, r * 0.12, r * 0.28, J);
     limb(g, 0, -r * 0.62, r * 1.25, -r * 0.05, r * 0.28, J);

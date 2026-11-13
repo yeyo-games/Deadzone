@@ -334,6 +334,136 @@ export const WEAPONS = {
     ammoPrice: 30,
     desc: 'Cohete con el doble de explosión que una granada. Revienta gordos y blindados. Recarga en 4 s.',
   },
+  // Armas que sólo vende la tienda de la Huida (escape: true). Precios en la misma escalera que las
+  // demás (daño por segundo, perforación y área): el revólver antes de la escopeta, el cañón de riel
+  // pasada la bazuca.
+  // Revólver: 6 tiros fuertes y precisos que atraviesan a uno.
+  revolver: {
+    id: 'revolver',
+    name: 'Revólver',
+    damage: 70,
+    rate: 2.5,
+    mag: 6,
+    reserve: 24,
+    reserveMax: Infinity,
+    pickup: 12,
+    reload: 2,
+    spread: 0.02,
+    bloom: 0.05,
+    pellets: 1,
+    speed: 1400,
+    range: 650,
+    knock: 90,
+    shake: 0.12,
+    pierce: 1,
+    len: 18,
+    escape: true,
+    price: 350,
+    ammoPrice: 8,
+    desc: 'Seis tiros fuertes y precisos que atraviesan a un zombi.',
+  },
+  // Subfusiles dobles: uno en cada mano, una lluvia de balas de cerca (poco precisos).
+  dualsmg: {
+    id: 'dualsmg',
+    name: 'Subfusiles dobles',
+    damage: 15,
+    rate: 22,
+    mag: 64,
+    reserve: 192,
+    reserveMax: Infinity,
+    pickup: 64,
+    reload: 2.2,
+    spread: 0.13,
+    bloom: 0.01,
+    pellets: 1,
+    speed: 1000,
+    range: 480,
+    knock: 22,
+    shake: 0.03,
+    pierce: 0,
+    len: 15,
+    escape: true,
+    price: 1000,
+    ammoPrice: 14,
+    desc: 'Uno en cada mano: una lluvia de 22 balas por segundo, mejor de cerca.',
+  },
+  // Ballesta: virotes silenciosos que atraviesan hasta 4 zombis en fila.
+  crossbow: {
+    id: 'crossbow',
+    name: 'Ballesta',
+    damage: 150,
+    rate: 1.3,
+    mag: 4,
+    reserve: 16,
+    reserveMax: Infinity,
+    pickup: 4,
+    reload: 1.8,
+    spread: 0.008,
+    bloom: 0.04,
+    pellets: 1,
+    speed: 1100,
+    range: 900,
+    knock: 160,
+    shake: 0.15,
+    pierce: 4,
+    len: 22,
+    escape: true,
+    price: 1500,
+    ammoPrice: 16,
+    desc: 'Virotes de 150 de daño que atraviesan hasta 4 zombis en fila.',
+  },
+  // Lanzagranadas: 6 granadas seguidas; cada una estalla con rocketK del cohete de la bazuca.
+  glauncher: {
+    id: 'glauncher',
+    name: 'Lanzagranadas',
+    damage: 0,
+    rate: 1.6,
+    mag: 6,
+    reserve: 12,
+    reserveMax: Infinity,
+    pickup: 3,
+    reload: 3.2,
+    spread: 0.03,
+    bloom: 0.02,
+    pellets: 1,
+    speed: 560,
+    range: 620,
+    knock: 200,
+    shake: 0.4,
+    pierce: 0,
+    len: 26,
+    rocket: true,
+    rocketK: 0.4,
+    escape: true,
+    price: 3800,
+    ammoPrice: 22,
+    desc: 'Seis granadas seguidas que estallan al primer golpe: limpia grupos enteros.',
+  },
+  // Cañón de riel: un rayo que atraviesa a todo lo que tiene delante.
+  railgun: {
+    id: 'railgun',
+    name: 'Cañón de riel',
+    damage: 700,
+    rate: 0.6,
+    mag: 3,
+    reserve: 9,
+    reserveMax: Infinity,
+    pickup: 3,
+    reload: 2.8,
+    spread: 0.002,
+    bloom: 0.1,
+    pellets: 1,
+    speed: 3200,
+    range: 1600,
+    knock: 300,
+    shake: 0.5,
+    pierce: 20,
+    len: 32,
+    escape: true,
+    price: 7500,
+    ammoPrice: 45,
+    desc: '700 de daño por disparo y atraviesa a todo lo que tenga delante.',
+  },
   // Cañón doble de la torreta pesada (SHOP.heavy): no se compra ni se lleva, se usa montado.
   // Sus balas salen de HEAVY.ammo (se compran en la tienda) y son explosivas (blast): estallan en
   // el primer zombi o pared que tocan con una microexplosión (HEAVY.blastR, HEAVY.blastPower).
@@ -373,7 +503,24 @@ export const WEAPON_ORDER = [
   'rshotgun',
   'mbazooka',
   'mlmg',
+  'revolver',
+  'dualsmg',
+  'crossbow',
+  'glauncher',
+  'railgun',
 ];
+
+// Mejoras de armas de la Huida (ui/shop.js; en línea, 'buy' con k 'wup'): hasta max niveles por arma.
+// Cada nivel suma dmg al daño y mag al cargador, y quita reload a la recarga. Cada nivel cuesta
+// price[i] veces el precio del arma (las de fábrica cuentan como base). Al vender el arma se pierden.
+export const WEAPON_UP = { max: 3, dmg: 0.25, mag: 0.2, reload: 0.12, price: [0.5, 0.8, 1.2], base: 400 };
+/** Lo que cuesta subir esa arma del nivel lv al siguiente (0: ya está al máximo). */
+export function weaponUpCost(id: string, lv: number) {
+  if (lv >= WEAPON_UP.max) return 0;
+  const d = (WEAPONS as Record<string, { price?: number }>)[id];
+  if (!d) return 0;
+  return Math.round(((d.price || WEAPON_UP.base) * WEAPON_UP.price[lv]) / 10) * 10;
+}
 
 // Cohete de la bazuca. La granada tiene radio 140 y 330 de daño: el cohete abarca el doble de área.
 // Contra un gordo se queda clavado en su panza (stick s), brilla en verde (glow s) y estalla más fuerte;
@@ -2450,6 +2597,11 @@ export const SELL_RATE = 0.5;
 
 // Largo de cada arma dibujada desde su culata (para la boca del cañón en el brazo del robot).
 export const GUN_REACH = {
+  revolver: 16,
+  dualsmg: 20,
+  crossbow: 28,
+  glauncher: 34,
+  railgun: 44,
   pistol: 12,
   smg: 22,
   shotgun: 30,
@@ -2765,9 +2917,21 @@ export const ESCAPE_OBJ = {
   // cap[0] + cap[1] × parada (si ya las tienes todas, cash), y munición
   armory: {
     dist: [480, 1100],
-    t: 4,
+    t: 2.5,
     reach: 54,
-    guns: ['shotgun', 'ar', 'flamer', 'autoshotgun', 'lmg', 'sniper', 'bazooka'],
+    guns: [
+      'revolver',
+      'shotgun',
+      'ar',
+      'dualsmg',
+      'flamer',
+      'crossbow',
+      'autoshotgun',
+      'lmg',
+      'glauncher',
+      'sniper',
+      'bazooka',
+    ],
     cap: [800, 900],
     cash: 800,
   },

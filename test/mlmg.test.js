@@ -17,7 +17,9 @@ test('cuesta $20 000, dispara 30 por segundo y carga 500 balas', () => {
   assert.ok(M.rate >= WEAPONS.lmg.rate * 2, 'al menos el doble que la normal');
   assert.equal(M.mag, 500);
   assert.equal(M.upgradeOf, 'lmg');
-  assert.equal(WEAPON_ORDER.at(-1), 'mlmg', 'la red manda el arma por su lugar: va al final');
+  // la red manda el arma por su lugar: las nuevas van detrás de las que ya estaban
+  assert.equal(WEAPON_ORDER.indexOf('mlmg'), WEAPON_ORDER.indexOf('mbazooka') + 1);
+  assert.ok(WEAPON_ORDER.indexOf('mlmg') < WEAPON_ORDER.indexOf('revolver'));
 });
 
 test('sólo se compra con la ametralladora y la reemplaza con sus balas', () => {

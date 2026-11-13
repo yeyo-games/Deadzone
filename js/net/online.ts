@@ -27,6 +27,7 @@ import { applyCombo } from '../sim/combo.ts';
 import { OnlineClient, Solo } from './mode.ts';
 import type { Cmd, LobbyMember, Snapshot } from '../core/types.d.ts';
 import type { Player } from '../sim/player.ts';
+import { upReload } from '../sim/player.ts';
 
 // Lo mínimo que se usa de la sala de Colyseus (el SDK se carga con import() dinámico y no se importa aquí).
 interface WsLike {
@@ -799,15 +800,16 @@ export class Online {
         p.weapons = wp.map(([id]) => p.makeWeapon(id));
         p.wi = Math.min(Math.max(0, st[3] | 0), p.weapons.length - 1);
       }
-      wp.forEach(([, mag, res], i) => {
+      wp.forEach(([, mag, res, lv], i) => {
         p.weapons[i].mag = mag | 0;
+        p.weapons[i].lv = (lv ?? 0) | 0;
         p.weapons[i].reserve = res < 0 ? Infinity : res | 0;
       });
       if (p.wi >= p.weapons.length) p.wi = 0;
     }
     p.reloadT = (Number(st[4]) || 0) / 100;
     p.reloadProg = (Number(st[5]) || 0) / 100;
-    p.reloadDur = p.weapon.def.reload / p.stats.reloadMult;
+    p.reloadDur = (p.weapon.def.reload * upReload(p.weapon.lv)) / p.stats.reloadMult;
   }
 
   // Barricadas, trampas y lanzables que tiene sin usar (los cuenta el servidor).

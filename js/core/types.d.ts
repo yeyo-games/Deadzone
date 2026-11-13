@@ -139,7 +139,7 @@ export interface Snapshot {
   ack: number;
   me: number[];
   st: number[];
-  wp: [string, number, number][];
+  wp: [string, number, number, number?][];
   o: [number, number];
   z: number[];
   zx: number[];

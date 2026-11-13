@@ -1072,6 +1072,15 @@ test('Huida en línea: la camioneta para todos, la foto lleva el viaje y se vota
   b.money = 0;
   assert.equal(sim.shop('b', 'van', 'turret', 0), false, 'sin dinero no');
   assert.equal(sim.shop('a', 'van', 'cohete', 0), false, 'una que no existe tampoco');
+  // la tienda de la Huida: armas propias y sus mejoras; nada de robot, torretas ni defensas
+  a.money = 10000;
+  assert.ok(sim.shop('a', 'gun', 'revolver', 0), 'arma de la Huida');
+  assert.ok(sim.shop('a', 'wup', 'revolver', 0), 'mejorada');
+  assert.equal(a.p.weapons.find((w: any) => w.id === 'revolver').lv, 1);
+  assert.equal((sim.snapshot('a', 0) as any).wp.find((w: any) => w[0] === 'revolver')[3], 1, 'el nivel va en la foto');
+  assert.equal(sim.shop('a', 'robot', 'buy', 0), false, 'sin robot');
+  assert.equal(sim.shop('a', 'item', 'wood', 0), false, 'sin defensas');
+  assert.ok(sim.shop('a', 'item', 'grenade', 0), 'explosivos sí');
   const next = e.route!.nodes[e.at].next;
   assert.equal(sim.voteStop('a', 999), false, 'no se vota una parada que no sigue');
   assert.ok(sim.voteStop('a', next[0]));
@@ -1094,6 +1103,16 @@ test('Huida en línea: la camioneta para todos, la foto lleva el viaje y se vota
   assert.equal(r.mode, 'escape');
   assert.equal(r.result, 'won');
   assert.equal(r.stop, 2);
+});
+
+test('en oleadas no se venden las armas de la Huida ni sus mejoras', () => {
+  const sim = new ServerSim(79, [{ id: 'a', idx: 1, name: 'Ana' }]);
+  const a = sim.slots.get('a')!;
+  a.money = 10000;
+  sim.director.state = 'waiting';
+  assert.equal(sim.shop('a', 'gun', 'railgun', 0), false);
+  assert.equal(sim.shop('a', 'wup', 'smg', 0), false);
+  assert.ok(sim.shop('a', 'gun', 'shotgun', 0), 'las normales sí');
 });
 
 test('Huida en línea: dentro de la camioneta no se mueve nadie y suben todos juntos', () => {

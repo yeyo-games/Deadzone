@@ -25,7 +25,12 @@ export function packPlayer(p) {
     hp: p.hp,
     stamina: p.stamina,
     stats: p.stats,
-    weapons: p.weapons.map((w) => ({ id: w.id, mag: w.mag, reserve: w.reserve === Infinity ? -1 : w.reserve })),
+    weapons: p.weapons.map((w) => ({
+      id: w.id,
+      mag: w.mag,
+      reserve: w.reserve === Infinity ? -1 : w.reserve,
+      lv: w.lv || 0,
+    })),
     wi: p.wi,
     shotsFired: p.shotsFired,
     shotsHit: p.shotsHit,
@@ -49,8 +54,17 @@ export function applyPlayer(game, sp) {
   p.weapons = sp.weapons
     .map((w) => (w.id === 'rifle' ? { id: 'flamer', mag: WEAPONS.flamer.mag, reserve: WEAPONS.flamer.reserve } : w))
     .filter((w) => WEAPONS[w.id] && w.id !== 'pistol' && w.id !== START_WEAPON)
-    .map((w) => ({ id: w.id, def: WEAPONS[w.id], mag: w.mag, reserve: w.reserve < 0 ? Infinity : w.reserve }));
-  p.weapons.unshift(p.makeWeapon(START_WEAPON));
+    .map((w) => ({
+      id: w.id,
+      def: WEAPONS[w.id],
+      mag: w.mag,
+      reserve: w.reserve < 0 ? Infinity : w.reserve,
+      lv: w.lv | 0,
+    }));
+  // el arma inicial se rehace, pero conserva su nivel de mejora (Huida)
+  const start = p.makeWeapon(START_WEAPON);
+  start.lv = sp.weapons.find((w) => w.id === START_WEAPON)?.lv | 0;
+  p.weapons.unshift(start);
   p.weapons.sort((a, b) => WEAPON_ORDER.indexOf(a.id) - WEAPON_ORDER.indexOf(b.id));
   p.wi = Math.min(sp.wi, p.weapons.length - 1);
   p.shotsFired = sp.shotsFired;

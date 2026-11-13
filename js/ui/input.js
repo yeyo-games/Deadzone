@@ -189,12 +189,14 @@ export class Input {
     this.on(zone, 'pointercancel', endJoy);
     this.on(zone, 'lostpointercapture', endJoy);
 
-    const hold = (sel, set) => {
+    // anyMouse: también se mantiene con el mouse sin pasar al modo táctil (el aviso de H)
+    const hold = (sel, set, anyMouse = false) => {
       const el = this.root.querySelector(sel);
       const ids = new Set();
       this.on(el, 'pointerdown', (e) => {
         e.preventDefault();
-        this.setMode('touch');
+        if (anyMouse) e.stopPropagation();
+        if (!anyMouse || e.pointerType !== 'mouse') this.setMode('touch');
         ids.add(e.pointerId);
         try {
           el.setPointerCapture(e.pointerId);
@@ -216,6 +218,8 @@ export class Input {
       this.on(el, 'lostpointercapture', up);
     };
     hold('#btn-use', (v) => (this.touchUse = v));
+    // el aviso ("Cargar combustible", "Abrir la armería"…) también es el botón: mantenerlo es como H
+    hold('#op-use', (v) => (this.touchUse = v), true);
     hold('#btn-fire', (v) => {
       this.touchFire = v;
       // en el modo construir el botón de disparo coloca la pieza

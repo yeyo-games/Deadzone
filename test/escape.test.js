@@ -672,3 +672,44 @@ test('la foto lleva las mejoras, el médico y el objetivo de la parada', () => {
   t2.player.y = e2.obj.y;
   assert.equal(c2.prompt({ ...t2.game, escape: c2 }, t2.player).k, 'armory', 'el aviso de H también en el cliente');
 });
+
+test('mejoras de armas: más daño, cargador y recarga por nivel, con tope y precio', async () => {
+  const { WEAPON_UP, weaponUpCost, WEAPONS } = await import('../js/core/config.ts');
+  const { upDmg } = await import('../js/sim/player.ts');
+  const p = new Player(0, 0);
+  p.unlock('revolver');
+  const w = p.weapons.find((x) => x.id === 'revolver');
+  const mag0 = p.magSize(w.def, 0);
+  assert.equal(weaponUpCost('revolver', 0), Math.round((WEAPONS.revolver.price * WEAPON_UP.price[0]) / 10) * 10);
+  assert.ok(weaponUpCost('smg', 0) > 0, 'la de fábrica también se mejora');
+  for (let i = 0; i < WEAPON_UP.max; i++) assert.ok(p.upgrade('revolver'));
+  assert.equal(p.upgrade('revolver'), false, 'tope de niveles');
+  assert.equal(weaponUpCost('revolver', WEAPON_UP.max), 0);
+  assert.ok(p.magSize(w.def, w.lv) > mag0, 'cargador más grande');
+  assert.equal(w.mag, p.magSize(w.def, w.lv), 'se llena al mejorar');
+  p.select(p.weapons.indexOf(w));
+  p.fireCd = 0;
+  p.reloadT = 0;
+  const shots = [];
+  const game = {
+    bullets: { spawn: (b) => shots.push(b) },
+    world: { pointBlocked: () => false },
+    camera: { shake() {}, kick() {} },
+    particles: silent,
+    sfx: silent,
+    input: { mode: 'mouse' },
+  };
+  game.player = p;
+  p.tryFire(game);
+  assert.equal(shots[0].dmg, WEAPONS.revolver.damage * upDmg(WEAPON_UP.max), 'pega más');
+});
+
+test('las armas nuevas son de la Huida y se cuelan al final de WEAPON_ORDER', async () => {
+  const { WEAPONS, WEAPON_ORDER } = await import('../js/core/config.ts');
+  const nuevas = Object.values(WEAPONS).filter((d) => d.escape);
+  assert.equal(nuevas.length, 5);
+  for (const d of nuevas) {
+    assert.ok(d.price > 0 && d.ammoPrice > 0, d.id);
+    assert.ok(WEAPON_ORDER.indexOf(d.id) > WEAPON_ORDER.indexOf('mlmg'), d.id);
+  }
+});

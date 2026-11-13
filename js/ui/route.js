@@ -20,7 +20,21 @@ export const VAN_ICONS = {
 export const vanIcon = (k) => `<svg viewBox="0 0 24 24" aria-hidden="true">${VAN_ICONS[k]}</svg>`;
 
 // Lo de la pantalla que no es del juego: lo elegido, la animación y el acomodo del último dibujo.
-const view = { sel: -1, hover: -1, t: 0, travel: null, puffs: [], L: null, w: 0, h: 0, dpr: 1, voted: -1, from: -1 };
+// confirm: la parada que espera el segundo toque del botón (hay que confirmar a dónde se va)
+const view = {
+  sel: -1,
+  hover: -1,
+  t: 0,
+  travel: null,
+  puffs: [],
+  L: null,
+  w: 0,
+  h: 0,
+  dpr: 1,
+  voted: -1,
+  from: -1,
+  confirm: -1,
+};
 
 /** Fundido a negro (on) o de vuelta (off); `then` corre a mitad del fundido. */
 export function fade(game, then) {
@@ -41,6 +55,7 @@ export function openRoute(game) {
   view.puffs = [];
   view.t = 0;
   view.voted = -1;
+  view.confirm = -1;
   view.from = e.at;
   game.$('route-garage').hidden = true;
   game.setState('route');
@@ -86,12 +101,17 @@ function renderCard(game) {
   $('rc-lvl').textContent = level;
   $('rc-need').textContent = need;
   $('rc-stop').textContent = `${stop} de ${e.total}`;
-  $('btn-route-go').textContent = n.kind === 'bridge' ? 'Ir al puente' : 'Viajar';
+  const ask = view.confirm === view.sel;
+  $('btn-route-go').textContent = ask ? 'Confirmar' : n.kind === 'bridge' ? 'Ir al puente' : 'Viajar';
+  $('btn-route-go').classList.toggle('ask', ask);
+  $('rc-confirm').hidden = !ask;
+  if (ask) $('rc-confirm').textContent = `¿Vamos a ${n.name}? Toca otra vez para confirmar, o elige otra parada`;
   // en línea se vota: gana la parada con más votos (o la que diga el tiempo)
   if (game.mode.viaServer()) {
     const v = game.routeVotes;
     const left = v ? v[0] : 0;
-    $('btn-route-go').textContent = view.voted === view.sel ? `Votaste · ${left} s` : `Votar · ${left} s`;
+    $('btn-route-go').textContent =
+      view.voted === view.sel ? `Votaste · ${left} s` : ask ? `Confirmar · ${left} s` : `Votar · ${left} s`;
     $('btn-route-go').disabled = !!view.travel;
   }
 }
@@ -161,6 +181,14 @@ function choose(game, i) {
 function travel(game) {
   const e = game.escape;
   if (view.travel || view.sel < 0) return;
+  // primero se pide confirmar a dónde se va (un toque de más: no se viaja sin querer)
+  if (view.confirm !== view.sel && view.voted !== view.sel) {
+    view.confirm = view.sel;
+    game.sfx.pageFlip?.();
+    renderCard(game);
+    return;
+  }
+  view.confirm = -1;
   // en línea: votar (el viaje lo decide el servidor cuando votan todos o se acaba el tiempo)
   if (game.mode.viaServer()) {
     view.voted = view.sel;

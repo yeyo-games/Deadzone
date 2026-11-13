@@ -258,7 +258,7 @@ export function updateDev(game, raw) {
       if (game.robot.owned) game.robot.hp = ROBOT.hp;
     }
     if (d.ammo) {
-      for (const w of p.weapons) w.mag = p.magSize(w.def);
+      for (const w of p.weapons) w.mag = p.magSize(w.def, w.lv);
       p.reloadT = 0;
       p.heavyAmmo = Math.max(p.heavyAmmo, 500);
     }

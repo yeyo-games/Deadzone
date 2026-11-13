@@ -19,6 +19,11 @@ const SHOTS = {
   rshotgun: { crack: 2200, body: 560, thump: 70, tail: 0.6, gain: 1, dur: 0.32 },
   mbazooka: { crack: 1300, body: 360, thump: 50, tail: 1, gain: 1, dur: 0.5 },
   heavy: { crack: 3400, body: 760, thump: 70, tail: 0.32, gain: 0.8, dur: 0.15 },
+  revolver: { crack: 3800, body: 1100, thump: 120, tail: 0.3, gain: 0.85, dur: 0.16 },
+  dualsmg: { crack: 5400, body: 2000, thump: 175, tail: 0.08, gain: 0.42, dur: 0.07 },
+  crossbow: { crack: 1800, body: 500, thump: 200, tail: 0.08, gain: 0.45, dur: 0.06 },
+  glauncher: { crack: 1200, body: 380, thump: 70, tail: 0.5, gain: 0.85, dur: 0.3 },
+  railgun: { crack: 7800, body: 2600, thump: 60, tail: 0.9, gain: 0.9, dur: 0.35 },
 };
 
 export class Sfx {

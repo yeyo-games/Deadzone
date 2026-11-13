@@ -228,7 +228,7 @@ export function updateHud(game, force) {
     : p.manned.kind === 'military'
       ? { def: { name: 'Misiles antitanque' }, mag: p.fireCd > 0 ? 0 : 1, reserve: Infinity }
       : { def: WEAPONS.heavy, mag: p.heavyAmmo, reserve: 0 };
-  set(game, 'wname', $('wname'), 'text', w.def.name);
+  set(game, 'wname', $('wname'), 'text', w.lv ? `${w.def.name} ${'★'.repeat(w.lv)}` : w.def.name);
   set(game, 'mag', $('mag'), 'text', String(w.mag));
   set(game, 'res', $('reserve'), 'text', w.reserve === Infinity ? '∞' : String(w.reserve));
   const empty = w.mag === 0;
@@ -306,7 +306,7 @@ export function updateHud(game, force) {
       $('bb-rot').classList.toggle('on', !!game.buildRot);
     }
   }
-  const sig = p.manned ? p.manned.kind : p.weapons.map((x) => x.id).join() + '|' + p.wi;
+  const sig = p.manned ? p.manned.kind : p.weapons.map((x) => x.id + (x.lv || '')).join() + '|' + p.wi;
   if (game.cache.slots !== sig) {
     game.cache.slots = sig;
     $('slots').innerHTML = p.manned
@@ -314,7 +314,7 @@ export function updateHud(game, force) {
       : p.weapons
           .map(
             (x, i) =>
-              `<button class="slot${i === p.wi ? ' on' : ''}" data-i="${i}">${i + 1} ${i === p.wi ? x.def.name : SHORT[x.id]}</button>`,
+              `<button class="slot${i === p.wi ? ' on' : ''}" data-i="${i}">${i + 1} ${i === p.wi ? x.def.name : SHORT[x.id]}${x.lv ? `<i class="slv">${'★'.repeat(x.lv)}</i>` : ''}</button>`,
           )
           .join('');
   }

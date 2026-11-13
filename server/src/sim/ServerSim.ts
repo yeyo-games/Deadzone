@@ -26,6 +26,7 @@ import {
   SHOP_ORDER,
   BUILD_ORDER,
   THROWABLES,
+  weaponUpCost,
   ROBOT,
   CLASS_ORDER,
   HEAVY,
@@ -608,12 +609,16 @@ export class ServerSim {
     // durante el combate de una operación no hay tienda (sí mientras se prepara); en la Huida, entre paradas
     const between = this.director.state === 'waiting' || (!!this.escape && !!this.vote);
     if (!between || !this.ops.canShop()) return false;
+    // en la Huida la tienda sólo tiene armas (y sus mejoras), munición y explosivos
+    const esc = !!this.escape;
+    if (esc && (k === 'robot' || k === 'heavy' || (k === 'item' && !THROWABLES.includes(wid)))) return false;
+    if (k === 'wup') return esc && this.upgradeGun(s, wid);
     if (k === 'item') return this.buyItem(s, wid);
     if (k === 'van') return this.buyVan(s, wid);
     if (k === 'robot') return this.buyRobot(s, wid);
     if (k === 'heavy') return this.buyHeavyAmmo(s, n);
     const d = Object.hasOwn(WEAPONS, wid) ? (WEAPONS as any)[wid] : null;
-    if (!d) return false;
+    if (!d || (d.escape && !esc)) return false;
     const p = s.p;
     if (k === 'gun') {
       // una mejora (bazuca mejorada) pide tener el arma de antes y la reemplaza
@@ -632,8 +637,19 @@ export class ServerSim {
       const cost = d.ammoPrice * n;
       if (s.money < cost) return false;
       s.money -= cost;
-      w.reserve += p.magSize(d) * n;
+      w.reserve += p.magSize(d, w.lv) * n;
     } else return false;
+    return true;
+  }
+
+  // Modo Huida: sube un nivel el arma que tiene (WEAPON_UP; la paga él).
+  upgradeGun(s: Slot, wid: string) {
+    const w = s.p.weapons.find((x: any) => x.id === wid);
+    const cost = w ? weaponUpCost(wid, w.lv || 0) : 0;
+    if (!cost || s.money < cost) return false;
+    s.money -= cost;
+    s.p.upgrade(wid);
+    s.toasts.push(`${w.def.name} mejorada: nivel ${w.lv}`);
     return true;
   }
 
@@ -1155,7 +1171,7 @@ export class ServerSim {
         Math.round((me.slowT || 0) * 10),
         Math.round((me.slowK ?? 1) * 100),
       ],
-      wp: me.weapons.map((w: any) => [w.id, w.mag, w.reserve === Infinity ? -1 : w.reserve]),
+      wp: me.weapons.map((w: any) => [w.id, w.mag, w.reserve === Infinity ? -1 : w.reserve, w.lv || 0]),
       ...world,
       kl: this.totalKills(),
       // entre oleadas: cuántos están listos, de cuántos, y si él lo está

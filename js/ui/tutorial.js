@@ -87,8 +87,8 @@ const STEPS = [
     glow: 'btn-reload',
     start: (game) => {
       const w = game.player.weapon;
-      w.mag = Math.min(w.mag, Math.floor(game.player.magSize(w.def) / 2));
-      w.reserve = Math.max(w.reserve, game.player.magSize(w.def));
+      w.mag = Math.min(w.mag, Math.floor(game.player.magSize(w.def, w.lv) / 2));
+      w.reserve = Math.max(w.reserve, game.player.magSize(w.def, w.lv));
     },
     done: (game) => game.player.reloadT > 0,
   },

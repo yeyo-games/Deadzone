@@ -89,7 +89,7 @@ export const UPGRADES: Upgrade[] = [
     apply: (p) => {
       p.stats.ammoMult += 0.25;
       for (const w of p.weapons) {
-        w.mag = p.magSize(w.def);
+        w.mag = p.magSize(w.def, w.lv);
         if (w.reserve !== Infinity) w.reserve = Math.min(p.reserveMax(w.def), w.reserve + w.def.pickup);
       }
     },

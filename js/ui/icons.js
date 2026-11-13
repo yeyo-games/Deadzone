@@ -17,6 +17,11 @@ export const SHORT = {
   rshotgun: 'EscR',
   mbazooka: 'BazM',
   mlmg: 'AmetM',
+  revolver: 'Rev',
+  dualsmg: 'Smg2',
+  crossbow: 'Bal',
+  glauncher: 'LGr',
+  railgun: 'Riel',
 };
 // Un ícono por pieza de construcción o lanzable del inventario.
 export const ITEM_ICONS = {

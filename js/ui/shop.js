@@ -1,4 +1,6 @@
 // Tienda de entre rondas: armas, munición, defensas, lanzables y robot. Compra, venta y dibujo de los íconos.
+// En la Huida (se abre en el mapa de ruta) sólo hay armas (con las suyas propias, escape: true, y sus
+// mejoras: WEAPON_UP), munición y explosivos.
 import {
   BOUNTY,
   BUILD_ORDER,
@@ -10,7 +12,10 @@ import {
   SELL_RATE,
   HEAVY,
   ROBOT,
+  WEAPON_UP,
+  weaponUpCost,
 } from '../core/config.ts';
+import { upDmg, upReload } from '../sim/player.ts';
 import { Robot } from '../sim/robot.ts';
 import { drawRobot } from '../render/robot.js';
 import { drawRocket } from '../render/bullets.js';
@@ -18,6 +23,7 @@ import { drawGunIcon } from '../render/sprites.js';
 import { drawBottle, drawGrenades, drawBlocks, drawGround, drawStickyBomb } from '../render/build.js';
 import { closest, on } from './dom.js';
 import { refreshRoute } from './route.js';
+import { saveTrip } from './escape.js';
 import { hasPlan } from './ops.js';
 
 export function openShop(game) {
@@ -40,6 +46,8 @@ export function closeShop(game) {
     game.shopReturn = null;
     game.setState('route');
     refreshRoute(game);
+    // lo comprado se guarda con el viaje (en solitario)
+    if (!game.mode.viaServer()) saveTrip(game);
     return;
   }
   game.setState('play');
@@ -50,18 +58,25 @@ export function closeShop(game) {
 
 export function renderShop(game) {
   game.$('shop-money').textContent = `$${game.money}`;
+  // (en la Huida no hay barricadas: la nota de la tienda sobra)
+  game.$('shop-bounty').parentElement.hidden = !!game.escape?.active;
   const p = game.player;
   const buyBtn = (attrs, price, label, extra = '') => {
     const poor = game.money < price;
     return `<button class="btn buy${extra}${poor ? ' poor' : ''}" ${attrs} ${poor ? 'disabled' : ''}>${label}</button>`;
   };
-  // armas: de la más barata a la más potente
+  const esc = !!game.escape?.active;
+  // armas: de la más barata a la más potente (en la Huida, también las suyas y la de fábrica para mejorarla)
   // (WEAPON_ORDER no se toca: la red manda el arma por su lugar en esa lista)
-  const guns = WEAPON_ORDER.filter((id) => WEAPONS[id].price)
-    .sort((a, b) => WEAPONS[a].price - WEAPONS[b].price)
+  const guns = WEAPON_ORDER.filter((id) => (WEAPONS[id].price || (esc && p.has(id))) && (!WEAPONS[id].escape || esc))
+    .sort((a, b) => (WEAPONS[a].price || 0) - (WEAPONS[b].price || 0))
     .map((id) => {
       const d = WEAPONS[id];
       const owned = p.has(id);
+      const w = owned ? p.weapons.find((x) => x.id === id) : null;
+      const lv = w?.lv || 0;
+      // en la Huida: el nivel, lo que tiene ahora y lo que tendría con el siguiente
+      if (esc) return escGun(game, d, owned, lv, buyBtn);
       // la mejora pide el arma de antes; el arma ya mejorada no se vuelve a comprar
       const need =
         d.upgradeOf && !p.has(d.upgradeOf) && !owned ? WEAPONS[d.upgradeOf].name.split(' ')[0].toLowerCase() : '';
@@ -85,7 +100,7 @@ export function renderShop(game) {
     .filter((w) => w.reserve !== Infinity)
     .map((w) => {
       const d = w.def;
-      const mag = p.magSize(d);
+      const mag = p.magSize(d, w.lv);
       return `<div class="shop-item">
       <canvas class="shop-ic" data-gun="${w.id}" width="96" height="96"></canvas>
       <div class="shop-txt"><b>${d.rocket ? 'Cohetes' : 'Balas'} · ${d.name}</b><span>${d.rocket ? `1 cohete por $${d.ammoPrice}` : `Cargador de ${mag} balas por $${d.ammoPrice}`}. Sin límite de reserva.</span><small>Reserva: ${w.reserve} ${d.rocket ? 'cohetes' : 'balas'}</small></div>
@@ -96,7 +111,8 @@ export function renderShop(game) {
     </div>`;
     });
   // las piezas de plano sólo tras ganarlas en una operación (ui/ops.js)
-  const gear = SHOP_ORDER.filter((k) => !SHOP[k].plan || hasPlan(game, SHOP[k].plan)).map((k) => {
+  const gearKeys = SHOP_ORDER.filter((k) => !SHOP[k].plan || hasPlan(game, SHOP[k].plan));
+  const gear = gearKeys.map((k) => {
     const it = SHOP[k];
     const poor = game.money < it.price;
     return `<div class="shop-item${THROWABLES.includes(k) ? ' hot' : ''}">
@@ -105,7 +121,11 @@ export function renderShop(game) {
       <button class="btn buy${poor ? ' poor' : ''}" data-buy="${k}" ${poor ? 'disabled' : ''}>$${it.price}</button>
     </div>`;
   });
-  game.$('shop-items').innerHTML = `
+  game.$('shop-items').innerHTML = esc
+    ? `<h3 class="shop-sec">Armas y mejoras</h3>${guns.join('')}
+    <h3 class="shop-sec">Munición</h3>${ammo.length ? ammo.join('') : '<p class="shop-empty">Compra un arma para poder comprarle balas. El subfusil tiene balas infinitas.</p>'}
+    <h3 class="shop-sec">Explosivos</h3>${gear.filter((_, i) => THROWABLES.includes(gearKeys[i])).join('')}`
+    : `
     <h3 class="shop-sec">Armas</h3>${guns.join('')}
     <h3 class="shop-sec">Munición</h3>${ammo.length ? ammo.join('') : '<p class="shop-empty">Compra un arma para poder comprarle balas. El subfusil tiene balas infinitas.</p>'}${heavyAmmoItem(game)}
     <h3 class="shop-sec">Defensas, granadas y molotovs</h3>${gear.join('')}
@@ -133,8 +153,62 @@ export function renderShop(game) {
       g.setTransform(2.1, 0, 0, 2.1, 4, 48);
       g.shadowColor = 'rgba(230,224,210,0.85)';
       g.shadowBlur = 3;
-      drawGunIcon(g, c.dataset.gun);
+      drawGunIcon(g, c.dataset.gun, Number(c.dataset.lv) || 0);
     });
+}
+
+/** Estrellas del nivel de mejora de un arma (★ ganadas, ☆ que faltan). */
+export const lvStars = (lv) => '★'.repeat(lv) + '☆'.repeat(WEAPON_UP.max - lv);
+
+/** Fila de un arma en la tienda de la Huida: comprar, o mejorarla y venderla; con sus números. */
+function escGun(game, d, owned, lv, buyBtn) {
+  const p = game.player;
+  const stat = (l) => ({
+    dmg: d.rocket
+      ? `×${(Math.round((d.rocketK || 1) * upDmg(l) * 100) / 100).toString().replace('.', ',')}`
+      : Math.round(d.damage * upDmg(l)),
+    mag: p.magSize(d, l),
+    rel: (d.reload * upReload(l)).toFixed(1).replace('.', ','),
+  });
+  const now = stat(lv);
+  const cost = owned ? weaponUpCost(d.id, lv) : 0;
+  const nx = owned && cost ? stat(lv + 1) : null;
+  const cell = (label, a, b) =>
+    `<span class="ws"><em>${label}</em>${a}${b !== undefined && b !== a ? `<u>→ ${b}</u>` : ''}</span>`;
+  const stats = `<span class="wstats">${cell(d.rocket ? 'Explosión' : `Daño${d.pellets > 1 ? ` ×${d.pellets}` : ''}`, now.dmg, nx?.dmg)}${cell('Cargador', now.mag, nx?.mag)}${cell('Recarga', `${now.rel} s`, nx ? `${nx.rel} s` : undefined)}${cell('Disp/s', d.rate)}</span>`;
+  const stars = owned ? `<i class="wlv lv${lv}">${lvStars(lv)}</i>` : '';
+  let btns;
+  if (!owned) btns = buyBtn(`data-gun-buy="${d.id}"`, d.price, `$${d.price}`);
+  else {
+    const up = cost
+      ? buyBtn(`data-gun-up="${d.id}"`, cost, `Mejorar · $${cost}`, ' sm up')
+      : '<button class="btn buy sm up" disabled>Nivel máximo</button>';
+    const sell = d.price
+      ? `<button class="btn buy sm sell" data-sell="${d.id}">Vender $${Math.round(d.price * SELL_RATE)}</button>`
+      : '';
+    btns = `<div class="buy-col">${up}${sell}</div>`;
+  }
+  return `<div class="shop-item gun${owned ? ' owned' : ''}${d.escape ? ' new' : ''}">
+      <canvas class="shop-ic" data-gun="${d.id}" data-lv="${lv}" width="96" height="96"></canvas>
+      <div class="shop-txt"><b class="wn">${d.name}${stars}</b><span>${d.desc}</span>${stats}</div>
+      ${btns}
+    </div>`;
+}
+
+/** Mejora un nivel el arma (Huida; en línea la cobra el servidor). */
+export function upgradeWeapon(game, id) {
+  const p = game.player;
+  const w = p.weapons.find((x) => x.id === id);
+  const cost = w ? weaponUpCost(id, w.lv || 0) : 0;
+  if (!cost || game.money < cost) return;
+  game.analitica.compra('mejora_arma', id, cost);
+  if (game.mode.viaServer()) return game.online.buy('wup', id);
+  game.money -= cost;
+  p.upgrade(id);
+  game.sfx.buy();
+  game.sfx.level?.();
+  game.toast(`${w.def.name} mejorada: nivel ${w.lv}`);
+  renderShop(game);
 }
 
 export function heavyAmmoItem(game) {
@@ -210,7 +284,7 @@ export function buyAmmo(game, id, n) {
   game.analitica.compra('municion', id, cost, n);
   if (game.mode.viaServer()) return game.online.buy('ammo', id, n);
   game.money -= cost;
-  w.reserve += p.magSize(w.def) * n;
+  w.reserve += p.magSize(w.def, w.lv) * n;
   game.sfx.buy();
   renderShop(game);
 }
@@ -347,6 +421,8 @@ export function bindShop(game) {
   game.$('shop-items').addEventListener('click', (e) => {
     const sell = closest(e.target, '[data-sell]');
     if (sell) return sellWeapon(game, sell.dataset.sell);
+    const up = closest(e.target, '[data-gun-up]');
+    if (up) return upgradeWeapon(game, up.dataset.gunUp);
     const g = closest(e.target, '[data-gun-buy]');
     if (g) return buyWeapon(game, g.dataset.gunBuy);
     const a = closest(e.target, '[data-ammo]');
