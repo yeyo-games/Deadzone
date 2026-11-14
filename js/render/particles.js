@@ -368,6 +368,24 @@ export class Particles {
   }
 
   explosion(x, y, R) {
+    this.flash(x, y, R * 2.2, 0.25);
+    this.add(SHOCK, x, y, 0, 0, 0.3, R * 0.2, '255,240,210', 0, R * 3);
+    this.add(FIREBALL, x, y, 0, 0, 0.3, R * 0.38, '', 0);
+    for (let i = 0; i < 5; i++) {
+      const a = rand(0, TAU);
+      this.add(
+        FIREBALL,
+        x + Math.cos(a) * R * 0.12,
+        y + Math.sin(a) * R * 0.12,
+        Math.cos(a) * 90,
+        Math.sin(a) * 90,
+        rand(0.16, 0.3),
+        R * rand(0.14, 0.22),
+        '',
+        3,
+      );
+    }
+    for (let i = 0; i < 8; i++) this.ember(x + rand(-R, R) * 0.3, y + rand(-R, R) * 0.3, 1.2);
     this.ring(x, y, R * 0.55, '255,190,120');
     for (let i = 0; i < 26; i++) {
       const a = rand(0, TAU);
@@ -483,6 +501,8 @@ export class Particles {
 
   // impacto del cohete: una bola de fuego corta y después el humo que sube
   rocketImpact(x, y, R) {
+    this.flash(x, y, R * 2.4, 0.3);
+    this.add(SHOCK, x, y, 0, 0, 0.34, R * 0.22, '255,235,200', 0, R * 3.2);
     this.add(FIREBALL, x, y, 0, 0, 0.32, R * 0.42, '', 0);
     for (let i = 0; i < 4; i++) {
       const a = rand(0, TAU);
@@ -815,10 +835,49 @@ export class Particles {
 
   // rebufo de la bazuca hacia atrás
   backblast(x, y, a) {
-    for (let i = 0; i < 10; i++) {
-      const aa = a + rand(-0.45, 0.45);
-      const s = rand(60, 220);
-      this.add(SMOKE, x, y, Math.cos(aa) * s, Math.sin(aa) * s, rand(0.6, 1.2), rand(5, 9), '170,165,155', 3, 26);
+    this.flash(x, y, 120, 0.12);
+    this.add(FIREBALL, x, y, Math.cos(a) * 160, Math.sin(a) * 160, 0.16, 14, '', 6);
+    for (let i = 0; i < 6; i++) {
+      const aa = a + rand(-0.35, 0.35);
+      const s = rand(260, 520);
+      this.add(SPARK, x, y, Math.cos(aa) * s, Math.sin(aa) * s, rand(0.08, 0.18), 1, pick(['#ffd890', '#fff2d0']), 6);
+    }
+    for (let i = 0; i < 16; i++) {
+      const aa = a + rand(-0.55, 0.55);
+      const s = rand(60, 260);
+      this.add(SMOKE, x, y, Math.cos(aa) * s, Math.sin(aa) * s, rand(0.7, 1.4), rand(5, 10), '170,165,155', 3, 30);
+    }
+  }
+
+  // polvo de las pisadas: una nubecita en cada paso (casi siempre al correr, a veces al caminar)
+  footstep(p) {
+    if (!p.alive || p.inVan || p.inRobot || p.manned || !(p.speedNow > 8)) return;
+    const step = Math.floor((p.walkPhase || 0) / Math.PI);
+    if (p.stepFx === undefined || Math.abs(step - p.stepFx) > 4) {
+      p.stepFx = step;
+      return;
+    }
+    if (step === p.stepFx) return;
+    p.stepFx = step;
+    if (!p.running && Math.random() < 0.65) return;
+    const a = p.legAngle || 0;
+    const side = step % 2 ? 1 : -1;
+    const x = p.x - Math.cos(a) * 6 - Math.sin(a) * side * 5;
+    const y = p.y - Math.sin(a) * 6 + Math.cos(a) * side * 5;
+    for (let i = 0; i < (p.running ? 3 : 2); i++) {
+      const s = rand(20, 60);
+      this.add(
+        SMOKE,
+        x,
+        y,
+        -Math.cos(a) * s + rand(-15, 15),
+        -Math.sin(a) * s + rand(-15, 15),
+        rand(0.35, 0.6),
+        rand(2, 3.5),
+        '120,108,90',
+        3,
+        10,
+      );
     }
   }
 

@@ -8,6 +8,18 @@ export function drawBullets(ctx, list) {
       flames = true;
       continue;
     }
+    if (b.rocket && b.wid === 'glauncher') {
+      drawShell(ctx, b);
+      continue;
+    }
+    if (b.wid === 'crossbow') {
+      drawBolt(ctx, b);
+      continue;
+    }
+    if (b.wid === 'railgun' || b.wid === 'sniper') {
+      drawBeam(ctx, b, b.wid === 'railgun');
+      continue;
+    }
     if (b.rocket) {
       // el de la bazuca mejorada es más grande
       const big = (b.rocketK || 1) > 1 ? 1.5 : 1;
@@ -37,6 +49,76 @@ export function drawBullets(ctx, list) {
     ctx.stroke();
   }
   if (flames) drawFlames(ctx, list);
+}
+
+// Granada del lanzagranadas: casco verde que gira, con su banda y un hilo de humo.
+function drawShell(ctx, b) {
+  const a = Math.atan2(b.dy, b.dx);
+  ctx.strokeStyle = 'rgba(190,185,170,0.35)';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(b.x - b.dx * 26, b.y - b.dy * 26);
+  ctx.lineTo(b.x, b.y);
+  ctx.stroke();
+  ctx.save();
+  ctx.translate(b.x, b.y);
+  ctx.rotate(a + (b.age || 0) * 20);
+  ctx.fillStyle = '#4a5a34';
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 5.5, 4, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#c9a54a';
+  ctx.fillRect(-1, -4, 2, 8);
+  ctx.restore();
+}
+
+// Virote de la ballesta: asta de madera, punta de metal y plumas.
+function drawBolt(ctx, b) {
+  const a = Math.atan2(b.dy, b.dx);
+  ctx.save();
+  ctx.translate(b.x, b.y);
+  ctx.rotate(a);
+  ctx.strokeStyle = 'rgba(255,240,205,0.18)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(-34, 0);
+  ctx.lineTo(-14, 0);
+  ctx.stroke();
+  ctx.fillStyle = '#8a6a44';
+  ctx.fillRect(-14, -0.9, 16, 1.8);
+  ctx.fillStyle = '#d0d4d8';
+  ctx.beginPath();
+  ctx.moveTo(2, -2.2);
+  ctx.lineTo(6, 0);
+  ctx.lineTo(2, 2.2);
+  ctx.fill();
+  ctx.fillStyle = '#c8402c';
+  ctx.beginPath();
+  ctx.moveTo(-14, 0);
+  ctx.lineTo(-18, -3);
+  ctx.lineTo(-11, 0);
+  ctx.lineTo(-18, 3);
+  ctx.fill();
+  ctx.restore();
+}
+
+// Francotirador y cañón de riel: trazadora larga (el de riel, un rayo azul con halo).
+function drawBeam(ctx, b, rail) {
+  const len = (b.trail || 20) * (rail ? 4 : 2.4);
+  const x0 = b.x - b.dx * len;
+  const y0 = b.y - b.dy * len;
+  ctx.strokeStyle = rail ? 'rgba(80,190,255,0.28)' : 'rgba(255,230,190,0.22)';
+  ctx.lineWidth = rail ? 8 : 4;
+  ctx.beginPath();
+  ctx.moveTo(x0, y0);
+  ctx.lineTo(b.x, b.y);
+  ctx.stroke();
+  ctx.strokeStyle = rail ? 'rgba(200,240,255,0.95)' : 'rgba(255,248,225,0.95)';
+  ctx.lineWidth = rail ? 2.6 : 1.6;
+  ctx.beginPath();
+  ctx.moveTo(b.x - b.dx * len * 0.6, b.y - b.dy * len * 0.6);
+  ctx.lineTo(b.x, b.y);
+  ctx.stroke();
 }
 
 // Llamaradas del lanzallamas: salen pequeñas y blancas de la boquilla, crecen, se vuelven naranjas y

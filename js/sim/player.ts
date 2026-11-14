@@ -138,6 +138,11 @@ export class Player {
   declare angle: number;
   declare legAngle: number;
   declare walkPhase: number;
+  /** cuándo lanzó algo y qué (sólo para la animación del brazo, render/sprites.js) */
+  declare throwAt?: number;
+  declare throwKind?: string;
+  /** el último paso que levantó polvo (render/scene.js) */
+  declare stepFx?: number;
   declare speedNow: number;
   declare stats: Stats;
   declare hp: number;
@@ -735,6 +740,8 @@ export class Player {
         knock: d.knock,
         shot,
         hits: null,
+        // el arma (para dibujar su trazadora: render/bullets.js)
+        wid: d.id,
         rocket: !!d.rocket,
         ...(d.rocketK || up > 1 ? { rocketK: (d.rocketK || 1) * up } : {}),
         ...(d.blast ? { blast: true, blastR: d.blastR, blastP: (d.blastP ?? 0) * this.stats.dmgMult * up } : {}),

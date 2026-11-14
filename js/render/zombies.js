@@ -66,7 +66,24 @@ export function drawHorde(ctx, list, view, base, layer) {
       const al = (z.spawnT > 0 ? 1 - z.spawnT : 1) * (z.cloak || z.selfA?.cloak ? 0.18 : 1);
       if (ctx.globalAlpha !== al) ctx.globalAlpha = al;
     }
-    ctx.setTransform(k * c, k * sn, -k * sn, k * c, tx + lx * s, ty + ly * s);
+    // los velocistas dejan una estela de sí mismos cuando corren (y se estiran un poco hacia delante)
+    const moved = Math.hypot(z.x - (z.rx ?? z.x), z.y - (z.ry ?? z.y));
+    z.rx = z.x;
+    z.ry = z.y;
+    const dash = z.type === 'sprinter' && moved > 0.6 && !lift && !(z.spawnT > 0) && !z.cloak;
+    if (dash) {
+      const a0 = ctx.globalAlpha;
+      for (let i = 2; i >= 1; i--) {
+        ctx.globalAlpha = a0 * (i === 1 ? 0.32 : 0.16);
+        const gx = lx - c * i * 10;
+        const gy = ly - sn * i * 10;
+        ctx.setTransform(k * c, k * sn, -k * sn, k * c, tx + gx * s, ty + gy * s);
+        ctx.drawImage(frames[(f + frames.length - i) % frames.length], -half, -half, half * 2, half * 2);
+      }
+      ctx.globalAlpha = a0;
+    }
+    const st = dash ? 1.08 : 1;
+    ctx.setTransform(k * c * st, k * sn * st, -k * sn, k * c, tx + lx * s, ty + ly * s);
     ctx.drawImage(img, -half, -half, half * 2, half * 2);
     if (swell) {
       // brilla amarillo, cada vez más fuerte

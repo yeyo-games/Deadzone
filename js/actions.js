@@ -278,6 +278,9 @@ export function tryGrenade(game, kind = 'grenade') {
     ty = p.y + Math.sin(p.angle) * 220;
   }
   game.inv[kind]--;
+  // la animación del brazo que lanza (render/sprites.js, drawThrowArm)
+  p.throwAt = game.time;
+  p.throwKind = kind;
   // en línea la lanza el servidor; la cuenta se corrige con su siguiente foto
   if (game.mode.sendThrow(kind, tx, ty)) return;
   if (kind === 'molotov') game.structures.throwMolotov(game, tx, ty);

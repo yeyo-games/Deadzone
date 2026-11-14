@@ -78,7 +78,10 @@ export function render(game) {
     if (!p.alive) ctx.globalAlpha = 0.55;
     if (p.inRobot) drawRobot(ctx, game.robot, p, game.time);
     // dentro de la camioneta (Huida) no se ve
-    else if (p.alive && !p.inVan) drawSurvivor(ctx, p, game.time);
+    else if (p.alive && !p.inVan) {
+      game.particles.footstep(p);
+      drawSurvivor(ctx, p, game.time);
+    }
     ctx.globalAlpha = 1;
     drawPeers(ctx, game);
     drawMannedHeavy(ctx, game.structures);

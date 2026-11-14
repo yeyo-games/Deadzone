@@ -2711,6 +2711,136 @@ function drawAura(g, id, r, p, time) {
   g.restore();
 }
 
+// s que dura la animación de lanzar (granada, molotov, lapa o misil improvisado)
+export const THROW_T = 0.42;
+
+/**
+ * Fogonazo en la boca del arma, distinto para cada tipo: estrella (las comunes), abanico ancho con
+ * chispas (escopetas), llamarada larga y fina (francotirador), rayo azul (cañón de riel), nube de la
+ * salida (bazuca y lanzagranadas) y nada (lanzallamas y ballesta, que no tienen fogonazo).
+ * @param {Ctx} g @param {string} id @param {number} tip @param {number} y
+ */
+function drawMuzzle(g, id, tip, y) {
+  if (id === 'flamer' || id === 'crossbow') return;
+  const rnd = Math.random;
+  g.save();
+  g.translate(tip, y);
+  g.globalCompositeOperation = 'lighter';
+  if (id === 'shotgun' || id === 'autoshotgun' || id === 'rshotgun') {
+    // abanico: tres lenguas abiertas y chispas
+    g.fillStyle = 'rgba(255,190,100,0.85)';
+    for (const a of [-0.32, 0, 0.32]) {
+      const L = 16 + rnd() * 10;
+      g.beginPath();
+      g.moveTo(0, 0);
+      g.lineTo(Math.cos(a - 0.1) * L, Math.sin(a - 0.1) * L);
+      g.lineTo(Math.cos(a) * (L + 6), Math.sin(a) * (L + 6));
+      g.lineTo(Math.cos(a + 0.1) * L, Math.sin(a + 0.1) * L);
+      g.closePath();
+      g.fill();
+    }
+    g.fillStyle = '#fff4d8';
+    for (let i = 0; i < 5; i++) g.fillRect(8 + rnd() * 18, (rnd() - 0.5) * 16, 2, 2);
+    circ(g, 2, 0, 6, 'rgba(255,240,200,0.9)', null);
+  } else if (id === 'sniper' || id === 'revolver') {
+    // llamarada larga y fina hacia delante, con aletas cortas
+    const L = id === 'sniper' ? 30 : 18;
+    g.fillStyle = 'rgba(255,214,140,0.9)';
+    g.beginPath();
+    g.moveTo(0, -3);
+    g.lineTo(L + rnd() * 8, 0);
+    g.lineTo(0, 3);
+    g.closePath();
+    g.fill();
+    g.fillRect(2, -7, 3, 14);
+    circ(g, 2, 0, 4.5, '#fff6dc', null);
+  } else if (id === 'railgun') {
+    // rayo azul con anillos de energía
+    g.fillStyle = 'rgba(120,210,255,0.9)';
+    g.fillRect(0, -2.2, 36 + rnd() * 10, 4.4);
+    g.strokeStyle = 'rgba(180,235,255,0.8)';
+    g.lineWidth = 1.5;
+    for (const k of [6, 14]) {
+      g.beginPath();
+      g.ellipse(k, 0, 2.5, 7 - k * 0.2, 0, 0, TAU);
+      g.stroke();
+    }
+    circ(g, 2, 0, 6, 'rgba(220,245,255,0.95)', null);
+  } else if (id === 'bazooka' || id === 'mbazooka' || id === 'glauncher') {
+    // fogonazo redondo y gordo de la salida del cohete
+    for (let i = 0; i < 4; i++) circ(g, 4 + i * 4, (rnd() - 0.5) * 6, 8 - i * 1.5, 'rgba(255,170,80,0.7)', null);
+    circ(g, 3, 0, 6, '#fff2d0', null);
+  } else {
+    // estrella de siempre (más grande cuanto más pesada)
+    const big = id === 'lmg' || id === 'mlmg' || id === 'ar' ? 1.2 : 1;
+    g.fillStyle = 'rgba(255,214,140,0.95)';
+    g.beginPath();
+    for (let i = 0; i < 10; i++) {
+      const a = (i / 10) * TAU;
+      const d = (i % 2 ? 3 : 9 + rnd() * 5) * big;
+      g.lineTo(Math.cos(a) * d * 1.3, Math.sin(a) * d * 0.7);
+    }
+    g.closePath();
+    g.fill();
+    circ(g, 0, 0, 3.5, '#fff6dc', null);
+  }
+  g.restore();
+}
+
+/**
+ * El brazo que lanza (sin el giro del arma): se echa atrás con el objeto, lo suelta hacia delante dejando
+ * un arco y vuelve. k: 0..1 del lanzamiento.
+ * @param {Ctx} g @param {number} r @param {number} k @param {string | undefined} kind @param {string} J @param {string} skin
+ */
+function drawThrowArm(g, r, k, kind, J, skin) {
+  const sh = { x: 0, y: -r * 0.62 };
+  // puntos de la mano: preparado, atrás del todo, soltando, terminado
+  const P0 = { x: r * 0.5, y: -r * 0.95 };
+  const P1 = { x: -r * 0.95, y: -r * 1.1 };
+  const P2 = { x: r * 1.7, y: -r * 0.25 };
+  const P3 = { x: r * 0.95, y: -r * 0.45 };
+  const ease = (/** @type {number} */ t) => t * t * (3 - 2 * t);
+  /** @param {{x: number, y: number}} a @param {{x: number, y: number}} b @param {number} t */
+  const mix = (a, b, t) => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
+  const h =
+    k < 0.38
+      ? mix(P0, P1, ease(k / 0.38))
+      : k < 0.58
+        ? mix(P1, P2, ease((k - 0.38) / 0.2))
+        : mix(P2, P3, ease((k - 0.58) / 0.42));
+  // arco del lanzamiento
+  if (k > 0.4 && k < 0.75) {
+    const a = 1 - Math.abs(k - 0.56) / 0.18;
+    g.strokeStyle = `rgba(255,250,235,${(0.45 * Math.max(0, a)).toFixed(3)})`;
+    g.lineWidth = r * 0.35;
+    g.lineCap = 'round';
+    g.beginPath();
+    g.moveTo(P1.x * 0.6, P1.y);
+    g.quadraticCurveTo(r * 0.4, -r * 1.6, h.x, h.y);
+    g.stroke();
+  }
+  limb(g, sh.x, sh.y, h.x, h.y, r * 0.28, J);
+  // el objeto en la mano hasta soltarlo
+  if (k < 0.5) {
+    if (kind === 'molotov') {
+      ell(g, h.x - 2, h.y, r * 0.22, r * 0.17, 0, '#7a9660');
+      circ(g, h.x - 2 - r * 0.25, h.y, r * 0.12, `rgba(255,${150 + Math.floor(Math.random() * 60)},40,0.95)`, null);
+    } else if (kind === 'sticky') {
+      g.fillStyle = '#c2ae7c';
+      g.fillRect(h.x - r * 0.22, h.y - r * 0.16, r * 0.44, r * 0.32);
+      circ(g, h.x, h.y, r * 0.06, '#ff3020', null);
+    } else if (kind === 'improv') {
+      g.fillStyle = '#8a5a34';
+      g.fillRect(h.x - r * 0.4, h.y - r * 0.09, r * 0.8, r * 0.18);
+    } else {
+      circ(g, h.x - 2, h.y, r * 0.22, '#5a6b3c', OUT, 1);
+      g.fillStyle = '#d9783a';
+      g.fillRect(h.x - 2 + r * 0.1, h.y - r * 0.28, r * 0.12, r * 0.12);
+    }
+  }
+  circ(g, h.x, h.y, r * 0.18, skin, OUT, 1);
+}
+
 /** @param {Ctx} g @param {Player} p @param {number} time */
 export function drawSurvivor(g, p, time) {
   const r = p.r;
@@ -2745,17 +2875,34 @@ export function drawSurvivor(g, p, time) {
   g.save();
   g.rotate(p.legAngle);
   const moving = p.speedNow > 8;
-  const amp = moving ? (p.running ? 0.75 : 0.5) : 0;
+  const amp = moving ? (p.running ? 0.85 : 0.5) : 0;
   const s = Math.sin(p.walkPhase) * amp;
-  ell(g, s * r, -r * 0.3, r * 0.38, r * 0.22, 0, P);
-  ell(g, -s * r, r * 0.3, r * 0.38, r * 0.22, 0, P);
+  // el pie que va adelante se ve un poco más grande (levantado); el de atrás, apoyado
+  const lift = (/** @type {number} */ k) => 1 + Math.max(0, k) * 0.16;
+  ell(g, s * r, -r * 0.3, r * 0.38 * lift(s), r * 0.22, 0, P);
+  ell(g, -s * r, r * 0.3, r * 0.38 * lift(-s), r * 0.22, 0, P);
   g.fillStyle = '#1a1a1a';
-  g.fillRect(s * r + r * 0.18, -r * 0.42, r * 0.2, r * 0.24);
-  g.fillRect(-s * r + r * 0.18, r * 0.18, r * 0.2, r * 0.24);
+  g.fillRect(s * r + r * 0.18, -r * 0.42, r * 0.2 * lift(s), r * 0.24);
+  g.fillRect(-s * r + r * 0.18, r * 0.18, r * 0.2 * lift(-s), r * 0.24);
   g.restore();
 
+  // al moverse el cuerpo rebota con cada paso y, corriendo, se inclina hacia donde va
+  const run = moving ? (p.running ? 1 : 0.5) : 0;
+  const bob = Math.abs(Math.sin(p.walkPhase));
+  if (run) {
+    g.translate(Math.cos(p.legAngle) * run * 1.8, Math.sin(p.legAngle) * run * 1.8);
+    const sq = 1 + bob * 0.045 * run;
+    g.scale(sq, sq);
+  }
   g.rotate(p.angle);
-  const kick = -p.recoil * 3;
+  // retroceso según el arma: las pesadas empujan más el arma hacia atrás y la levantan
+  const W = p.weapon.def;
+  const heft = Math.min(1, (W.shake || 0) * 2.2);
+  const kick = -p.recoil * (2.5 + heft * 7);
+  const climb = -p.recoil * heft * 0.22;
+  // el lanzamiento (granada, molotov, lapa, misil): 0..1 mientras dura
+  const tk = p.throwAt !== undefined ? (time - p.throwAt) / THROW_T : 1;
+  const throwing = tk >= 0 && tk < 1 && !p.manned && !p.rageT;
   const longGun = p.weapon.id !== 'pistol';
   // mochila (o lo que lleve a la espalda)
   if (!L.back || L.back === 'pack') {
@@ -2768,16 +2915,28 @@ export function drawSurvivor(g, p, time) {
     g.fillStyle = shade(L.pack, 0.79);
     g.fillRect(-r * 0.95, -r * 0.4, r * 0.5, r * 0.25);
   } else if (L.back !== 'katana') drawBack(g, L.back, r, L.pack, p, time);
-  // torso
+  // torso (acompaña un poco el retroceso)
+  g.save();
+  g.translate(kick * 0.25, 0);
   ell(g, -r * 0.05, 0, r * 0.52, r * 0.88, 0, J);
   g.fillStyle = shade(J, 0.84);
   g.fillRect(-r * 0.12, -r * 0.7, r * 0.12, r * 1.4);
   if (L.suit && L.suit !== 'none') drawSuit(g, L.suit, r, J, time);
   // la katana va cruzada sobre la espalda (se ve encima del torso)
   if (L.back === 'katana') drawBack(g, L.back, r, L.pack, p, time);
+  g.restore();
   // arma + brazos
   g.save();
   g.translate(kick, 0);
+  g.rotate(climb);
+  // caminando el arma se mece con los pasos (no mientras dispara)
+  if (run && p.recoil < 0.2) g.rotate(Math.sin(p.walkPhase) * 0.05 * run);
+  // lanzando: el arma baja hacia el costado mientras el otro brazo lanza
+  if (throwing) {
+    const e = Math.sin(tk * Math.PI);
+    g.translate(-e * 4, e * 6);
+    g.rotate(e * 0.75);
+  }
   // durante la recarga el arma baja e inclina (sincronizado con los sonidos de cada paso)
   if (p.reloadT > 0) {
     const k = Math.sin((p.reloadProg || 0) * Math.PI);
@@ -2797,11 +2956,18 @@ export function drawSurvivor(g, p, time) {
     GUNS[p.weapon.id](g, r, p);
     drawGunLevel(g, p.weapon.id, r, p.weapon.lv || 0);
   }
-  if (longGun || rage) {
+  if ((longGun || rage) && throwing) {
+    // sólo la mano de la empuñadura: la otra está lanzando (se dibuja aparte, sin el giro del arma)
+    limb(g, 0, r * 0.62, r * 0.7, r * 0.12, r * 0.28, J);
+    circ(g, r * 0.72, r * 0.12, r * 0.17, L.skin, OUT, 1);
+  } else if (longGun || rage) {
     limb(g, 0, r * 0.62, r * 0.7, r * 0.12, r * 0.28, J);
     limb(g, 0, -r * 0.62, r * 1.25, -r * 0.05, r * 0.28, J);
     circ(g, r * 0.72, r * 0.12, r * 0.17, L.skin, OUT, 1);
     circ(g, r * 1.28, -r * 0.05, r * 0.17, L.skin, OUT, 1);
+  } else if (throwing) {
+    limb(g, 0, r * 0.62, r * 0.78, r * 0.08, r * 0.28, J);
+    circ(g, r * 0.8, r * 0.05, r * 0.2, L.skin, OUT, 1);
   } else {
     limb(g, 0, r * 0.62, r * 0.78, r * 0.08, r * 0.28, J);
     limb(g, 0, -r * 0.62, r * 0.78, -r * 0.08, r * 0.28, J);
@@ -2809,20 +2975,11 @@ export function drawSurvivor(g, p, time) {
   }
   if (p.flashT > 0) {
     const tip = rage ? r * 0.15 + 38 : p.gunTip;
-    for (const y of rage ? [-9, 0, 9] : [0]) {
-      g.fillStyle = 'rgba(255,214,140,0.95)';
-      g.beginPath();
-      for (let i = 0; i < 10; i++) {
-        const a = (i / 10) * TAU;
-        const d = i % 2 ? 3 : 9 + Math.random() * 5;
-        g.lineTo(tip + Math.cos(a) * d * 1.3, y + Math.sin(a) * d * 0.7);
-      }
-      g.closePath();
-      g.fill();
-      circ(g, tip, y, 3.5, '#fff6dc', null);
-    }
+    const id = rage ? 'lmg' : p.weapon.id;
+    for (const y of rage ? [-9, 0, 9] : id === 'dualsmg' ? [-4.5, 4.5] : [0]) drawMuzzle(g, id, tip, y);
   }
   g.restore();
+  if (throwing) drawThrowArm(g, r, tk, p.throwKind, J, L.skin);
   // cabeza con pañuelo
   circ(g, r * 0.02, 0, r * 0.44, L.skin);
   g.fillStyle = L.hair;

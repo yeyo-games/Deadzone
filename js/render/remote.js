@@ -19,7 +19,10 @@ export function drawPeers(ctx, game) {
     if (q.away) ctx.globalAlpha = 0.45;
     const r = q.inRobot && R.robots.get(q.idx);
     if (r) drawRobot(ctx, r, q, game.time);
-    else drawSurvivor(ctx, q, game.time);
+    else {
+      game.particles.footstep(q);
+      drawSurvivor(ctx, q, game.time);
+    }
     const name = q.away ? `${q.name} (reconectando)` : q.name;
     ctx.fillStyle = 'rgba(0,0,0,0.6)';
     ctx.fillText(name, q.x + 1, q.y - q.r - 13);
