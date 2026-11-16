@@ -40,6 +40,7 @@ import { showOnline, onlineStatus, renderLobby, openInvite, bindLobby } from './
 import { showAccount, bindAccount } from './ui/account.js';
 import { refreshHall, bindBoard } from './ui/board.js';
 import { openShop, closeShop, renderShop, bindShop } from './ui/shop.js';
+import { applySettings, bindSettings, loadSettings } from './ui/settings.js';
 import { openTurret, bindTurret } from './ui/turret.js';
 import { toast, banner, updateHud, updateNetStat, moneyPop, bindHud } from './ui/hud.js';
 import { Input } from './ui/input.js';
@@ -124,8 +125,11 @@ class Game {
     // última clase elegida (se vuelve a preguntar en cada partida)
     const cls = storage.get('dz-class', null);
     this.classPick = isClass(cls) ? cls : CLASS_ORDER[0];
+    // ajustes del jugador (volumen, temblor, números de daño, calidad): ui/settings.js
+    this.settings = loadSettings();
     this.bindUi();
     resize(this);
+    applySettings(this);
     this.newWorld();
     this.setupMenu();
     // al entrar: crear cuenta o elegir una
@@ -308,6 +312,7 @@ class Game {
     bindMenu(this);
     bindOver(this);
     bindShop(this);
+    bindSettings(this);
     bindTurret(this);
     bindClass(this);
     bindLook(this);

@@ -161,6 +161,8 @@ export class Online {
   declare playing: boolean;
   declare leaving: boolean;
   declare reconnecting: boolean;
+  /** volviendo a la sala con el token tras perderla (ver retryResume) */
+  declare resuming: boolean;
   declare seed: number;
   declare clock: ServerClock;
   declare inp: InputLike | null;
@@ -195,6 +197,7 @@ export class Online {
     this.playing = false;
     this.leaving = false;
     this.reconnecting = false;
+    this.resuming = false;
     this.seed = 0;
     this.clock = new ServerClock();
     this.inp = null;
@@ -208,9 +211,16 @@ export class Online {
     this.bytesIn = 0;
     this.bytesOut = 0;
     this.results = null;
-    // al recargar o cerrar la página se anota la hora: desde ahí corren los 20 s para volver
+    // al recargar o cerrar la página se anota la hora: desde ahí corre el tiempo para volver
     window.addEventListener('pagehide', () => {
       if (this.room && !this.leaving) this.remember();
+    });
+    // al irse a otra app el celular puede cerrar la conexión: se anota la hora al salir y, al volver,
+    // si la sala se perdió mientras tanto, se intenta volver a ella con el token
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        if (this.room && !this.leaving) this.remember();
+      } else if (!this.room && !this.leaving && this.saved()) this.retryResume();
     });
   }
 
@@ -268,22 +278,56 @@ export class Online {
     this.attach(await c.joinById(code, { name, look: lookCode(this.game.look), cls: this.game.classPick }));
   }
 
-  // Tras recargar la página: vuelve a la misma sala con el token (dentro de la ventana de 20 s).
-  async resume() {
-    let s = null;
+  /** El token guardado para volver a la sala, si todavía está dentro del tiempo que el servidor guarda el sitio. */
+  saved(): { token: string; at: number } | null {
     try {
-      s = JSON.parse(sessionStorage.getItem(SAVE) || 'null');
+      const s = JSON.parse(sessionStorage.getItem(SAVE) || 'null');
+      return s && s.token && Date.now() - s.at <= NET.reconnectSeconds * 1000 ? s : null;
     } catch {
-      s = null;
+      return null;
     }
-    if (!s || !s.token || Date.now() - s.at > NET.reconnectSeconds * 1000) return false;
+  }
+
+  // Tras recargar la página (o perder la sala): vuelve a la misma sala con el token (dentro de
+  // NET.reconnectSeconds). keep: si falla, se guarda el token para otro intento (la red puede tardar en
+  // volver al regresar a la app).
+  async resume(keep = false) {
+    const s = this.saved();
+    if (!s || this.room) return false;
     try {
       const c = await this.client();
       this.attach(await c.reconnect(s.token));
       return true;
     } catch {
-      this.forget();
+      if (!keep) this.forget();
       return false;
+    }
+  }
+
+  // Se perdió la sala sin querer (el celular cerró la conexión en segundo plano, se fue la red): se intenta
+  // volver cada pocos segundos mientras el servidor guarde el sitio (sólo con la página a la vista).
+  async retryResume() {
+    if (this.resuming) return false;
+    this.resuming = true;
+    const g = this.game;
+    try {
+      while (this.saved() && !this.room && !this.leaving) {
+        if (!document.hidden) {
+          g.onlineStatus('Se perdió la conexión: volviendo a la partida…', true);
+          if (await this.resume(true)) {
+            g.onlineStatus('Reconectado');
+            return true;
+          }
+        }
+        await new Promise((r) => setTimeout(r, 2500));
+      }
+      if (!this.room && !this.leaving) {
+        this.forget();
+        g.onlineStatus('No se pudo volver a la sala: pasó demasiado tiempo sin conexión.', true);
+      }
+      return false;
+    } finally {
+      this.resuming = false;
     }
   }
 
@@ -311,8 +355,10 @@ export class Online {
     this.leaving = false;
     this.shutdown = false;
     this.results = null;
-    // reconexión automática con espera progresiva y pocos intentos (el servidor guarda el sitio 20 s)
-    Object.assign(room.reconnection, { minUptime: 0, maxRetries: 8, minDelay: 300, maxDelay: 4000 });
+    // reconexión automática con espera progresiva, durante todo el tiempo que el servidor guarda el sitio
+    // (NET.reconnectSeconds); si aun así se pierde, retryResume vuelve a intentarlo con el token
+    const tries = Math.ceil((NET.reconnectSeconds * 1000) / 3000) + 4;
+    Object.assign(room.reconnection, { minUptime: 0, maxRetries: tries, minDelay: 300, maxDelay: 3000 });
     this.countBytes();
     this.remember();
     room.onStateChange(() => this.onState());
@@ -378,9 +424,18 @@ export class Online {
     const g = this.game;
     const mine = this.leaving;
     this.room = null;
-    this.forget();
+    // perdida sin querer (no la cerró el servidor ni te sacó): se intenta volver con el token
+    const lost = !mine && code !== KICKED && code !== IDLE && !this.shutdown && !!this.saved();
+    if (!lost) this.forget();
     if (this.playing) this.stopPlay();
     if (mine) return;
+    if (lost) {
+      g.newWorld();
+      g.setupMenu();
+      g.showOnline();
+      this.retryResume();
+      return;
+    }
     g.newWorld();
     g.setupMenu();
     g.showOnline();

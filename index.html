@@ -265,6 +265,7 @@
         <div class="menu-extra">
           <button class="btn manual-btn" id="btn-manual" type="button"><span class="mb-ic" aria-hidden="true"></span>Manual de supervivencia</button>
           <button class="link-btn" id="btn-tuto" type="button">Repetir el entrenamiento</button>
+          <button class="link-btn" id="btn-settings" type="button">Ajustes</button>
         </div>
         <p class="best" id="acct-best"></p>
         <div class="controls-help">
@@ -347,6 +348,25 @@
       </div>
     </section>
 
+    <!-- ajustes (ui/settings.js): ventana encima del menú o de la pausa -->
+    <div id="settings" hidden>
+      <div class="set-panel" role="dialog" aria-label="Ajustes">
+        <p class="kicker">Opciones</p>
+        <h2>Ajustes</h2>
+        <label class="set-row"><span>Música</span><input type="range" id="set-music" min="0" max="100" step="5"><b id="set-music-v"></b></label>
+        <label class="set-row"><span>Efectos</span><input type="range" id="set-fx" min="0" max="100" step="5"><b id="set-fx-v"></b></label>
+        <label class="set-row"><span>Temblor de cámara</span><input type="range" id="set-shake" min="0" max="100" step="10"><b id="set-shake-v"></b></label>
+        <div class="set-row"><span>Números de daño</span><button class="set-toggle" id="set-numbers" type="button">Sí</button></div>
+        <div class="set-row set-q"><span>Calidad</span>
+          <div class="set-seg" id="set-quality">
+            <button type="button" data-q="auto">Auto</button><button type="button" data-q="high">Alta</button><button type="button" data-q="mid">Media</button><button type="button" data-q="low">Baja</button>
+          </div>
+        </div>
+        <p class="set-note">Auto baja la resolución sola si el juego va lento. Baja: menos humo y chispas, para celulares lentos.</p>
+        <button class="btn primary" id="btn-settings-done" type="button">Listo</button>
+      </div>
+    </div>
+
     <section class="screen" id="screen-pause" hidden>
       <div class="panel pause-panel">
         <h2>Pausa</h2>
@@ -354,6 +374,7 @@
           <div class="stack">
             <button class="btn primary" id="btn-resume">Continuar</button>
             <button class="btn" id="btn-sound">Sonido: activado</button>
+            <button class="btn" id="btn-pause-settings">Ajustes</button>
             <button class="btn" id="btn-restart">Reiniciar partida</button>
             <button class="btn ghost" id="btn-menu">Salir al menú principal</button>
           </div>

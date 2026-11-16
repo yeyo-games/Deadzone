@@ -72,6 +72,8 @@ export class Particles {
     this.idx = 0;
     /** Destellos cortos que alumbran la noche (los dibuja lighting.js). @type {{ x: number, y: number, r: number, t: number, max: number }[]} */
     this.lights = [];
+    /** fracción de partículas menudas (humo, chispas, polvo, brasas) que se saltan con calidad baja */
+    this.thin = 0;
     /** Tramos brillantes que deja el misil antitanque y se apagan despacio (también alumbran). @type {{ x0: number, y0: number, x1: number, y1: number, t: number, max: number }[]} */
     this.streaks = [];
   }
@@ -88,6 +90,8 @@ export class Particles {
   }
 
   add(type, x, y, vx, vy, life, size, color, drag = 4, grow = 0, delay = 0) {
+    // con calidad baja (celulares lentos) se salta parte de lo menudo; las ondas y bolas de fuego no
+    if (this.thin > 0 && type <= EMBER && type !== CASING && Math.random() < this.thin) return;
     const q = this.p[this.idx];
     q.delay = delay;
     this.idx = (this.idx + 1) % this.max;

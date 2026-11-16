@@ -5,6 +5,8 @@ const MAX = 40;
 const STYLE = {
   money: { color: '#ffd36a', size: 17, dy: 0 },
   xp: { color: '#8fd3ff', size: 12.5, dy: 15 },
+  // daño a un zombi (render/combatfx.js): blanco; los golpes fuertes, amarillos
+  dmg: { color: '#f4efe4', size: 11.5, dy: -4 },
 };
 
 export class Floaters {
@@ -16,7 +18,7 @@ export class Floaters {
     this.list.length = 0;
   }
 
-  // kind: 'money' | 'xp'
+  // kind: 'money' | 'xp' | 'dmg'
   add(x, y, n, kind) {
     if (!(n > 0)) return;
     for (const f of this.list) {
@@ -54,11 +56,11 @@ export class Floaters {
       const size = st.size * big * (1 + f.pop * 0.4);
       ctx.globalAlpha = k < 0.6 ? 1 : 1 - (k - 0.6) / 0.4;
       ctx.font = `800 ${size.toFixed(1)}px "Barlow Condensed", "Arial Narrow", sans-serif`;
-      const text = f.kind === 'money' ? `+$${f.n}` : `+${f.n} XP`;
+      const text = f.kind === 'money' ? `+$${f.n}` : f.kind === 'dmg' ? String(f.n) : `+${f.n} XP`;
       ctx.lineWidth = 3.5;
       ctx.strokeStyle = 'rgba(10,8,6,0.85)';
       ctx.strokeText(text, f.x, y);
-      ctx.fillStyle = st.color;
+      ctx.fillStyle = f.kind === 'dmg' && f.n >= 150 ? '#ffd860' : st.color;
       ctx.fillText(text, f.x, y);
     }
     ctx.globalAlpha = 1;

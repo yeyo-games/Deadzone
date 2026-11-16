@@ -32,6 +32,8 @@ export class Sfx {
     this.onReady;
     this.ctx = null;
     this.muted = storage.get('dz-muted', false);
+    /** volumen de la música y de los efectos (ajustes del jugador, 0..1) */
+    this.vol = { music: 1, fx: 1 };
     this.last = {};
     this.voices = 0;
   }
@@ -50,10 +52,10 @@ export class Sfx {
       comp.connect(this.ctx.destination);
       // bus de efectos y bus de música separados para mezclar sin que la música tape los disparos
       this.fx = this.ctx.createGain();
-      this.fx.gain.value = 1;
+      this.fx.gain.value = this.vol.fx;
       this.fx.connect(this.master);
       this.musicBus = this.ctx.createGain();
-      this.musicBus.gain.value = 0.32;
+      this.musicBus.gain.value = 0.32 * this.vol.music;
       this.musicBus.connect(this.master);
       const len = this.ctx.sampleRate;
       this.noise = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
@@ -62,6 +64,14 @@ export class Sfx {
       if (this.onReady) this.onReady(this);
     }
     if (this.ctx.state === 'suspended') this.ctx.resume();
+  }
+
+  /** Volumen de la música y de los efectos (0..1). */
+  setVolumes(music, fx) {
+    this.vol.music = music;
+    this.vol.fx = fx;
+    if (this.fx) this.fx.gain.value = fx;
+    if (this.musicBus) this.musicBus.gain.value = 0.32 * music;
   }
 
   setMuted(m) {

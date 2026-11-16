@@ -20,6 +20,8 @@ import { drawPickups } from './pickups.js';
 import { drawBossAir, drawBossGround } from './bosses.js';
 import { drawOpsArrows, drawOpsCarried, drawOpsGround, drawOpsUi } from './ops.js';
 import { drawEscapeArrows, drawEscapeGround, drawEscapeUi } from './escape.js';
+import { drawCombatHud, trackCombat } from './combatfx.js';
+import { particleThin } from '../ui/settings.js';
 import { drawBullets } from './bullets.js';
 import { drawPeers, drawRemoteBullets } from './remote.js';
 import { drawHorde } from './zombies.js';
@@ -100,6 +102,7 @@ export function render(game) {
   game.lighting.composite(ctx, game, base, v, W, H);
 
   ctx.setTransform(z, 0, 0, z, tx, ty);
+  if (playing) trackCombat(game);
   if (playing) game.floaters.draw(ctx);
   if (playing) drawWorldUi(game, ctx);
   if (playing) drawOpsUi(ctx, game, game.time);
@@ -122,6 +125,7 @@ export function render(game) {
       drawOpsArrows(game, ctx, W, H);
       drawEscapeArrows(game, ctx, W, H);
       if (game.input.mode === 'mouse' && p.alive) drawCrosshair(game, ctx);
+      drawCombatHud(game, ctx, W, H);
     }
   }
 }
@@ -314,7 +318,7 @@ export function resize(game) {
 
 // Si el juego va lento (pocos FPS) baja la resolución de dibujo un paso; si va sobrado, la sube.
 export function adaptQuality(game, dt) {
-  if (game.state !== 'play') return;
+  if (game.state !== 'play' || (game.settings && game.settings.quality !== 'auto')) return;
   const q = (game.qStat = game.qStat || { t: 0, n: 0, good: 0 });
   q.t += dt;
   q.n++;
@@ -329,12 +333,14 @@ export function adaptQuality(game, dt) {
     game.quality = steps[Math.min(steps.length - 1, i + (fps < 25 ? 2 : 1))];
     q.good = 0;
     resize(game);
+    game.particles.thin = particleThin(game.quality);
   } else if (fps > 57 && i > 0) {
     // sólo vuelve a subir tras un buen rato fluido, para no estar cambiando
     if (++q.good >= 5) {
       game.quality = steps[i - 1];
       q.good = 0;
       resize(game);
+      game.particles.thin = particleThin(game.quality);
     }
   } else q.good = 0;
 }

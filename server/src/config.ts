@@ -26,7 +26,8 @@ export const CONFIG = {
   maxCatchup: num('MAX_CATCHUP', 8),
   reconnectSeconds: num('RECONNECT_SECONDS', NET.reconnectSeconds),
   // una sala sin nadie conectado se borra pasado este tiempo
-  emptyRoomSeconds: num('EMPTY_ROOM_SECONDS', 30),
+  // (lo mismo que se guarda el sitio: si todos se fueron a otra app, la sala los espera)
+  emptyRoomSeconds: num('EMPTY_ROOM_SECONDS', NET.reconnectSeconds),
   // una sala sin partida (esperando o en resultados) se cierra pasado este tiempo, para que
   // una pestaña olvidada no ocupe uno de los cupos de MAX_ROOMS
   idleRoomMinutes: num('IDLE_ROOM_MINUTES', 20),

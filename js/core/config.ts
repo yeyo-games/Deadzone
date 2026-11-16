@@ -2360,7 +2360,8 @@ export const NET = {
   pendingMax: 120, // entradas sin confirmar que guarda el cliente (2 s)
   snapDist: 150, // corrección mayor que esto (px): se salta directo, sin suavizar
   smooth: 12, // rapidez con que se borra una corrección pequeña
-  reconnectSeconds: 20,
+  // s que el servidor guarda el sitio de quien se desconecta (cambiar de app en el celular, perder la red)
+  reconnectSeconds: 180,
   view: 1000, // mitad del cuadro alrededor de cada jugador que se le manda
   zombieView: [900, 760], // mitad del cuadro para los zombis (cubre cualquier pantalla); dorado y gigante usan view
   crowd: [0.5, 0.15], // zombis por oleada: 0,5 del solitario + 0,15 por cada jugador extra
@@ -2797,7 +2798,7 @@ export const ESCAPE = {
   leaveT: 3.2,
   lostT: 2.6,
   barrels: { near: [160, 480], hitR: 14, chainR: 150, radius: 130, power: 320 },
-  boss: { pool: ['supremo', 'aplastador', 'campanero', 'contaminado', 'carcelero'], hp: 0.55 },
+  boss: { pool: ['supremo', 'aplastador', 'campanero', 'contaminado', 'carcelero'], hp: 0.45 },
   // en línea: cuántos zombis más llegan por cada jugador de más
   perPlayer: 0.4,
 };

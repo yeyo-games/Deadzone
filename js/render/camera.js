@@ -14,6 +14,8 @@ export class Camera {
     this.sy = 0;
     this.viewW = 800;
     this.viewH = 600;
+    /** cuánto tiembla (ajuste del jugador, 0..1) */
+    this.shakeK = 1;
   }
   // Temblor de fuerza a (0..1). Con lugar (x, y) se apaga con la distancia a la cámara; sin lugar
   // es algo que le pasa a este jugador (su golpe, su muerte). La fuente más fuerte manda y las demás
@@ -23,12 +25,13 @@ export class Camera {
       const d = Math.hypot(x - this.x, y - this.y);
       a *= clamp(1 - (d - CAMERA.near) / (CAMERA.far - CAMERA.near), 0, 1);
     }
+    a *= this.shakeK;
     if (!(a > 0)) return;
     this.trauma = Math.min(1, Math.max(this.trauma, a) + a * CAMERA.stack * (1 - this.trauma));
   }
   kick(x, y) {
-    this.kx += x;
-    this.ky += y;
+    this.kx += x * this.shakeK;
+    this.ky += y * this.shakeK;
   }
   update(dt, tx, ty, snap) {
     const a = snap ? 1 : 1 - Math.exp(-dt * 7);
