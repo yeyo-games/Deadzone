@@ -336,6 +336,8 @@
             <button type="button" class="ol-mode-btn" data-mode="waves" role="radio"><b>Oleadas</b><small>Aguanten juntos todo lo que puedan</small></button>
             <button type="button" class="ol-mode-btn" data-mode="escape" role="radio"><b>Huida</b><small>Escapen de la ciudad en camioneta</small></button>
           </div>
+          <p class="coop-label">Mundo</p>
+          <div class="ol-worlds" id="ol-worlds"></div>
           <p class="coop-label">Jugadores <span id="ol-count"></span></p>
           <ul class="ol-members" id="ol-members"></ul>
           <div class="ol-results" id="ol-results" hidden></div>
@@ -347,6 +349,17 @@
         <button class="btn ghost" id="btn-ol-back" type="button">Salir</button>
       </div>
     </section>
+
+    <!-- dar dinero y cosas a los compañeros (en línea, ui/worlds.js) -->
+    <div id="give" hidden>
+      <div class="set-panel" role="dialog" aria-label="Dar a compañeros">
+        <p class="kicker">En línea</p>
+        <h2>Dar a compañeros</h2>
+        <p class="give-money" id="give-money"></p>
+        <div class="give-list" id="give-list"></div>
+        <button class="btn primary" id="btn-give-done" type="button">Listo</button>
+      </div>
+    </div>
 
     <!-- ajustes (ui/settings.js): ventana encima del menú o de la pausa -->
     <div id="settings" hidden>
@@ -375,6 +388,7 @@
             <button class="btn primary" id="btn-resume">Continuar</button>
             <button class="btn" id="btn-sound">Sonido: activado</button>
             <button class="btn" id="btn-pause-settings">Ajustes</button>
+            <button class="btn" id="btn-give">Dar a compañeros</button>
             <button class="btn" id="btn-restart">Reiniciar partida</button>
             <button class="btn ghost" id="btn-menu">Salir al menú principal</button>
           </div>
@@ -591,7 +605,10 @@
         </div>
         <p class="shop-note"><span id="shop-bounty"></span> Las barricadas se colocan delante de ti y las balas pasan por encima.</p>
         <div class="shop-items" id="shop-items"></div>
-        <button class="btn primary" id="btn-shop-done">Continuar</button>
+        <div class="shop-foot">
+          <button class="btn" id="btn-shop-give" type="button">Dar a compañeros</button>
+          <button class="btn primary" id="btn-shop-done">Continuar</button>
+        </div>
       </div>
     </section>
 

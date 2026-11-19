@@ -1,3 +1,4 @@
+import { hitShield, shieldHit } from './coloso.ts';
 import { IMPROV, PERKS, WEAPONS } from '../core/config.ts';
 import { rand, segCircleT } from '../core/util.ts';
 import type { Bullet, GameHost, Zombie } from '../core/types.d.ts';
@@ -95,6 +96,9 @@ export class Bullets {
 
       let dead = wall;
       let endT = 1;
+      // escudo de un coloso en el camino (las balas de adorno también se detienen ahí)
+      const cols = game.horde.colosos;
+      const sh = cols && cols.length ? shieldHit(cols, x, y, ex, ey) : null;
       let bounce: { dx: number; dy: number; perk?: boolean } | null = null;
       // procesar impactos en orden a lo largo del segmento
       for (;;) {
@@ -108,6 +112,23 @@ export class Bullets {
             bt = t;
             best = z;
           }
+        }
+        if (sh && sh.t < bt) {
+          // contra el escudo: lo explosivo estalla ahí (la explosión daña el escudo); lo demás le pega
+          const hx = x + (ex - x) * sh.t;
+          const hy = y + (ey - y) * sh.t;
+          if (!b.fake) {
+            if (b.rocket) game.rocketBlast(hx, hy, b.owner, b.rocketK || 1);
+            else if (b.improv) game.structures.improvBlast(game, hx, hy, b.owner);
+            else if (b.atgm) game.structures.missileBlast(game, hx, hy, b.owner, b.blastK, b.blastRK);
+            else if (b.blast) game.heavyBlast(hx, hy, b.owner, b.blastR, b.blastP);
+            else hitShield(game, sh.z, b.dmg, hx, hy);
+          }
+          if (b.rocket || b.improv || b.atgm) b.exploded = true;
+          dead = true;
+          wall = false;
+          endT = sh.t;
+          break;
         }
         if (!best) break;
         (b.hits || (b.hits = [])).push(best);

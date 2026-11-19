@@ -21,6 +21,7 @@ import { drawBossAir, drawBossGround } from './bosses.js';
 import { drawOpsArrows, drawOpsCarried, drawOpsGround, drawOpsUi } from './ops.js';
 import { drawEscapeArrows, drawEscapeGround, drawEscapeUi } from './escape.js';
 import { drawCombatHud, trackCombat } from './combatfx.js';
+import { drawColosos } from './coloso.js';
 import { particleThin } from '../ui/settings.js';
 import { drawBullets } from './bullets.js';
 import { drawPeers, drawRemoteBullets } from './remote.js';
@@ -90,6 +91,7 @@ export function render(game) {
     drawOpsCarried(ctx, game, game.time);
   }
   drawHorde(ctx, game.horde.list, v, base, 'giant');
+  drawColosos(ctx, game.horde.list, v, game.time);
   drawBullets(ctx, game.bullets.list);
   drawRemoteBullets(ctx, game);
   drawGrenades(ctx, game.structures);

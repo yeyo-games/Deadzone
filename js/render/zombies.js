@@ -6,7 +6,8 @@ import { bossSprite } from './bossart.js';
 
 // Juego de imágenes de un zombi (lo guarda en z.spr la primera vez). En el servidor no se usa.
 export function zombieSprite(z) {
-  if (!z.spr) z.spr = z.def?.boss ? bossSprite(z.type) : zombieSprites()[z.type][z.si];
+  // (el coloso usa el cuerpo del gigante, más grande)
+  if (!z.spr) z.spr = z.def?.boss ? bossSprite(z.type) : zombieSprites()[z.type === 'coloso' ? 'giant' : z.type][z.si];
   return z.spr;
 }
 
@@ -15,7 +16,7 @@ export function drawHorde(ctx, list, view, base, layer) {
   const { z: s, tx, ty } = base;
   for (const z of list) {
     // los grandes (gigante y jefes) van por encima de los jugadores
-    const isGiant = z.type === 'giant' || !!z.def?.boss;
+    const isGiant = z.type === 'giant' || z.type === 'coloso' || !!z.def?.boss;
     if ((layer === 'giant') !== isGiant) continue;
     // bajo tierra no se ve (sólo el polvo que levanta)
     if (z.under) continue;
@@ -47,7 +48,13 @@ export function drawHorde(ctx, list, view, base, layer) {
     const lift = z.air > 0 ? Math.min(z.air, AIR.max) : 0;
     // hinchado por el cohete clavado: crece y tiembla antes de reventar
     const swell = z.swell > 0 ? z.swell : 0;
-    const k = s * pop * grow * (1 + lift / 140) * (1 + swell * 0.35 + (swell ? Math.sin(z.id + swell * 60) * 0.03 : 0));
+    const k =
+      s *
+      pop *
+      grow *
+      (z.def?.drawK || 1) *
+      (1 + lift / 140) *
+      (1 + swell * 0.35 + (swell ? Math.sin(z.id + swell * 60) * 0.03 : 0));
     const shake = z.bs === 'windup' ? (Math.random() - 0.5) * 2.4 : swell ? (Math.random() - 0.5) * (2 + swell * 5) : 0;
     const lx = z.x + c * z.lunge * 5 + shake;
     const ly = z.y + sn * z.lunge * 5 - lift * 0.7 + shake;

@@ -5,6 +5,7 @@ import { validName, explainOnline } from '../net/online.ts';
 import { on } from './dom.js';
 import { tutoDone } from './tutorial.js';
 import { showClass } from './class.js';
+import { renderWorlds } from './worlds.js';
 
 export function showOnline(game, keepStatus) {
   game.sfx.unlock();
@@ -75,8 +76,10 @@ export function renderLobby(game) {
     const on = b.dataset.mode === mode;
     b.classList.toggle('on', on);
     b.setAttribute('aria-checked', String(on));
-    b.disabled = !ol.isOwner || (st.phase !== 'waiting' && st.phase !== 'finished');
+    // con un mundo guardado elegido, el modo es el del mundo
+    b.disabled = !ol.isOwner || (st.phase !== 'waiting' && st.phase !== 'finished') || !!st.world;
   }
+  renderWorlds(game);
   const phase = st.phase;
   const owner = ol.isOwner;
   const lobbyLike = phase === 'waiting' || phase === 'finished';

@@ -1137,3 +1137,129 @@ test('Huida en línea: dentro de la camioneta no se mueve nadie y suben todos ju
   sim.applyCmd(a, { s: 1, mx: 1, my: 0, f: 0, a: 0, w: -1 });
   assert.equal(a.p.x, x, 'dentro no se mueve');
 });
+
+/* ---------- mundos guardados, entrar a mitad de partida y dar a compañeros ---------- */
+
+test('dar dinero y cosas a un compañero: sólo lo que se tiene y a otro jugador', () => {
+  const sim = new ServerSim(91, [
+    { id: 'a', idx: 1, name: 'Ana' },
+    { id: 'b', idx: 2, name: 'Beto' },
+  ]);
+  const a = sim.slots.get('a')!;
+  const b = sim.slots.get('b')!;
+  a.money = 300;
+  assert.ok(sim.give('a', 'b', 'money', 200));
+  assert.equal(a.money, 100);
+  assert.equal(b.money, 200);
+  assert.equal(sim.give('a', 'b', 'money', 500), false, 'no da lo que no tiene');
+  assert.equal(sim.give('a', 'a', 'money', 10), false, 'no a sí mismo');
+  assert.equal(sim.give('a', 'b', 'money', -5), false);
+  a.inv.grenade = 2;
+  assert.ok(sim.give('a', 'b', 'grenade', 1));
+  assert.equal(b.inv.grenade, 1);
+  assert.equal(sim.give('a', 'b', 'grenade', 5), false);
+  assert.equal(sim.give('a', 'b', 'cohete', 1), false, 'algo que no existe');
+});
+
+test('entrar a mitad de partida: aparece junto a un compañero y se pone al día', () => {
+  const sim = new ServerSim(92, [
+    { id: 'a', idx: 1, name: 'Ana' },
+    { id: 'b', idx: 2, name: 'Beto' },
+  ]);
+  const a = sim.slots.get('a')!;
+  const b = sim.slots.get('b')!;
+  a.level = 6;
+  b.level = 4;
+  a.money = 1000;
+  b.money = 600;
+  const c = sim.joinMidGame({ id: 'c', idx: 3, name: 'Caro', cls: 'booster' });
+  assert.equal(sim.slots.size, 3);
+  assert.equal(c.level, 4, 'el nivel del más bajo');
+  assert.equal(c.pending, 3, 'con esas mejoras por elegir');
+  assert.equal(c.money, 400, 'la mitad del dinero promedio');
+  assert.ok(Math.hypot(c.p.x - a.p.x, c.p.y - a.p.y) < 200, 'junto a un compañero');
+  assert.equal(c.p.cls, 'booster');
+  // si vuelve el mismo, no se duplica
+  assert.equal(sim.joinMidGame({ id: 'c', idx: 3, name: 'Caro' }), c);
+});
+
+test('mundo guardado: se arma, se revisa y se sigue con lo de cada uno', async () => {
+  const { packWorld, cleanWorld, restoreWorld } = await import('../src/sim/worldsave.ts');
+  const sim = new ServerSim(93, [
+    { id: 'a', idx: 1, name: 'Ana' },
+    { id: 'b', idx: 2, name: 'Beto' },
+  ]);
+  const a = sim.slots.get('a')!;
+  a.money = 777;
+  a.level = 5;
+  a.inv.grenade = 3;
+  a.p.unlock('shotgun');
+  a.p.upgrade('shotgun');
+  sim.director.wave = 6;
+  sim.director.state = 'active';
+  const w = packWorld(sim, 'Ana');
+  assert.equal(w.wave, 5, 'a mitad de oleada se vuelve a jugar esa oleada');
+  const clean = cleanWorld(JSON.parse(JSON.stringify(w)))!;
+  assert.ok(clean);
+  // un navegador tramposo no pasa de los topes
+  const bad = cleanWorld({
+    ...w,
+    players: [{ ...w.players[0], money: 1e12, weapons: [{ id: 'heavy', mag: 1, reserve: 1, lv: 9 }] }],
+  })!;
+  assert.equal(bad.players[0].money, 1e7);
+  assert.equal(bad.players[0].weapons.length, 0, 'sólo armas de la tienda');
+  assert.equal(cleanWorld({ v: 99 }), null);
+  // otra partida con el mismo mundo: Ana recupera lo suyo; Caro (nueva) se pone al día
+  const sim2 = new ServerSim(clean.seed, [
+    { id: 'x', idx: 1, name: 'ana' },
+    { id: 'y', idx: 2, name: 'Caro' },
+  ]);
+  restoreWorld(sim2, clean);
+  const x = sim2.slots.get('x')!;
+  assert.equal(x.money, 777);
+  assert.equal(x.level, 5);
+  assert.equal(x.inv.grenade, 3);
+  assert.equal(x.p.weapons.find((q: any) => q.id === 'shotgun').lv, 1);
+  assert.equal(sim2.director.wave, 5);
+  assert.equal(sim2.director.state, 'waiting', 'entre oleadas: cuando estén listos empieza la siguiente');
+  assert.equal(sim2.worldId, w.id, 'mismo mundo');
+  assert.equal(sim2.slots.get('y')!.level, 5, 'Caro se pone al día');
+});
+
+test('mundo guardado de la Huida: sigue en la misma parada (y votando si ya la habían superado)', async () => {
+  const { packWorld, cleanWorld, restoreWorld } = await import('../src/sim/worldsave.ts');
+  const sim = new ServerSim(
+    94,
+    [
+      { id: 'a', idx: 1, name: 'Ana' },
+      { id: 'b', idx: 2, name: 'Beto' },
+    ],
+    'escape',
+  );
+  const e = sim.escape!;
+  e.buyUp('armor');
+  e.finish(sim.game, 'stop');
+  const next = e.route!.nodes[e.at].next[0];
+  sim.voteStop('a', next);
+  sim.voteStop('b', next);
+  sim.step();
+  assert.equal(e.stop, 2);
+  e.finish(sim.game, 'stop');
+  const w = cleanWorld(JSON.parse(JSON.stringify(packWorld(sim, 'Ana'))))!;
+  assert.ok(w.escape!.cleared);
+  const sim2 = new ServerSim(
+    w.seed,
+    [
+      { id: 'a', idx: 1, name: 'Ana' },
+      { id: 'b', idx: 2, name: 'Beto' },
+    ],
+    'escape',
+  );
+  restoreWorld(sim2, w);
+  const e2 = sim2.escape!;
+  assert.equal(e2.at, next);
+  assert.equal(e2.stop, 2);
+  assert.equal(e2.ups.armor, 1);
+  assert.ok(sim2.vote, 'se sigue votando el camino');
+  assert.equal(sim2.world.seedBase, e2.seedFor(), 'el mapa de esa parada');
+});

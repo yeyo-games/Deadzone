@@ -5,7 +5,8 @@
 // efectos que ocurrieron donde manda el mundo (partículas, sonidos, manchas) se repiten aquí. Las balas
 // que se ven son de adorno: el daño lo calcula quien manda.
 // `game.remote` es la única instancia; se dibuja desde js/render/remote.js.
-import { NET, PLAYER_BASE, ROBOT, SHOP, WEAPON_ORDER, WEAPONS, ZOMBIES } from '../core/config.ts';
+import { COLOSO, NET, PLAYER_BASE, ROBOT, SHOP, WEAPON_ORDER, WEAPONS, ZOMBIES } from '../core/config.ts';
+import { shielded } from '../sim/coloso.ts';
 import { angleTo, rand, TAU } from '../core/util.ts';
 import { MOUNTS, militaryMissile, turretBullet } from '../sim/build.ts';
 import { flameBullet } from '../sim/bullets.ts';
@@ -40,6 +41,11 @@ export type RemoteZombie = Pick<
   it: Interp;
   spr: unknown;
   wounded?: boolean;
+  /** coloso: escudo, furia y de qué es el escudo */
+  shield?: number;
+  shieldMax?: number;
+  rage?: boolean;
+  shieldKind?: string;
   hp?: number;
   maxHp?: number;
   burn: number;
@@ -183,6 +189,7 @@ export class Remote {
     this.applyBullets(s.b || []);
     this.applyStructures(s, opts.collide !== false);
     this.applyBosses(s.bo || [], s.bf || []);
+    this.applyColosos(s.co || []);
     this.applyOps(s.op || null, opts.myIdx ?? -1);
   }
 
@@ -315,6 +322,19 @@ export class Remote {
       this.zs.delete(id);
     }
     g.horde.list = Array.from(this.zs.values());
+  }
+
+  // Escudo y furia de los colosos (para dibujarlos y para que las balas de adorno choquen con el escudo).
+  applyColosos(co: number[]) {
+    for (let i = 0; i + 2 < co.length; i += 3) {
+      const o = this.zs.get(co[i]);
+      if (!o) continue;
+      o.shieldMax = COLOSO.shield;
+      o.shield = (co[i + 1] / 100) * COLOSO.shield;
+      o.rage = !!co[i + 2];
+      o.shieldKind = COLOSO.kinds[o.id % COLOSO.kinds.length];
+    }
+    this.game.horde.colosos = shielded(this.game.horde.list);
   }
 
   // Coloca a cada zombi donde estaba hace `delay` ms, con su animación, y arma la rejilla de choques.

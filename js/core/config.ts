@@ -694,6 +694,24 @@ export const ZOMBIES = {
     turn: 1.4,
     blocksBullets: true,
   },
+  // Coloso, el muro caminante (ver COLOSO y sim/coloso.ts): enorme, lento y con un pedazo de edificio o
+  // un montón de coches como escudo. Su vida no depende de la oleada (flatHp). Se dibuja con el cuerpo del
+  // gigante, drawK veces más grande. damage: lo que pega a un jugador (a las barricadas, COLOSO.punch).
+  coloso: {
+    hp: 2000000,
+    flatHp: true,
+    speed: 0.6,
+    radius: 62,
+    damage: 120,
+    attackRate: 0.7,
+    xp: 800,
+    mass: 400,
+    reach: 22,
+    frames: 8,
+    turn: 1.1,
+    blocksBullets: true,
+    drawK: 1.5,
+  },
   // Zombis con habilidades (ver SPECIALS): escupidor, chillón, excavador y saltador.
   // Escupidor: flaco y débil cuerpo a cuerpo; desde lejos te escupe ácido por encima de los muros.
   spitter: {
@@ -815,14 +833,14 @@ export const BOSS = {
   support: 0.5,
   rage: 0.6,
   despair: 0.3,
-  cd: [1, 0.8, 0.6],
+  cd: [0.85, 0.68, 0.5],
   loop: 1.5,
-  hp: 0.3,
-  dmg: 2,
-  power: 1.25,
-  area: 1.2,
-  push: 1.4,
-  wreck: 1.5,
+  hp: 0.6,
+  dmg: 3,
+  power: 1.6,
+  area: 1.4,
+  push: 1.6,
+  wreck: 2.2,
   stuck: 2,
   far: 7,
   farD: 420,
@@ -1860,6 +1878,7 @@ export const BOUNTY = {
   digger: 3,
   jumper: 2,
   giant: 2.5,
+  coloso: 2000,
   golden: 0,
   supremo: 100,
   aplastador: 150,
@@ -1943,6 +1962,30 @@ export const ROCK = {
 //   leap: si estás entre min y max px y lo ve directo, salta hacia ti (cada cd s, al azar entre los dos):
 //     sube con up px/s y cae a land px de ti; al caer te golpea enseguida
 //   frenzy: cada every s corre como loco time s: speed veces más rápido, zigzagueando (zig rad)
+// Coloso, el muro caminante (sim/coloso.ts): sale desde la oleada `from` (first, y uno más cada 1/per
+// oleadas, hasta max) al frente de la oleada, y los demás zombis caminan detrás de él (followR: a cuántos px
+// lo siguen; gap: a qué distancia detrás). Su escudo (shield de vida, un círculo de radio shieldR a ahead px
+// delante de él) para las balas y las explosiones: lo de atrás de él no recibe daño (blastK de una explosión
+// que lo cruza). Sin escudo se enfurece: rageSpeed veces más rápido, va por la barricada más cercana (seek
+// px) y le pega punch cada punchCd s.
+export const COLOSO = {
+  from: 16,
+  first: 1,
+  per: 0.25,
+  max: 6,
+  shield: 300000,
+  shieldR: 88,
+  ahead: 74,
+  blastK: 0.1,
+  followR: 700,
+  gap: 70,
+  rageSpeed: 2.6,
+  seek: 1400,
+  punch: 2000,
+  punchCd: 1.1,
+  kinds: ['building', 'brick', 'cars', 'glass'],
+};
+
 export const DEMON = {
   from: 6,
   first: 2,
@@ -2714,6 +2757,7 @@ export const ZOMBIE_VARIANTS = {
   digger: 2,
   jumper: 2,
   giant: 2,
+  coloso: 2,
   supremo: 1,
   aplastador: 1,
   campanero: 1,

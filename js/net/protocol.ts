@@ -38,6 +38,8 @@ export const TYPES = [
   'screamer',
   'digger',
   'jumper',
+  // el coloso (muro caminante)
+  'coloso',
 ];
 export const PICKS = ['ammo', 'med', 'crate'];
 

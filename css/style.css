@@ -1606,6 +1606,8 @@ kbd {
   cursor: pointer;
   touch-action: none;
   white-space: nowrap;
+  /* el panel de arriba (#hud) no recibe toques: los botones sí */
+  pointer-events: auto;
 }
 .op-btn[hidden] { display: none; }
 .op-btn + .op-btn { margin-left: 0; }
@@ -2413,6 +2415,34 @@ h4.pg-warn { color: #a3291b; }
 .shop-item.new .shop-txt .wn::after { content: 'Huida'; margin-left: 8px; padding: 1px 5px 0; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; vertical-align: middle; color: #14120a; background: #86c08e; }
 .btn.buy.up { border-color: rgba(240, 196, 64, 0.7); color: #ffe6a8; }
 #slots .slv { margin-left: 3px; font-style: normal; font-size: 0.8em; color: #f0c440; }
+/* mundos guardados en la sala y dar a compañeros (ui/worlds.js) */
+.ol-worlds { display: grid; gap: 5px; max-height: 210px; overflow-y: auto; }
+.ol-world-row { display: grid; grid-template-columns: 1fr auto; gap: 5px; }
+.ol-world { display: grid; gap: 1px; padding: 7px 10px 6px; text-align: left; font: inherit; color: #e6e0d2; background: rgba(230, 224, 210, 0.05); border: 1px solid var(--line); cursor: pointer; }
+.ol-world b { font-family: var(--display); font-size: 18px; font-weight: 500; letter-spacing: 0.03em; }
+.ol-world small { font-size: 12px; color: var(--dim); }
+.ol-world.on { border-color: #f0c440; background: rgba(240, 196, 64, 0.14); box-shadow: inset 3px 0 0 #f0c440; }
+.ol-world-del { width: 34px; font-size: 20px; color: var(--dim); background: transparent; border: 1px solid var(--line); cursor: pointer; }
+.ol-world-del:hover { color: #ff8a7a; border-color: #e05a48; }
+.ol-world-now, .ol-world-none { margin: 0; font-size: 13px; color: var(--dim); }
+.ol-world-now { padding: 7px 10px; color: #e6e0d2; background: rgba(230, 224, 210, 0.05); border: 1px solid var(--line); }
+#give { position: absolute; inset: 0; z-index: 70; display: grid; place-items: center; padding: 16px; background: rgba(6, 7, 5, 0.75); }
+#give[hidden] { display: none; }
+.give-money { margin: -4px 0 0; font-family: var(--display); font-size: 22px; color: #f0c440; }
+.give-list { display: grid; gap: 10px; }
+.give-mate { display: grid; gap: 6px; padding: 10px; background: rgba(230, 224, 210, 0.04); border: 1px solid var(--line); }
+.give-mate > b { font-family: var(--display); font-size: 22px; font-weight: 500; }
+.give-btns { display: flex; flex-wrap: wrap; gap: 5px; }
+.give-btns button { padding: 6px 10px 4px; font: inherit; font-family: var(--display); font-size: 17px; color: #14120a; background: #f0c440; border: 0; cursor: pointer; }
+.give-btns.inv button { color: #e6e0d2; background: rgba(230, 224, 210, 0.1); border: 1px solid var(--line); }
+.give-btns button i { font-style: normal; opacity: 0.7; }
+.give-btns button:disabled { opacity: 0.35; cursor: default; }
+.give-none { margin: 0; color: var(--dim); }
+.shop-foot { display: flex; gap: 8px; justify-content: flex-end; }
+/* sólo en línea */
+#btn-give, #btn-shop-give { display: none; }
+.net-on #btn-give, .net-on #btn-shop-give { display: block; }
+
 /* ajustes (ui/settings.js) */
 #settings { position: absolute; inset: 0; z-index: 70; display: grid; place-items: center; padding: 16px; background: rgba(6, 7, 5, 0.75); }
 #settings[hidden] { display: none; }

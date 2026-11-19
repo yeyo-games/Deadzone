@@ -9,6 +9,7 @@ import { CONFIG, originAllowed } from '../config.ts';
 import { cleanName, cleanLookCode, cleanClass, cleanAct, cleanView, Bucket } from '../validate.ts';
 import { MoveInput, MOVE_SANITIZE, type MoveInputT } from '../input.ts';
 import { STATS, countTick } from '../stats.ts';
+import { cleanWorld, packWorld, restoreWorld, type WorldSave } from '../sim/worldsave.ts';
 
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const CODE_LEN = 6;
@@ -17,6 +18,12 @@ const live = new Set<string>();
 // Códigos de cierre propios (los de 4000 a 4010 los usa Colyseus: 4003 es «no se pudo reconectar»).
 export const KICKED = 4100; // mandaba datos no válidos
 export const IDLE = 4101; // sala cerrada por inactividad
+
+/** Cómo se ve un mundo guardado en la sala: de quién es y por dónde van. */
+function worldLabel(w: WorldSave) {
+  const where = w.mode === 'escape' ? `Huida · parada ${w.escape?.stop ?? 1}` : `Oleada ${w.wave + 1}`;
+  return `${where} · ${w.players.map((p) => p.name).join(', ')}`.slice(0, 80);
+}
 
 // Código de sala impredecible (crypto) y único en este servidor.
 function newCode() {
@@ -82,6 +89,7 @@ export class DeadZoneRoom extends Room<{ state: LobbyStateT; input: MoveInputT }
       minPlayers: CONFIG.minPlayers,
       wave: 0,
       mode: 'waves',
+      world: '',
     });
     // el estado (lobby y cuerpos de los jugadores) se parchea a la tasa de las fotos: cada parche lleva el ack de las entradas
     this.setPatchRate(1000 / CONFIG.snapHz);
@@ -109,6 +117,36 @@ export class DeadZoneRoom extends Room<{ state: LobbyStateT; input: MoveInputT }
         this.state.mode = m.v;
       }),
     );
+    // seguir un mundo guardado (lo manda el propietario desde su navegador; null: mundo nuevo)
+    this.onMessage('world', (c, m) =>
+      this.admin(c, () => {
+        if (c.sessionId !== this.state.ownerId || (this.phase !== 'waiting' && this.phase !== 'finished')) return;
+        if (!m || m.data === null) {
+          this.world = null;
+          this.state.world = '';
+          return;
+        }
+        const w = cleanWorld(m.data);
+        if (!w) return c.send('error', { m: 'Ese mundo guardado no se puede abrir' });
+        this.world = w;
+        this.state.mode = w.mode;
+        this.state.world = worldLabel(w);
+      }),
+    );
+    // el mundo como va ahora (lo pide el navegador al salir de la partida, para guardarlo)
+    this.onMessage('save', (c) =>
+      this.admin(c, () => {
+        if (this.sim && this.phase === 'playing') c.send('save', this.packSave());
+      }),
+    );
+    // dar dinero o algo del inventario a un compañero
+    this.onMessage('give', (c, m) =>
+      this.shopMsg(c, () => {
+        const ok = m && typeof m.to === 'string' && typeof m.k === 'string' && Number.isInteger(m.n);
+        if (!ok) return this.strike(c, 'regalo mal formado');
+        this.sim!.give(c.sessionId, m.to, m.k, m.n);
+      }),
+    );
     // modo Huida: votar la siguiente parada en el mapa de ruta
     this.onMessage('route', (c, m) =>
       this.admin(c, () => {
@@ -120,6 +158,7 @@ export class DeadZoneRoom extends Room<{ state: LobbyStateT; input: MoveInputT }
     this.onMessage('lobby', (c) => this.admin(c, () => this.backToLobby(c)));
     this.onMessage('loaded', (c) =>
       this.admin(c, () => {
+        if (this.phase === 'playing') return this.joinNow(c);
         if (this.phase !== 'loading') return;
         this.loaded.add(c.sessionId);
         this.maybeGo();
@@ -227,9 +266,9 @@ export class DeadZoneRoom extends Room<{ state: LobbyStateT; input: MoveInputT }
     });
     STATS.players++;
     this.joined = true;
-    // a mitad de partida se espera en la sala: entrar sin más rompería la oleada en curso
-    if (this.phase === 'loading' || this.phase === 'playing')
-      client.send('notice', { m: 'Partida en curso: entrarás en la siguiente' });
+    // a mitad de partida se entra a ella (al cargar, en cuanto empiece)
+    if (this.phase === 'playing') this.dropIn(client);
+    else if (this.phase === 'loading') client.send('notice', { m: 'Partida empezando: entrarás en un momento' });
   }
 
   onDrop(client: Client) {
@@ -369,6 +408,9 @@ export class DeadZoneRoom extends Room<{ state: LobbyStateT; input: MoveInputT }
     }
   }
 
+  /** El mundo guardado que se va a seguir (lo eligió el propietario) o null. */
+  world: WorldSave | null = null;
+
   /** Modo de la partida que se va a jugar. */
   mode(): 'waves' | 'escape' {
     return this.state.mode === 'escape' ? 'escape' : 'waves';
@@ -385,7 +427,9 @@ export class DeadZoneRoom extends Room<{ state: LobbyStateT; input: MoveInputT }
       return c.send('error', { m: `Hacen falta al menos ${CONFIG.minPlayers} jugadores para iniciar la partida` });
     const others = [...this.state.members.entries()].filter(([id, m]) => id !== this.state.ownerId && m.connected);
     if (others.some(([, m]) => !m.ready)) return c.send('error', { m: 'Faltan jugadores por estar listos' });
-    this.seed = randomInt(1, 2 ** 31 - 1);
+    // un mundo guardado sigue en su mismo mapa y modo
+    this.seed = this.world ? this.world.seed : randomInt(1, 2 ** 31 - 1);
+    if (this.world) this.state.mode = this.world.mode;
     this.loaded.clear();
     for (const m of this.state.members.values()) m.inGame = m.connected;
     this.state.phase = 'loading';
@@ -396,14 +440,44 @@ export class DeadZoneRoom extends Room<{ state: LobbyStateT; input: MoveInputT }
     this.broadcast('load', { seed: this.seed, ids, mode: this.mode() }, { afterNextPatch: true });
     // el mundo del servidor se arma mientras los celulares cargan (así no frena al empezar)
     this.setSim(null);
-    this.next = new ServerSim(
-      this.seed,
+    this.next = this.makeSim(
       ids.map((id) => {
         const m = this.state.members.get(id)!;
         return { id, idx: m.idx, name: m.name, cls: m.cls };
       }),
-      this.mode(),
     );
+  }
+
+  /** La simulación de la partida (con el mundo guardado elegido, si hay). */
+  makeSim(players: { id: string; idx: number; name: string; cls?: string }[]) {
+    const sim = new ServerSim(this.seed, players, this.mode());
+    if (this.world) restoreWorld(sim, this.world);
+    return sim;
+  }
+
+  /** El mundo como va ahora, para que cada navegador lo guarde. */
+  packSave(): WorldSave {
+    return packWorld(this.sim!, this.state.members.get(this.state.ownerId)?.name || '');
+  }
+
+  /** Alguien entró a la sala con la partida en marcha: carga el mapa y entra (ver joinNow). */
+  dropIn(c: Client) {
+    if (!this.sim) return;
+    c.send('notice', { m: 'Entrando a la partida en curso…' });
+    c.send('load', { seed: this.sim.world.seedBase, ids: [c.sessionId], mode: this.mode(), join: true });
+  }
+
+  /** Ya cargó el mapa quien entró a mitad de partida: aparece junto a sus compañeros. */
+  joinNow(c: Client) {
+    const m = this.member(c);
+    const sim = this.sim;
+    if (!m || !sim || m.inGame) return;
+    sim.joinMidGame({ id: c.sessionId, idx: m.idx, name: m.name, cls: m.cls });
+    this.bindInputs(sim);
+    m.inGame = true;
+    m.alive = true;
+    m.kills = 0;
+    c.send('go', { ids: [c.sessionId] });
   }
 
   maybeGo() {
@@ -423,7 +497,7 @@ export class DeadZoneRoom extends Room<{ state: LobbyStateT; input: MoveInputT }
       m.alive = m.inGame;
       m.kills = 0;
     }
-    const sim = this.next && this.next.seed === this.seed ? this.next : new ServerSim(this.seed, players, this.mode());
+    const sim = this.next && this.next.seed === this.seed ? this.next : this.makeSim(players);
     this.next = null;
     // quien se fue durante la carga no aparece en la partida
     for (const id of [...sim.slots.keys()]) if (!players.some((p) => p.id === id)) sim.remove(id);
@@ -433,6 +507,14 @@ export class DeadZoneRoom extends Room<{ state: LobbyStateT; input: MoveInputT }
     this.acc = 0;
     this.state.phase = 'playing';
     this.broadcast('go', { ids: players.map((p) => p.id) }, { afterNextPatch: true });
+    // el mundo elegido ya se está jugando (lo que sigue se guarda con cada oleada o parada)
+    this.world = null;
+    this.state.world = '';
+    // quien entró mientras cargaba también juega
+    for (const c of this.clients) {
+      const m = this.member(c);
+      if (m && m.connected && !m.inGame) this.dropIn(c);
+    }
   }
 
   finish() {
@@ -498,6 +580,14 @@ export class DeadZoneRoom extends Room<{ state: LobbyStateT; input: MoveInputT }
       this.acc -= step;
       n++;
       if (sim.tick % this.snapEvery === 0) this.sendSnaps();
+      if (sim.saveDue) {
+        sim.saveDue = false;
+        this.broadcast('save', this.packSave());
+      }
+      if (sim.worldDone) {
+        sim.worldDone = false;
+        this.broadcast('save', { id: sim.worldId, done: true });
+      }
       if (sim.over) return this.finish();
     }
     // tras una pausa larga no se intenta recuperar todo: se descarta el atraso

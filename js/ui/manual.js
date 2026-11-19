@@ -14,6 +14,7 @@ import {
   VAN_UP_ORDER,
   VAN_UPS,
   ZOMBIES,
+  COLOSO,
 } from '../core/config.ts';
 import { rand, TAU } from '../core/util.ts';
 import { zombieSprites } from '../render/sprites.js';
@@ -114,6 +115,21 @@ const COMMON = [
       'El más rápido de todos y a ratos corre como loco',
       'Salta hacia ti desde lejos y te golpea al caer',
       'Las balas no lo frenan',
+    ],
+  },
+  {
+    type: 'coloso',
+    name: 'Muro caminante',
+    from: COLOSO.from,
+    look: 'Un gigante enorme que carga un pedazo de edificio o un montón de coches como escudo. La horda camina detrás de él.',
+    weak: [
+      'Rómpele el escudo: dispárale de lado o por detrás, donde no lo cubre',
+      'Sin escudo ya no protege a nadie: ataca a los que venían detrás',
+    ],
+    warn: [
+      'Su escudo para balas y explosiones',
+      'Sin escudo corre a tus barricadas y les quita 2000 por golpe',
+      '2 millones de vida',
     ],
   },
   {
@@ -683,7 +699,7 @@ function drawPortraits(game) {
     fit(c);
     const g = c.getContext('2d');
     const type = c.dataset.z;
-    const set = c.dataset.boss ? bossSprite(type) : zombieSprites()[type]?.[0];
+    const set = c.dataset.boss ? bossSprite(type) : zombieSprites()[type === 'coloso' ? 'giant' : type]?.[0];
     g.clearRect(0, 0, c.width, c.height);
     if (!set) continue;
     const fr = set.frames[Math.floor(t * 7) % set.frames.length];

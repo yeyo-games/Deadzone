@@ -41,6 +41,7 @@ import { showAccount, bindAccount } from './ui/account.js';
 import { refreshHall, bindBoard } from './ui/board.js';
 import { openShop, closeShop, renderShop, bindShop } from './ui/shop.js';
 import { applySettings, bindSettings, loadSettings } from './ui/settings.js';
+import { bindWorlds, storeWorld } from './ui/worlds.js';
 import { openTurret, bindTurret } from './ui/turret.js';
 import { toast, banner, updateHud, updateNetStat, moneyPop, bindHud } from './ui/hud.js';
 import { Input } from './ui/input.js';
@@ -198,6 +199,7 @@ class Game {
   showOnline = (keepStatus) => showOnline(this, keepStatus);
   onlineStatus = (text, bad) => onlineStatus(this, text, bad);
   renderLobby = () => renderLobby(this);
+  onWorldSave = (w) => storeWorld(this, w);
   renderClassRows = () => renderClassRows(this);
   openLevelUp = () => openLevelUp(this);
   openTurret = () => openTurret(this);
@@ -313,6 +315,7 @@ class Game {
     bindOver(this);
     bindShop(this);
     bindSettings(this);
+    bindWorlds(this);
     bindTurret(this);
     bindClass(this);
     bindLook(this);

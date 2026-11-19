@@ -140,7 +140,8 @@ const near: Zombie[] = [];
 /** Peso de cada tipo en la mezcla de un nivel de amenaza (la composición de esa oleada, con su ronda especial). */
 function mix(level: number, ev: EventDef | null): [string, number][] {
   const c = waveCounts(level, 1, ev) as unknown as Record<string, number>;
-  return Object.entries(c).filter(([k, n]) => k !== 'total' && k !== 'boss' && n > 0);
+  // (el coloso no sale en la Huida: es para las oleadas)
+  return Object.entries(c).filter(([k, n]) => k !== 'total' && k !== 'boss' && k !== 'coloso' && n > 0);
 }
 
 function pickType(m: [string, number][]) {

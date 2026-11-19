@@ -43,6 +43,7 @@ import { TYPES } from '../../../js/net/protocol.ts';
 import { TAU } from '../../../js/core/util.ts';
 import type { Cmd, Act } from '../validate.ts';
 import type { Snapshot } from '../../../js/core/types.d.ts';
+import { newWorldId } from './worldsave.ts';
 
 const FX_MAX = 300;
 // entradas que se guardan como mucho por jugador (las más viejas se tiran)
@@ -151,6 +152,10 @@ export class ServerSim {
   escapeResult = '';
   deadT = 0;
   over = false;
+  /** mundo guardado de esta partida (worldsave.ts): su identificador, si toca mandarlo y si ya terminó */
+  worldId = newWorldId();
+  saveDue = false;
+  worldDone = false;
   kills: Record<string, number> = {};
   snapN = 0;
   // operaciones de alto riesgo (js/sim/ops.ts): aquí manda el servidor (oferta votada, refuerzos, pagos)
@@ -171,53 +176,118 @@ export class ServerSim {
     this.pickups = new Pickups();
     this.structures = new Structures();
     this.game = this.makeGame();
-    const s = this.world.spawn;
-    players.forEach((pl, i) => {
-      const a = (i / Math.max(1, players.length)) * TAU;
-      const p: any = new Player(s.x + Math.cos(a) * 44 * Math.min(1, i), s.y + Math.sin(a) * 44 * Math.min(1, i));
-      this.world.collide(p, p.r, true);
-      p.field = this.newField();
-      p.sid = pl.id;
-      // clase elegida en el lobby (si no eligió, bomber)
-      p.cls = isClass(pl.cls ?? '') ? pl.cls : CLASS_ORDER[0];
-      const idle: Cmd = { s: 0, mx: 0, my: 0, f: 0, a: p.angle, w: -1 };
-      this.slots.set(pl.id, {
-        id: pl.id,
-        idx: pl.idx,
-        name: pl.name,
-        p,
-        queue: [],
-        last: idle,
-        ack: 0,
-        kills: 0,
-        money: 0,
-        deaths: 0,
-        away: false,
-        dropped: 0,
-        starve: 0,
-        toasts: [],
-        level: 1,
-        xp: 0,
-        xpNeed: xpForLevel(1),
-        pending: 0,
-        taken: {},
-        choices: [],
-        choiceN: 0,
-        bonus: [],
-        choiceSrc: 'level',
-        inv: Object.fromEntries(SHOP_ORDER.map((k: string) => [k, 0])),
-        robot: new Robot(),
-        acts: [],
-        acidT: 0,
-        acidTick: 0,
-        ready: false,
-        lost: 0,
-        stGeo: '',
-        stSent: '',
-        stN: 0,
-      });
-    });
+    players.forEach((pl, i) => this.addPlayer(pl, i, players.length));
     if (mode === 'escape') this.startEscape();
+  }
+
+  /** Crea la ranura de un jugador (al empezar o al entrar a mitad de partida), junto a `at` si se da. */
+  addPlayer(pl: { id: string; idx: number; name: string; cls?: string }, i = 0, n = 1, at?: { x: number; y: number }) {
+    const sp = at || this.world.spawn;
+    const a = (i / Math.max(1, n)) * TAU;
+    const p: any = new Player(sp.x + Math.cos(a) * 44 * Math.min(1, i), sp.y + Math.sin(a) * 44 * Math.min(1, i));
+    this.world.collide(p, p.r, true);
+    p.field = this.newField();
+    p.sid = pl.id;
+    // clase elegida en el lobby (si no eligió, bomber)
+    p.cls = isClass(pl.cls ?? '') ? pl.cls : CLASS_ORDER[0];
+    const idle: Cmd = { s: 0, mx: 0, my: 0, f: 0, a: p.angle, w: -1 };
+    const slot: Slot = {
+      id: pl.id,
+      idx: pl.idx,
+      name: pl.name,
+      p,
+      queue: [],
+      last: idle,
+      ack: 0,
+      kills: 0,
+      money: 0,
+      deaths: 0,
+      away: false,
+      dropped: 0,
+      starve: 0,
+      toasts: [],
+      level: 1,
+      xp: 0,
+      xpNeed: xpForLevel(1),
+      pending: 0,
+      taken: {},
+      choices: [],
+      choiceN: 0,
+      bonus: [],
+      choiceSrc: 'level',
+      inv: Object.fromEntries(SHOP_ORDER.map((k: string) => [k, 0])),
+      robot: new Robot(),
+      acts: [],
+      acidT: 0,
+      acidTick: 0,
+      ready: false,
+      lost: 0,
+      stGeo: '',
+      stSent: '',
+      stN: 0,
+    };
+    this.slots.set(pl.id, slot);
+    return slot;
+  }
+
+  /** Quien llega sin nada (a mitad de partida o a un mundo en el que no estaba) se pone al día: el nivel del
+   * más bajo del equipo (con esas mejoras por elegir) y la mitad del dinero promedio. */
+  catchUp(s: Slot) {
+    const others = [...this.slots.values()].filter((o) => o !== s);
+    if (!others.length) return;
+    const level = Math.max(1, Math.min(...others.map((o) => o.level)));
+    s.level = level;
+    s.xp = 0;
+    s.xpNeed = xpForLevel(level);
+    s.pending = level - 1;
+    s.money = Math.round((others.reduce((t, o) => t + o.money, 0) / others.length) * 0.5);
+  }
+
+  /** Entra un jugador a la partida en curso: aparece junto a un compañero (en la Huida, en la camioneta). */
+  joinMidGame(pl: { id: string; idx: number; name: string; cls?: string }) {
+    const had = this.slots.get(pl.id);
+    if (had) {
+      this.setAway(pl.id, false);
+      return had;
+    }
+    const mate = [...this.slots.values()].find((o) => !o.away && o.p.alive) || [...this.slots.values()][0];
+    const van = this.escape?.van;
+    const at = van
+      ? { x: van.x + van.w / 2, y: van.y + van.h + 30 }
+      : mate
+        ? { x: mate.p.x + 40, y: mate.p.y }
+        : undefined;
+    const s = this.addPlayer(pl, 0, 1, at);
+    this.world.collide(s.p, s.p.r, true);
+    this.catchUp(s);
+    const e = this.escape;
+    // en la Huida, con la camioneta saliendo o entre paradas, va dentro con los demás
+    if (e && (e.phase === 'leaving' || e.phase === 'done')) s.p.inVan = true;
+    this.world.computeField(s.p.field, s.p.x, s.p.y);
+    this.toastAll(`${pl.name} se unió a la partida`);
+    return s;
+  }
+
+  /** Un jugador le da a otro dinero o algo de su inventario (granadas, barricadas…). */
+  give(from: string, to: string, k: string, n: number) {
+    const a = this.slots.get(from);
+    const b = this.slots.get(to);
+    if (!a || !b || a === b || !Number.isInteger(n) || n < 1) return false;
+    if (k === 'money') {
+      if (n > a.money) return false;
+      a.money -= n;
+      b.money += n;
+      a.toasts.push(`Le diste $${n} a ${b.name}`);
+      b.toasts.push(`${a.name} te dio $${n}`);
+      return true;
+    }
+    if (!Object.hasOwn(a.inv, k) || !((a.inv[k] || 0) >= n)) return false;
+    a.inv[k] -= n;
+    b.inv[k] = (b.inv[k] || 0) + n;
+    const name = (SHOP as any)[k]?.name || k;
+    a.toasts.push(`Le diste ${n} × ${name} a ${b.name}`);
+    b.toasts.push(`${a.name} te dio ${n} × ${name}`);
+    return true;
   }
 
   newField() {
@@ -370,6 +440,8 @@ export class ServerSim {
 
   // Fin de una parada: 'stop' abre la votación del camino; 'won' o 'van' terminan la partida.
   onEscapeEnd(r: string) {
+    if (r === 'stop') this.saveDue = true;
+    if (r === 'won') this.worldDone = true;
     if (r !== 'stop') {
       this.escapeResult = r;
       this.over = true;
@@ -421,6 +493,13 @@ export class ServerSim {
     const e = this.escape!;
     const g = this.game;
     if (!e.travel(id)) return;
+    this.enterStop();
+  }
+
+  /** Cambia al mapa de la parada en la que va el viaje y la empieza (al viajar o al seguir un mundo guardado). */
+  enterStop() {
+    const e = this.escape!;
+    const g = this.game;
     this.vote = null;
     this.world = new World(e.seedFor());
     g.world = this.world;
@@ -907,6 +986,7 @@ export class ServerSim {
   }
 
   onWaveCleared() {
+    this.saveDue = true;
     this.structures.waveRepair();
     // premio por superar la oleada, para cada uno
     const bonus = Rules.waveBonus(this.director.wave);

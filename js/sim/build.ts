@@ -1,5 +1,6 @@
 // Barricadas compradas en la tienda (madera, metal, vallas, alambre) y granadas.
-import { SHOP, MOLOTOV, ROCKET, ABILITY, HEAVY, AIR, MILITARY, IMPROV, BUILD, STICKY } from '../core/config.ts';
+import { SHOP, MOLOTOV, ROCKET, ABILITY, HEAVY, AIR, MILITARY, IMPROV, BUILD, STICKY, COLOSO } from '../core/config.ts';
+import { hitShield, shieldAt, shieldBetween } from './coloso.ts';
 import { TAU, rand, clamp } from '../core/util.ts';
 import type { Bullet, GameHost, Zombie } from '../core/types.d.ts';
 import type { Player } from './player.ts';
@@ -334,6 +335,25 @@ function snapPiece(
   return { x, y: cy > bcy ? b.y + b.h : b.y - h, w, h };
 }
 
+// Corrimientos para dejar una pieza al ras de una pared (de menor a mayor; ninguno llega a una casilla).
+const NUDGE: [number, number][] = [];
+for (let d = 1; d < SNAP; d++)
+  for (const [x, y] of [
+    [d, 0],
+    [-d, 0],
+    [0, d],
+    [0, -d],
+  ])
+    NUDGE.push([x, y]);
+for (let d = 2; d < SNAP; d += 3)
+  for (const [x, y] of [
+    [d, d],
+    [-d, d],
+    [d, -d],
+    [-d, -d],
+  ])
+    NUDGE.push([x, y]);
+
 export class Structures {
   declare blocks: Block[];
   declare wires: Wire[];
@@ -417,7 +437,12 @@ export class Structures {
     if (s && this.fits(game, def, s.x, s.y, s.w, s.h)) return { ...s, a, ok: true };
     const x = Math.round((cx - w / 2) / SNAP) * SNAP;
     const y = Math.round((cy - h / 2) / SNAP) * SNAP;
-    return { x, y, w, h, a, ok: this.fits(game, def, x, y, w, h) };
+    if (this.fits(game, def, x, y, w, h)) return { x, y, w, h, a, ok: true };
+    // pegada a una pared que no cae en la cuadrícula: se corre lo justo (menos de una casilla) para quedar al ras
+    for (const [dx, dy] of NUDGE) {
+      if (this.fits(game, def, x + dx, y + dy, w, h)) return { x: x + dx, y: y + dy, w, h, a, ok: true };
+    }
+    return { x, y, w, h, a, ok: false };
   }
 
   // Si la pieza cabe ahí: dentro de la calle, sin pisar al jugador ni a un zombi. Las estructuras
@@ -994,6 +1019,9 @@ export class Structures {
   explode(game: GameHost, g: BlastAt, R = BLAST_R, power = 330, fling = 0, small = false) {
     const { x, y } = g;
     game.horde.grid.query(x - R - 44, y - R - 44, x + R + 44, y + R + 44, near);
+    // escudos de los colosos: lo que queda detrás recibe poco (y el escudo se lleva la explosión, una vez)
+    const cols = game.horde.colosos || [];
+    const shieldsHit = new Set<Zombie>();
     for (const z of near) {
       if (z.dead) continue;
       const dx = z.x - x;
@@ -1002,13 +1030,20 @@ export class Structures {
       if (d > R + z.r) continue;
       const f = clamp(1 - d / R, 0, 1);
       const n = d || 1;
+      const cover = cols.length ? shieldBetween(cols, x, y, z) : null;
+      if (cover && !shieldsHit.has(cover)) {
+        shieldsHit.add(cover);
+        const sp = shieldAt(cover);
+        hitShield(game, cover, power, sp.x, sp.y);
+      }
+      const ck = cover ? COLOSO.blastK : 1;
       game.hitZombie(
         z,
         {
-          dmg: power * (0.35 + 0.65 * f),
+          dmg: power * (0.35 + 0.65 * f) * ck,
           dx: dx / n,
           dy: dy / n,
-          knock: (120 + 260 * f) * (1 + fling),
+          knock: (120 + 260 * f) * (1 + fling) * ck,
           shot: null,
           blast: true,
           owner: g.owner,
@@ -1016,7 +1051,7 @@ export class Structures {
         z.x,
         z.y,
       );
-      if (fling && !z.dead) {
+      if (fling && !z.dead && !cover) {
         z.airV = Math.max(z.airV || 0, Math.min(AIR.vmax, ((160 + 320 * f) * fling) / Math.sqrt(z.mass)));
         z.air = z.air || 0.01;
         z.spinV = rand(-9, 9);

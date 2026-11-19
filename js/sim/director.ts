@@ -1,5 +1,6 @@
 // Director de oleadas: decide cuántos zombis salen, de qué tipo y por dónde.
 import {
+  COLOSO,
   BOSS,
   BOSSES,
   EVENT_ORDER,
@@ -42,6 +43,8 @@ export interface WaveCounts {
   screamer: number;
   digger: number;
   jumper: number;
+  /** colosos, los muros caminantes (COLOSO) */
+  coloso: number;
   /** el jefe de la oleada (1) o ninguno */
   boss?: number;
   total: number;
@@ -73,6 +76,8 @@ export function waveCounts(w: number, m: number, ev: EventDef | null): WaveCount
     const S = SPECIALS[k];
     return few(w >= S.from ? S.first + Math.floor((w - S.from) * S.per) : 0);
   };
+  // colosos (muros caminantes) desde la oleada COLOSO.from: al frente, con escudo
+  let coloso = w >= COLOSO.from ? Math.min(COLOSO.max, COLOSO.first + Math.floor((w - COLOSO.from) * COLOSO.per)) : 0;
   let spitter = sp('spitter');
   let screamer = sp('screamer');
   let digger = sp('digger');
@@ -82,7 +87,7 @@ export function waveCounts(w: number, m: number, ev: EventDef | null): WaveCount
     const total = Math.round((normalTotal + sprinter + fat + bull) * ev.size);
     bull = Math.max(few(2), Math.round(total * (ev.bulls ?? 0)));
     sprinter = total - bull;
-    normal = swat = fat = heavy = rock = demon = spitter = screamer = digger = jumper = 0;
+    normal = swat = fat = heavy = rock = demon = spitter = screamer = digger = jumper = coloso = 0;
   }
   normal -= heavy;
   return {
@@ -98,7 +103,8 @@ export function waveCounts(w: number, m: number, ev: EventDef | null): WaveCount
     screamer,
     digger,
     jumper,
-    total: normal + swat + sprinter + fat + heavy + bull + rock + demon + spitter + screamer + digger + jumper,
+    coloso,
+    total: normal + swat + sprinter + fat + heavy + bull + rock + demon + spitter + screamer + digger + jumper + coloso,
   };
 }
 
@@ -195,6 +201,7 @@ export class Director {
       bull: bulls,
       rock: rocks,
       demon: demons,
+      coloso: colosos,
       ...specials
     } = waveCounts(w, boss ? m * BOSS.support : m, ev);
     const q: string[] = [];
@@ -209,6 +216,8 @@ export class Director {
     // los de habilidades, repartidos desde el primer décimo de la oleada
     for (const k of SPECIAL_ORDER)
       for (let i = 0; i < specials[k]; i++) q.splice(randInt(Math.floor(q.length * 0.1), q.length), 0, k);
+    // los colosos van al frente (los demás caminan detrás de ellos)
+    for (let i = 0; i < colosos; i++) q.unshift('coloso');
     // el jefe sale en la primera ráfaga
     if (boss) q.unshift(boss);
     this.queue = q;
@@ -424,15 +433,16 @@ export class Director {
       for (let i = 0; i < cluster && this.queue.length; i++) {
         const type = this.queue[0];
         const big = (ZOMBIES as Record<string, { radius: number; boss?: boolean }>)[type];
-        const r = big?.boss
-          ? big.radius + 4
-          : type === 'rock'
-            ? 36
-            : type === 'fat' || type === 'heavy' || type === 'bull' || type === 'demon'
-              ? 24
-              : type === 'sprinter'
-                ? 12
-                : 15;
+        const r =
+          big?.boss || type === 'coloso'
+            ? big.radius + 4
+            : type === 'rock'
+              ? 36
+              : type === 'fat' || type === 'heavy' || type === 'bull' || type === 'demon'
+                ? 24
+                : type === 'sprinter'
+                  ? 12
+                  : 15;
         for (let t = 0; t < 6; t++) {
           const x = c.x + rand(-45, 45);
           const y = c.y + rand(-45, 45);

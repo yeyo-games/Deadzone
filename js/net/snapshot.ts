@@ -48,6 +48,7 @@ export const WORLD_KEYS = [
   'ev',
   'bo',
   'bf',
+  'co',
 ];
 
 const r100 = (v: number) => Math.round(v * 100);
@@ -255,6 +256,10 @@ export function encodeWorld(
     // ronda especial: su lugar en EVENT_ORDER + 1 (0 = ninguna)
     ev: EVENT_ORDER.indexOf(d.event) + 1,
     ...encodeBosses(src.horde),
+    // colosos (muros caminantes): id, escudo en % y si ya están furiosos
+    co: src.horde.list
+      .filter((z) => z.type === 'coloso' && !z.dead)
+      .flatMap((z) => [z.id, Math.ceil((Math.max(0, z.shield) / (z.shieldMax || 1)) * 100), z.rage ? 1 : 0]),
   };
 }
 

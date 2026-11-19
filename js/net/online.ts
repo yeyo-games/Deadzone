@@ -374,6 +374,8 @@ export class Online {
       g.onlineStatus('El servidor se está reiniciando: las partidas en memoria se pierden.', true);
     });
     room.onMessage<{ c: number }>('p', (m) => this.onPong(m));
+    // el mundo como va (al terminar una oleada o parada, o al salir): el navegador lo guarda
+    room.onMessage<unknown>('save', (w) => g.onWorldSave(w));
     room.onDrop(() => {
       this.reconnecting = true;
       g.onlineStatus('Conexión perdida: reconectando…', true);
@@ -416,8 +418,19 @@ export class Online {
     this.forget();
     const r = this.room;
     this.room = null;
+    // a mitad de partida: antes de irse se pide el mundo como va, para seguirlo otro día
+    const wasPlaying = this.playing;
     if (this.playing) this.stopPlay('abandono');
-    r.leave(true).catch(() => {});
+    if (!wasPlaying) {
+      r.leave(true).catch(() => {});
+      return;
+    }
+    try {
+      r.send('save');
+    } catch {
+      /* sin conexión: queda el último guardado */
+    }
+    setTimeout(() => r.leave(true).catch(() => {}), 500);
   }
 
   onLeave(code: number) {
@@ -518,6 +531,8 @@ export class Online {
     g.sfx.unlock();
     g.resetRun();
     g.mode = new OnlineClient(g);
+    // (con esta clase se ven los botones de dar a los compañeros)
+    g.root.classList.add('net-on');
     g.director.coop = true;
     g.director.state = 'break';
     const p = g.player;
@@ -551,6 +566,7 @@ export class Online {
   stopPlay(fin: 'fin' | 'abandono' = 'abandono') {
     const g = this.game;
     this.playing = false;
+    g.root.classList.remove('net-on');
     g.analitica.terminar(fin);
     g.mode = new Solo(g, true);
     g.remote.stop();

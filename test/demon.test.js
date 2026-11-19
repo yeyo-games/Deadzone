@@ -87,7 +87,8 @@ test('salen desde la oleada DEMON.from, pocos, y crecen; en la estampida no', ()
       c.spitter +
       c.screamer +
       c.digger +
-      c.jumper,
+      c.jumper +
+      c.coloso,
   );
 });
 

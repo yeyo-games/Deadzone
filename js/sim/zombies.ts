@@ -1,3 +1,4 @@
+import { colosoThink, followColoso, initColoso, shielded } from './coloso.ts';
 import {
   ZOMBIES,
   ZOMBIE_SPEED,
@@ -199,6 +200,8 @@ function nearestAlive(list: Target[], z: Zombie): Target {
 
 export class Horde {
   declare list: Zombie[];
+  /** colosos con escudo (sim/coloso.ts): se recalcula en cada update */
+  declare colosos: Zombie[];
   declare grid: Grid;
   declare frame: number;
   declare danger: number;
@@ -212,6 +215,7 @@ export class Horde {
   declare dt: number;
   constructor() {
     this.list = [];
+    this.colosos = [];
     this.lobs = [];
     this.zones = [];
     this.fallen = [];
@@ -243,8 +247,9 @@ export class Horde {
       y,
       r: def.radius,
       mass: def.mass,
-      hp: def.hp * hpMult,
-      maxHp: def.hp * hpMult,
+      // (el coloso tiene vida fija: no crece con la oleada)
+      hp: (def as { flatHp?: boolean }).flatHp ? def.hp : def.hp * hpMult,
+      maxHp: (def as { flatHp?: boolean }).flatHp ? def.hp : def.hp * hpMult,
       speed: rand(ZOMBIE_SPEED[0], ZOMBIE_SPEED[1]) * def.speed * speedMult,
       angle: rand(0, TAU),
       anim: rand(0, def.frames),
@@ -293,6 +298,7 @@ export class Horde {
       hitJolt: 0,
       life: type === 'golden' ? GOLDEN.life : 0,
     };
+    if (type === 'coloso') initColoso(z);
     this.list.push(z);
     return z;
   }
@@ -331,6 +337,8 @@ export class Horde {
     const views = dir && game.state !== 'menu' ? dir.views(game) : null;
     let danger = 0;
     let nearCount = 0;
+    // colosos con escudo: los demás caminan detrás de ellos y sus escudos paran balas y explosiones
+    this.colosos = shielded(list);
     // quien va volando tras el lanzamiento de un rocoso arrolla a los zombis que toca
     for (const pl of (targets || [p0]) as Player[]) if ((pl.flungT || 0) > 0) this.flungStep(pl, dt, game);
     this.dt = dt;
@@ -421,6 +429,7 @@ export class Horde {
       if (z.type === 'bull' && this.bullThink(z, p, dx, dy, d, dt, game, world)) continue;
       if (z.type === 'rock' && this.rockThink(z, p, d, dt, game)) continue;
       if (z.type === 'demon') this.demonThink(z, p, dx, dy, d, dt, game, world);
+      if (z.type === 'coloso' && colosoThink(z, dt, game)) continue;
       if (def.boss && bossThink(this, z, p, d, dt, game)) continue;
       // zombis con habilidades (specials.ts): mientras preparan su ataque, cavan o saltan no caminan
       if (z.type === 'spitter' && spitterThink(this, z, p, d, dt, game)) continue;
@@ -465,6 +474,20 @@ export class Horde {
         } else {
           mx = dx / d;
           my = dy / d;
+        }
+        // coloso furioso: directo a la barricada que va a golpear
+        if (z.steer) {
+          mx = z.steer.x;
+          my = z.steer.y;
+        }
+      }
+      // detrás de un coloso con escudo (en columna y a su paso), mientras no estén ya cerca de ti
+      if (this.colosos.length && z.type !== 'coloso' && !def.boss && d > 160) {
+        const fo = followColoso(this.colosos, z, p.x, p.y);
+        if (fo) {
+          mx = fo.x;
+          my = fo.y;
+          z.capSp = fo.cap;
         }
       }
       // si se quedó atascado, se escurre de lado un momento para despegarse
@@ -530,6 +553,9 @@ export class Horde {
       z.angle = angleTo(z.angle, Math.atan2(inRange ? dy : my, inRange ? dx : mx), def.turn * dt);
       // ritmo propio que sube y baja; al tropezar casi se frenan
       let sp = z.speed * z.pace * (0.85 + 0.15 * Math.sin(time * 0.7 + z.wob)) * (z.slow > 0 ? 0.35 : 1);
+      // siguiendo a un coloso no lo rebasa
+      if (z.capSp > 0) sp = Math.min(sp, z.capSp);
+      z.capSp = 0;
       if (z.stumbleT > 0) sp *= 0.25;
       if (z.air > 0) sp = 0;
       // arrastrándose: avanza a tirones, como si arrastrara una pierna
